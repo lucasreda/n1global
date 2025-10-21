@@ -38,6 +38,8 @@ interface Operation {
   operationType: string;
   status: string;
   createdAt: string;
+  shopifyOrderPrefix?: string;
+  fhbAccountId?: string;
 }
 
 interface Product {
@@ -144,7 +146,9 @@ export default function AdminOperations() {
     country: '',
     ownerId: '',
     currency: 'EUR',
-    operationType: 'Cash on Delivery'
+    operationType: 'Cash on Delivery',
+    shopifyOrderPrefix: '',
+    fhbAccountId: ''
   });
 
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -168,6 +172,11 @@ export default function AdminOperations() {
   // Fetch users for owner selection
   const { data: users } = useQuery<User[]>({
     queryKey: ['/api/admin/users']
+  });
+
+  // Fetch FHB accounts for fulfillment configuration
+  const { data: fhbAccounts } = useQuery<{id: string; accountName: string; status: string}[]>({
+    queryKey: ['/api/admin/fhb-accounts']
   });
 
   // Fetch all products
@@ -708,7 +717,9 @@ export default function AdminOperations() {
       country: operation.country,
       ownerId: operation.ownerId || '',
       currency: operation.currency,
-      operationType: operation.operationType
+      operationType: operation.operationType,
+      shopifyOrderPrefix: operation.shopifyOrderPrefix || '',
+      fhbAccountId: operation.fhbAccountId || ''
     });
     setActiveTab("general");
     setShowEditModal(true);
@@ -742,6 +753,14 @@ export default function AdminOperations() {
     }
     if (editOperationData.operationType !== operationToEdit.operationType) {
       updateData.operationType = editOperationData.operationType;
+      hasChanges = true;
+    }
+    if (editOperationData.shopifyOrderPrefix !== (operationToEdit.shopifyOrderPrefix || '')) {
+      updateData.shopifyOrderPrefix = editOperationData.shopifyOrderPrefix;
+      hasChanges = true;
+    }
+    if (editOperationData.fhbAccountId !== (operationToEdit.fhbAccountId || '')) {
+      updateData.fhbAccountId = editOperationData.fhbAccountId;
       hasChanges = true;
     }
     
@@ -1157,6 +1176,56 @@ export default function AdminOperations() {
                     placeholder="EUR, USD, BRL..."
                     data-testid="input-edit-operation-currency"
                   />
+                </div>
+
+                {/* Fulfillment Configuration Section */}
+                <div className="border-t border-white/20 pt-4 mt-4">
+                  <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Configuração de Fulfillment (FHB)
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="edit-shopify-prefix" className="text-sm text-slate-400">
+                        Prefixo Shopify
+                      </Label>
+                      <Input
+                        id="edit-shopify-prefix"
+                        value={editOperationData.shopifyOrderPrefix}
+                        onChange={(e) => setEditOperationData({ ...editOperationData, shopifyOrderPrefix: e.target.value })}
+                        className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                        placeholder="Ex: ESP-, PT-, IT-"
+                        data-testid="input-shopify-prefix"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Usado para filtrar pedidos desta operação no FHB
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-fhb-account" className="text-sm text-slate-400">
+                        Conta FHB
+                      </Label>
+                      <Select 
+                        value={editOperationData.fhbAccountId || undefined} 
+                        onValueChange={(value) => setEditOperationData({ ...editOperationData, fhbAccountId: value === 'none' ? '' : value })}
+                      >
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-fhb-account">
+                          <SelectValue placeholder="Selecione uma conta FHB" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-600">
+                          <SelectItem value="none" className="text-white hover:bg-gray-700">Nenhuma</SelectItem>
+                          {fhbAccounts?.filter(acc => acc.status === 'active').map((account) => (
+                            <SelectItem key={account.id} value={account.id} className="text-white hover:bg-gray-700">
+                              {account.accountName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Conta FHB compartilhada para sync de pedidos
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
               
