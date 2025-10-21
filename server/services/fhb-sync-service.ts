@@ -145,12 +145,6 @@ export class FHBSyncService {
       for (const fhbOrder of fhbOrders) {
         stats.ordersProcessed++;
         
-        // Only sync orders in non-final states to reduce load
-        if (this.isFinalState(fhbOrder.status)) {
-          stats.ordersSkipped++;
-          continue;
-        }
-        
         try {
           // Determine which operation this order belongs to based on prefix
           const operation = this.findOperationByPrefix(
@@ -352,14 +346,6 @@ export class FHBSyncService {
     }
     
     return null;
-  }
-  
-  /**
-   * Check if order is in a final state (no need to sync)
-   */
-  private isFinalState(fhbStatus: string): boolean {
-    const finalStates = ['delivered', 'rejected', 'cancelled'];
-    return finalStates.includes(fhbStatus.toLowerCase());
   }
   
   /**
