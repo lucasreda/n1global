@@ -305,7 +305,7 @@ export class SharedFHBSyncService {
     // Match e atualização
     for (const fhbOrder of relevantFhbOrders) {
       const matchingShopifyOrder = shopifyOrders.find(shopifyOrder => {
-        const shopifyRef = shopifyOrder.shopifyOrderNumber || shopifyOrder.name || '';
+        const shopifyRef = shopifyOrder.shopifyOrderNumber || '';
         const fhbRef = fhbOrder.variable_symbol || '';
         
         // Remove prefixo para comparação se necessário
@@ -325,6 +325,8 @@ export class SharedFHBSyncService {
         
         // Atualizar pedido Shopify com dados FHB
         try {
+          const existingProviderData = matchingShopifyOrder.providerData as Record<string, any> || {};
+          
           await db
             .update(orders)
             .set({
@@ -335,7 +337,7 @@ export class SharedFHBSyncService {
               carrierOrderId: fhbOrder.id,
               carrierConfirmation: fhbOrder.status,
               providerData: {
-                ...matchingShopifyOrder.providerData,
+                ...existingProviderData,
                 fhb: {
                   orderId: fhbOrder.id,
                   status: fhbOrder.status,

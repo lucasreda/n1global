@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: any;
 }
 

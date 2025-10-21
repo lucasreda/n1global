@@ -42,9 +42,7 @@ import EventEmitter from "events";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
-interface AuthRequest extends Request {
-  user?: any;
-}
+import type { AuthRequest } from "./auth-middleware";
 
 // Multi-Page Funnel Validation Schemas
 const funnelPageSchema = z.object({
@@ -441,6 +439,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Shopify sync error:", error);
       res.status(500).json({ message: "Failed to start Shopify sync" });
+    }
+  });
+
+  // 🏦 Shared FHB Sync - Optimized multi-tenant sync (admin only)
+  app.post("/api/sync/fhb-shared", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      // Validate request body
+      const bodySchema = z.object({
+        operationIds: z.array(z.string()).optional()
+      });
+      const { operationIds } = bodySchema.parse(req.body);
+      
+      const { SharedFHBSyncService } = await import("./shared-fhb-sync-service");
+      const sharedFhbSync = new SharedFHBSyncService();
+      
+      console.log(`🏦 Starting shared FHB sync for ${operationIds?.length || 'all'} operation(s)`);
+      
+      const result = await sharedFhbSync.syncMultipleOperations(operationIds);
+      
+      res.json({
+        success: result.success,
+        message: `FHB Sync: ${result.operationsProcessed} operações, ${result.totalFhbOrders} pedidos processados`,
+        ...result
+      });
+    } catch (error: any) {
+      console.error("Shared FHB sync error:", error);
+      // Return 400 for validation errors, 500 for others
+      const statusCode = error.name === 'ZodError' ? 400 : 500;
+      res.status(statusCode).json({ 
+        success: false,
+        message: `Erro no sync compartilhado FHB: ${error.message}` 
+      });
     }
   });
 

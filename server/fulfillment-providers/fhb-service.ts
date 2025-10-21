@@ -12,7 +12,7 @@ import {
 import fetch from 'node-fetch';
 import https from 'https';
 
-interface FHBCredentials extends FulfillmentCredentials {
+export interface FHBCredentials {
   appId: string; // App ID para autenticação
   secret: string; // Secret para autenticação
   apiUrl?: string; // URL da API (produção ou sandbox)
@@ -55,7 +55,12 @@ export class FHBService extends BaseFulfillmentProvider {
   private fhbCredentials: FHBCredentials;
   
   constructor(credentials: FHBCredentials) {
-    super(credentials);
+    // Convert FHB credentials to base format for parent class
+    super({
+      email: credentials.appId, // Using appId as email for base class compatibility
+      password: credentials.secret
+    });
+    
     this.fhbCredentials = {
       ...credentials,
       apiUrl: credentials.apiUrl || FHB_PRODUCTION_URL
