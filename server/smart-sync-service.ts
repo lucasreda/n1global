@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { orders, stores, operations, type InsertOrder } from "@shared/schema";
-import { EuropeanFulfillmentService } from "./fulfillment-service";
+import { BaseFulfillmentProvider } from "./fulfillment-providers/base-fulfillment-provider";
 import { eq, and, not, inArray } from "drizzle-orm";
 
 interface SyncOptions {
@@ -9,22 +9,42 @@ interface SyncOptions {
   statusFilter?: string[];
 }
 
+// Type guard para verificar se tem métodos específicos do European Fulfillment
+interface EuropeanFulfillmentMethods {
+  getLeadsList(country?: string, page?: number, dateFrom?: string, dateTo?: string): Promise<any[]>;
+  getLeadsListWithPagination(country?: string, page?: number, dateFrom?: string, dateTo?: string): Promise<any>;
+  getLeadStatus(leadId: string): Promise<any>;
+}
+
 export class SmartSyncService {
   private isRunning = false;
   private lastSyncTime: Date | null = null;
   private syncHistory: Array<{ timestamp: Date; newLeads: number; updates: number }> = [];
   private defaultStoreId: string | null = null;
-  private fulfillmentService: EuropeanFulfillmentService;
+  private fulfillmentService: BaseFulfillmentProvider;
 
-  constructor(fulfillmentService?: EuropeanFulfillmentService) {
-    this.fulfillmentService = fulfillmentService || new EuropeanFulfillmentService();
+  constructor(fulfillmentService?: BaseFulfillmentProvider) {
+    // Se não receber um service, criar um adapter padrão
+    if (!fulfillmentService) {
+      // Importação dinâmica para evitar dependência circular
+      this.fulfillmentService = null as any; // Será inicializado no primeiro uso
+    } else {
+      this.fulfillmentService = fulfillmentService;
+    }
   }
 
   /**
    * Configura o fulfillment service com autenticação
    */
-  setFulfillmentService(fulfillmentService: EuropeanFulfillmentService) {
+  setFulfillmentService(fulfillmentService: BaseFulfillmentProvider) {
     this.fulfillmentService = fulfillmentService;
+  }
+
+  /**
+   * Type guard para verificar se tem métodos do European Fulfillment
+   */
+  private hasEuropeanMethods(service: any): service is BaseFulfillmentProvider & EuropeanFulfillmentMethods {
+    return 'getLeadsList' in service && 'getLeadsListWithPagination' in service && 'getLeadStatus' in service;
   }
   
   // Estado da sincronização completa progressiva
@@ -1041,58 +1061,67 @@ export class SmartSyncService {
 
       console.log(`📋 Encontrados ${leadsToUpdate.length} leads para atualização`);
 
-      // 2. Atualizar leads existentes com status não-final
-      for (const lead of leadsToUpdate) {
-        if (lead.id) {
-          try {
-            const leadDetails = await this.fulfillmentService.getLeadStatus(lead.id);
-            
-            if (leadDetails && leadDetails.status !== lead.status) {
-              await db
-                .update(orders)
-                .set({
-                  status: leadDetails.status,
-                  updatedAt: new Date(),
-                })
-                .where(and(
-                  eq(orders.id, lead.id),
-                  eq(orders.operationId, operationId)
-                ));
+      // 2. Atualizar leads existentes com status não-final (só funciona com providers que têm getLeadStatus)
+      if (this.hasEuropeanMethods(this.fulfillmentService)) {
+        for (const lead of leadsToUpdate) {
+          if (lead.id) {
+            try {
+              const leadDetails = await this.fulfillmentService.getLeadStatus(lead.id);
               
-              updatedLeads++;
-              console.log(`✏️  Lead ${lead.id} atualizado: ${lead.status} → ${leadDetails.status}`);
-            } else {
-              skippedLeads++;
+              if (leadDetails && leadDetails.status !== lead.status) {
+                await db
+                  .update(orders)
+                  .set({
+                    status: leadDetails.status,
+                    updatedAt: new Date(),
+                  })
+                  .where(and(
+                    eq(orders.id, lead.id),
+                    eq(orders.operationId, operationId)
+                  ));
+                
+                updatedLeads++;
+                console.log(`✏️  Lead ${lead.id} atualizado: ${lead.status} → ${leadDetails.status}`);
+              } else {
+                skippedLeads++;
+              }
+            } catch (error) {
+              console.warn(`⚠️  Erro ao atualizar lead ${lead.id}:`, error);
             }
+          }
+          totalProcessed++;
+        }
+      } else {
+        console.log(`ℹ️  Sync incremental de status individuais não disponível para este provider`);
+      }
+
+      // 3. Buscar novos leads da API (TODAS as páginas para garantir completude) - só para providers com paginação
+      let apiLeads: any[] = [];
+      
+      if (this.hasEuropeanMethods(this.fulfillmentService)) {
+        const maxPages = options.maxPages || Infinity; // SEM LIMITE - buscar TODOS os leads
+
+        for (let page = 1; page <= maxPages; page++) {
+          try {
+            const pageResponse = await this.fulfillmentService.getLeadsListWithPagination(syncCountry || undefined, page);
+            const pageLeads = pageResponse.data || pageResponse;
+            
+            if (!pageLeads || pageLeads.length === 0) break;
+            
+            apiLeads = apiLeads.concat(pageLeads);
+            
+            // Se encontrou menos que 15 leads, provavelmente chegou ao fim
+            if (pageLeads.length < 15) break;
           } catch (error) {
-            console.warn(`⚠️  Erro ao atualizar lead ${lead.id}:`, error);
+            console.warn(`⚠️  Erro ao buscar página ${page}:`, error);
+            break;
           }
         }
-        totalProcessed++;
+
+        console.log(`🌐 Recuperados ${apiLeads.length} leads da API`);
+      } else {
+        console.log(`ℹ️  Busca paginada de leads não disponível para este provider - use sync completo`);
       }
-
-      // 3. Buscar novos leads da API (TODAS as páginas para garantir completude)
-      const maxPages = options.maxPages || Infinity; // SEM LIMITE - buscar TODOS os leads
-      let apiLeads: any[] = [];
-
-      for (let page = 1; page <= maxPages; page++) {
-        try {
-          const pageResponse = await this.fulfillmentService.getLeadsListWithPagination(syncCountry, page);
-          const pageLeads = pageResponse.data || pageResponse;
-          
-          if (!pageLeads || pageLeads.length === 0) break;
-          
-          apiLeads = apiLeads.concat(pageLeads);
-          
-          // Se encontrou menos que 15 leads, provavelmente chegou ao fim
-          if (pageLeads.length < 15) break;
-        } catch (error) {
-          console.warn(`⚠️  Erro ao buscar página ${page}:`, error);
-          break;
-        }
-      }
-
-      console.log(`🌐 Recuperados ${apiLeads.length} leads da API`);
 
       // 4. Processar novos leads
       for (const apiLead of apiLeads) {
@@ -1327,86 +1356,38 @@ export class SmartSyncService {
    * Executa a sincronização completa com atualizações de progresso
    */
   private async executeCompleteSyncWithProgress(apiCountry: string, operationId: string, storeId: string): Promise<void> {
-    console.log(`🔄 Iniciando sincronização completa progressiva para ${apiCountry}...`);
+    console.log(`🔄 Iniciando sincronização completa com provider para operação ${operationId}...`);
     
     this.completeSyncStatus.phase = 'syncing';
-    this.completeSyncStatus.message = "Obtendo informações totais da API...";
+    this.completeSyncStatus.message = "Sincronizando pedidos com warehouse...";
 
-    // Obter informações iniciais da API - primeiro buscar dados para calcular total
-    const firstPageLeads = await this.fulfillmentService.getLeadsList(apiCountry, 1);
+    // Usar o método syncOrders() que todos os providers implementam
+    const startTime = Date.now();
+    const syncResult = await this.fulfillmentService.syncOrders(operationId);
     
-    if (!firstPageLeads || firstPageLeads.length === 0) {
-      throw new Error('Não foi possível obter dados da primeira página da API');
+    if (!syncResult.success) {
+      throw new Error(`Erro ao sincronizar: ${syncResult.errors.join(', ')}`);
     }
 
-    // Usar o total real retornado pela API
-    const apiResponse = await this.fulfillmentService.getLeadsListWithPagination(apiCountry, 1);
-    const totalLeads = apiResponse?.total || 1173; // Fallback baseado no último valor conhecido
-    const leadsPerPage = apiResponse?.per_page || 15; // Usar o valor real da API
-    const totalPages = apiResponse?.last_page || Math.ceil(totalLeads / leadsPerPage);
-    
-    this.completeSyncStatus.totalLeads = totalLeads;
-    this.completeSyncStatus.totalPages = totalPages;
-    this.completeSyncStatus.message = `Processando ${this.completeSyncStatus.totalLeads} pedidos em ${this.completeSyncStatus.totalPages} páginas...`;
-
-    console.log(`📊 Total de pedidos a processar: ${this.completeSyncStatus.totalLeads}`);
-    console.log(`📄 Total de páginas estimadas: ${this.completeSyncStatus.totalPages}`);
-
-    let allNewLeads = 0;
-    let allUpdatedLeads = 0;
-
-    // Processar todas as páginas
-    for (let page = 1; page <= this.completeSyncStatus.totalPages; page++) {
-      this.completeSyncStatus.currentPage = page;
-      this.completeSyncStatus.message = `Processando página ${page} de ${this.completeSyncStatus.totalPages}...`;
-
-      try {
-        const pageResponse = await this.fulfillmentService.getLeadsListWithPagination(apiCountry, page);
-        const pageLeads = pageResponse.data || pageResponse;
-        
-        if (!pageLeads || pageLeads.length === 0) {
-          console.log(`📄 Página ${page} vazia, finalizando...`);
-          break;
-        }
-        
-        const { newLeads, updatedLeads } = await this.processLeadsPage(pageLeads, storeId, operationId);
-        
-        allNewLeads += newLeads;
-        allUpdatedLeads += updatedLeads;
-        
-        this.completeSyncStatus.newLeads = allNewLeads;
-        this.completeSyncStatus.updatedLeads = allUpdatedLeads;
-        this.completeSyncStatus.processedLeads = (page - 1) * leadsPerPage + pageLeads.length;
-
-        // Calcular velocidade e tempo estimado
-        const elapsed = (Date.now() - this.completeSyncStatus.startTime!.getTime()) / 1000;
-        this.completeSyncStatus.currentSpeed = Math.round((this.completeSyncStatus.processedLeads / elapsed) * 60);
-        
-        const remaining = this.completeSyncStatus.totalLeads - this.completeSyncStatus.processedLeads;
-        const estimatedSeconds = remaining / (this.completeSyncStatus.currentSpeed / 60);
-        this.completeSyncStatus.estimatedTimeRemaining = this.formatTimeRemaining(estimatedSeconds);
-
-        console.log(`✅ Página ${page}/${this.completeSyncStatus.totalPages}: +${newLeads} novos, ~${updatedLeads} atualizados`);
-
-        // Pequena pausa para não sobrecarregar a API
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-      } catch (error) {
-        console.error(`❌ Erro na página ${page}:`, error);
-        throw error; // Re-throw para tentar novamente
-      }
-    }
+    // Atualizar status com resultados
+    const elapsed = (Date.now() - startTime) / 1000;
+    this.completeSyncStatus.processedLeads = syncResult.ordersProcessed;
+    this.completeSyncStatus.newLeads = syncResult.ordersCreated;
+    this.completeSyncStatus.updatedLeads = syncResult.ordersUpdated;
+    this.completeSyncStatus.totalLeads = syncResult.ordersProcessed;
+    this.completeSyncStatus.currentSpeed = Math.round((syncResult.ordersProcessed / elapsed) * 60);
+    this.completeSyncStatus.message = `Sincronização concluída: ${syncResult.ordersCreated} novos, ${syncResult.ordersUpdated} atualizados`;
 
     // Atualizar histórico
     this.syncHistory.push({
       timestamp: new Date(),
-      newLeads: allNewLeads,
-      updates: allUpdatedLeads
+      newLeads: syncResult.ordersCreated,
+      updates: syncResult.ordersUpdated
     });
 
     this.lastSyncTime = new Date();
 
-    console.log(`🎉 Sincronização completa finalizada: ${allNewLeads} novos, ${allUpdatedLeads} atualizados`);
+    console.log(`🎉 Sincronização completa finalizada: ${syncResult.ordersCreated} novos, ${syncResult.ordersUpdated} atualizados`);
   }
 
   /**

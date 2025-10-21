@@ -1935,17 +1935,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const credentials = integration.credentials as any;
       console.log(`📦 Warehouse selecionado: ${integration.provider} | OperationId: ${currentOperation.id} | IntegrationId: ${integration.id}`);
 
-      // SmartSyncService só funciona com N1 Warehouse (european_fulfillment)
-      if (integration.provider !== 'european_fulfillment') {
-        return res.status(400).json({ 
-          success: false,
-          message: `Sincronização completa só está disponível para N1 Warehouse. Seu warehouse atual: ${integration.provider}` 
-        });
-      }
-
-      // Criar fulfillment service específico para N1 Warehouse
-      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
-      const fulfillmentService = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
+      // Criar fulfillment service com credenciais da integração usando a Factory
+      const { FulfillmentProviderFactory } = await import("./fulfillment-providers/fulfillment-factory");
+      const fulfillmentService = await FulfillmentProviderFactory.createProvider(integration.provider as any, credentials);
 
       // Usar o singleton compartilhado do smart sync service
       const { smartSyncService } = await import("./smart-sync-service");
