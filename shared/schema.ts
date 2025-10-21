@@ -314,6 +314,10 @@ export const fhbAccounts = pgTable("fhb_accounts", {
   lastTestedAt: timestamp("last_tested_at"),
   testResult: text("test_result"), // Last connection test result
   
+  // Initial sync tracking - ensures 1-year historical backfill on first use
+  initialSyncCompleted: boolean("initial_sync_completed").notNull().default(false),
+  initialSyncCompletedAt: timestamp("initial_sync_completed_at"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -323,7 +327,7 @@ export const fhbSyncLogs = pgTable("fhb_sync_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   fhbAccountId: varchar("fhb_account_id").notNull().references(() => fhbAccounts.id),
   
-  syncType: text("sync_type").notNull(), // 'deep' (30 days) or 'fast' (10 days)
+  syncType: text("sync_type").notNull(), // 'initial' (1 year), 'deep' (30 days), or 'fast' (10 days)
   status: text("status").notNull(), // 'started', 'completed', 'failed'
   
   ordersProcessed: integer("orders_processed").default(0),
