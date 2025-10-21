@@ -25,13 +25,13 @@ function mapFHBStatus(fhbStatus: string): string {
 }
 
 /**
- * Find operation by order prefix using cached operations
+ * Find operation by order prefix from cached operations list
  */
 function findOperationByPrefix(
   variableSymbol: string,
-  operationsMap: Map<string, typeof operations.$inferSelect>
+  operationsList: (typeof operations.$inferSelect)[]
 ): typeof operations.$inferSelect | null {
-  for (const [fhbAccountId, operation] of operationsMap.entries()) {
+  for (const operation of operationsList) {
     if (!operation.shopifyOrderPrefix) continue;
     
     if (variableSymbol.startsWith(operation.shopifyOrderPrefix)) {
@@ -125,18 +125,11 @@ async function processUnprocessedOrders() {
           // Find operation by prefix
           const operation = findOperationByPrefix(
             fhbOrder.variableSymbol,
-            new Map(accountOperations.map(op => [fhbOrder.fhbAccountId, op]))
+            accountOperations
           );
           
           if (!operation) {
-            // No matching operation - mark as processed to avoid reprocessing
-            await db.update(fhbOrders)
-              .set({
-                processedToOrders: true,
-                processedAt: new Date()
-              })
-              .where(eq(fhbOrders.id, fhbOrder.id));
-            
+            // No matching operation - skip but leave unprocessed for retry when config changes
             batchSkipped++;
             continue;
           }
