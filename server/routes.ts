@@ -5036,7 +5036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/operations/:operationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { name, description, ownerId, country, currency, operationType, status } = req.body;
+      const { name, description, ownerId, country, currency, operationType, status, shopifyOrderPrefix } = req.body;
       
       const updatedOperation = await adminService.updateOperation(operationId, {
         name,
@@ -5045,7 +5045,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         country,
         currency,
         operationType,
-        status
+        status,
+        shopifyOrderPrefix
       });
       
       res.json(updatedOperation);

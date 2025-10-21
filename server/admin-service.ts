@@ -711,6 +711,7 @@ export class AdminService {
     currency?: string;
     operationType?: string;
     status?: string;
+    shopifyOrderPrefix?: string;
   }) {
     try {
       const updateData: any = { updatedAt: new Date() };
@@ -722,6 +723,7 @@ export class AdminService {
       if (operationData.currency !== undefined) updateData.currency = operationData.currency;
       if (operationData.operationType !== undefined) updateData.operationType = operationData.operationType;
       if (operationData.status !== undefined) updateData.status = operationData.status;
+      if (operationData.shopifyOrderPrefix !== undefined) updateData.shopifyOrderPrefix = operationData.shopifyOrderPrefix;
 
       const [updatedOperation] = await db
         .update(operations)
