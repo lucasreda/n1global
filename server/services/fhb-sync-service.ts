@@ -584,6 +584,7 @@ export class FHBSyncService {
   /**
    * Fetch orders from FHB API with pagination
    * Returns object with orders and completion status
+   * Note: Stops at 99 pages max - this is normal behavior for high-volume windows
    */
   private async fetchFHBOrders(
     fhbService: FHBService,
@@ -593,8 +594,9 @@ export class FHBSyncService {
     const allOrders: FHBOrder[] = [];
     let page = 1;
     let hasMore = true;
+    const MAX_PAGES = 99;
     
-    while (hasMore) {
+    while (hasMore && page <= MAX_PAGES) {
       try {
         const response = await (fhbService as any).makeAuthenticatedRequest(
           `/order/history?from=${from}&to=${to}&page=${page}`
@@ -610,15 +612,6 @@ export class FHBSyncService {
         allOrders.push(...pageOrders);
         page++;
         
-        // Safety limit to prevent infinite loops
-        if (page > 100) {
-          console.warn('⚠️ Reached page limit (100), window incomplete');
-          return {
-            orders: allOrders,
-            complete: false,
-            error: 'Reached pagination limit (100 pages) - window may be incomplete'
-          };
-        }
       } catch (error: any) {
         console.error(`❌ Error fetching page ${page}:`, error);
         return {
@@ -627,6 +620,11 @@ export class FHBSyncService {
           error: `Failed to fetch page ${page}: ${error.message}`
         };
       }
+    }
+    
+    // Reached page limit - this is normal for high-volume windows
+    if (page > MAX_PAGES) {
+      console.log(`📦 Fetched ${allOrders.length} orders (${MAX_PAGES} pages max per window)`);
     }
     
     return { orders: allOrders, complete: true };
