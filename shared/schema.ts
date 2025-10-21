@@ -129,6 +129,11 @@ export const orders = pgTable("orders", {
   affiliateTrackingId: text("affiliate_tracking_id"), // Token from affiliate link
   landingSource: text("landing_source"), // Where customer came from (URL, campaign, etc)
   
+  // FHB Sync fields
+  syncedFromFhb: boolean("synced_from_fhb").default(false), // If order came from FHB API
+  needsSync: boolean("needs_sync").default(true), // If order needs to be synced
+  lastSyncAt: timestamp("last_sync_at"), // Last time this order was synced from FHB
+  
   // Metadata
   notes: text("notes"),
   tags: text("tags").array(),
@@ -311,6 +316,27 @@ export const fhbAccounts = pgTable("fhb_accounts", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// FHB Sync Logs - tracking of synchronization executions
+export const fhbSyncLogs = pgTable("fhb_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fhbAccountId: varchar("fhb_account_id").notNull().references(() => fhbAccounts.id),
+  
+  syncType: text("sync_type").notNull(), // 'deep' (30 days) or 'fast' (10 days)
+  status: text("status").notNull(), // 'started', 'completed', 'failed'
+  
+  ordersProcessed: integer("orders_processed").default(0),
+  ordersCreated: integer("orders_created").default(0),
+  ordersUpdated: integer("orders_updated").default(0),
+  ordersSkipped: integer("orders_skipped").default(0),
+  
+  durationMs: integer("duration_ms"), // Duration in milliseconds
+  errorMessage: text("error_message"), // Error details if failed
+  
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // European Fulfillment integration - per operation 
