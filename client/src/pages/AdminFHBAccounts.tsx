@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Edit, TestTube } from "lucide-react";
+import { Plus, Trash2, Edit, TestTube, ArrowRight, Settings } from "lucide-react";
+import { Link } from "wouter";
 
 export default function AdminFHBAccounts() {
   const { toast } = useToast();
@@ -239,6 +240,37 @@ export default function AdminFHBAccounts() {
           )}
         </CardContent>
       </Card>
+
+      {/* Next Step Card */}
+      {accounts.length > 0 && (
+        <Card className="border-blue-500/20 bg-blue-50/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Próximo Passo
+            </CardTitle>
+            <CardDescription>
+              Agora que você criou contas FHB, configure suas operações
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Para cada operação, você precisa configurar:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+              <li><strong>Prefixo Shopify:</strong> Identificador único dos pedidos (ex: ESP-, PT-)</li>
+              <li><strong>Conta FHB:</strong> Selecionar qual conta FHB usar para sync</li>
+            </ul>
+            <Link href="/inside/stores">
+              <Button className="mt-3 w-full" data-testid="button-configure-operations">
+                <Settings className="mr-2 h-4 w-4" />
+                Configurar Operações
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
