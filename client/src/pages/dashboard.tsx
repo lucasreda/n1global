@@ -511,7 +511,7 @@ export default function Dashboard() {
             </TooltipTrigger>
             {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
               <TooltipContent className="max-w-xs">
-                <p>É necessário conectar pelo menos uma plataforma e um armazém para realizar a sincronização completa</p>
+                <p>É necessário conectar pelo menos uma plataforma (Shopify) {!integrationsStatus?.hasWarehouse && 'e configurar um armazém ou prefixo FHB'} para realizar a sincronização completa</p>
               </TooltipContent>
             )}
           </Tooltip>
