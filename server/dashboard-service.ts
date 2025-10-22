@@ -147,9 +147,9 @@ export class DashboardService {
     };
   }
   
-  // 🎯 MÉTODO PRINCIPAL: Conversões históricas otimizadas por agregação de data
-  private async calculateHistoricalRevenue(operationId: string, dateRange: any, provider?: string, timezone: string = 'Europe/Madrid') {
-    console.log(`📊 Iniciando cálculo de receita histórica para operação ${operationId} (timezone: ${timezone})`);
+  // 🎯 MÉTODO PRINCIPAL: Agregação de receita (SEM conversão de moeda)
+  private async calculateHistoricalRevenue(operationId: string, dateRange: any, provider?: string, timezone: string = 'Europe/Madrid', shouldConvert: boolean = false) {
+    console.log(`📊 Iniciando cálculo de receita para operação ${operationId} (timezone: ${timezone}, convert: ${shouldConvert})`);
     
     // 1. Agregar pedidos POR DATA (otimizado com GROUP BY) - com timezone awareness
     // Use raw SQL with CTE to avoid Drizzle GROUP BY issues
@@ -191,58 +191,31 @@ export class DashboardService {
       };
     }
     
-    // 2. Buscar taxas históricas para TODAS as datas de uma vez (BATCH)
-    const uniqueDates = dailyAggregation.map(row => row.day).filter(Boolean);
-    const historicalRates = await currencyService.getHistoricalRates(uniqueDates);
-    const currentRates = await currencyService.getExchangeRates(); // Para hoje
-    const today = new Date().toISOString().split('T')[0];
-    
-    console.log(`💱 Taxas carregadas: ${Object.keys(historicalRates).length} históricas + taxa atual`);
-    
-    // 3. Converter TOTAIS DIÁRIOS com suas taxas específicas
-    let totalShopifyRevenueBRL = 0;
-    let deliveredRevenueBRL = 0;
-    let paidRevenueBRL = 0;
+    // 2. Sum values directly without currency conversion
+    let totalRevenue = 0;
+    let deliveredRevenue = 0;
+    let paidRevenue = 0;
     
     for (const dayData of dailyAggregation) {
       if (!dayData.day) continue;
       
-      const dayTotalEUR = parseFloat(dayData.totalRevenueEUR || '0');
-      const dayDeliveredEUR = parseFloat(dayData.deliveredRevenueEUR || '0');
-      const dayPaidEUR = parseFloat(dayData.paidRevenueEUR || '0');
+      const dayTotal = parseFloat(dayData.totalRevenueEUR || '0');
+      const dayDelivered = parseFloat(dayData.deliveredRevenueEUR || '0');
+      const dayPaid = parseFloat(dayData.paidRevenueEUR || '0');
       
-      // Escolher taxa histórica OU atual
-      let dayRates;
-      if (dayData.day === today) {
-        dayRates = currentRates;
-        console.log(`📅 ${dayData.day} (HOJE): Usando taxa atual EUR=${currentRates.EUR}`);
-      } else if (historicalRates[dayData.day]) {
-        dayRates = historicalRates[dayData.day];
-        console.log(`📅 ${dayData.day}: Usando taxa histórica EUR=${dayRates.EUR}`);
-      } else {
-        dayRates = currentRates; // Fallback
-        console.warn(`⚠️ ${dayData.day}: Taxa histórica não encontrada, usando atual`);
-      }
+      totalRevenue += dayTotal;
+      deliveredRevenue += dayDelivered;
+      paidRevenue += dayPaid;
       
-      // Converter totais do dia
-      const dayTotalBRL = currencyService.convertToBRLSync(dayTotalEUR, 'EUR', dayRates);
-      const dayDeliveredBRL = currencyService.convertToBRLSync(dayDeliveredEUR, 'EUR', dayRates);
-      const dayPaidBRL = currencyService.convertToBRLSync(dayPaidEUR, 'EUR', dayRates);
-      
-      // Somar aos totais
-      totalShopifyRevenueBRL += dayTotalBRL;
-      deliveredRevenueBRL += dayDeliveredBRL;
-      paidRevenueBRL += dayPaidBRL;
-      
-      console.log(`💰 ${dayData.day}: €${dayTotalEUR} → R$${dayTotalBRL.toFixed(2)} (taxa: ${dayRates.EUR})`);
+      console.log(`💰 ${dayData.day}: ${dayTotal.toFixed(2)} (original currency, no conversion)`);
     }
     
-    console.log(`🎯 RESULTADO FINAL - Total: R$${totalShopifyRevenueBRL.toFixed(2)}, Entregue: R$${deliveredRevenueBRL.toFixed(2)}, Pago: R$${paidRevenueBRL.toFixed(2)}`);
+    console.log(`🎯 RESULTADO FINAL - Total: ${totalRevenue.toFixed(2)}, Entregue: ${deliveredRevenue.toFixed(2)}, Pago: ${paidRevenue.toFixed(2)} (original currency)`);
     
     return {
-      totalShopifyRevenueBRL,
-      deliveredRevenueBRL,
-      paidRevenueBRL
+      totalShopifyRevenueBRL: totalRevenue, // Keep variable name for compatibility
+      deliveredRevenueBRL: deliveredRevenue,
+      paidRevenueBRL: paidRevenue
     };
   }
   
@@ -317,6 +290,11 @@ export class DashboardService {
     // Use operation's configured timezone
     const operationTimezone = currentOperation.timezone || 'Europe/Madrid';
     console.log(`🌍 Using timezone: ${operationTimezone} from operation configuration`);
+    
+    // 🔥 NO CURRENCY CONVERSION: System displays values in original currency
+    const operationCurrency = currentOperation.currency || 'EUR';
+    const shouldConvertCurrency = false; // NEVER convert - always show original currency
+    console.log(`💱 Operation currency: ${operationCurrency}, Conversion disabled (showing original values)`);
     
     // CRITICAL: Use operationId + TIMEZONE-AWARE date filtering
     // Filter by operation timezone to match Shopify's display
@@ -534,34 +512,34 @@ export class DashboardService {
     // Calculate delivery percentage based on transportadora data
     const deliveryRate = totalTransportadoraOrders > 0 ? (deliveredTransportadoraOrders / totalTransportadoraOrders) * 100 : 0;
     
-    // 🎯 NOVA LÓGICA: Agregação por data com conversões históricas precisas (timezone-aware)
-    const dailyRevenueData = await this.calculateHistoricalRevenue(currentOperation.id, dateRange, provider, operationTimezone);
+    // 🎯 Sum revenue in original currency (NO conversion)
+    const dailyRevenueData = await this.calculateHistoricalRevenue(currentOperation.id, dateRange, provider, operationTimezone, shouldConvertCurrency);
     
-    const totalShopifyRevenueBRL = dailyRevenueData.totalShopifyRevenueBRL;
-    const deliveredRevenueBRL = dailyRevenueData.deliveredRevenueBRL;
-    const paidRevenueBRL = dailyRevenueData.paidRevenueBRL;
+    const totalShopifyRevenueBRL = dailyRevenueData.totalShopifyRevenueBRL; // Actually in original currency
+    const deliveredRevenueBRL = dailyRevenueData.deliveredRevenueBRL; // Actually in original currency
+    const paidRevenueBRL = dailyRevenueData.paidRevenueBRL; // Actually in original currency
     
-    console.log(`💰 Conversões HISTÓRICAS otimizadas - Receita Shopify: €${totalShopifyRevenue} = R$${totalShopifyRevenueBRL.toFixed(2)}`);
-    console.log(`💰 Receita PAGA histórica: €${paidRevenue} = R$${paidRevenueBRL.toFixed(2)} (${totalPaidOrders} pedidos pagos)`);
+    console.log(`💰 NO CONVERSION - Receita Shopify: ${totalShopifyRevenue.toFixed(2)} ${operationCurrency}`);
+    console.log(`💰 Receita PAGA: ${paidRevenue.toFixed(2)} ${operationCurrency} (${totalPaidOrders} pedidos pagos)`);
     
-    // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
-    const marketingCostsBRL = marketingCosts.totalBRL;
-    const marketingCostsEUR = marketingCosts.totalEUR;
-    // Custos retornados: 2 euros por pedido retornado
-    const returnCostsEUR = returnedOrders * 2;
-    const returnCostsBRL = currencyService.convertToBRLSync(returnCostsEUR, 'EUR', exchangeRates);
+    // Calculate profit in original currency (NO conversion)
+    const marketingCostsBRL = marketingCosts.totalBRL; // Actually in original currency
+    const marketingCostsEUR = marketingCosts.totalEUR; // Actually in original currency
+    // Return costs: 2 per returned order (in original currency)
+    const returnCosts = returnedOrders * 2;
+    const returnCostsBRL = returnCosts; // Keep variable name for compatibility
     
-    // Calculate profit in BOTH currencies
-    const totalProfitEUR = deliveredRevenue - totalCombinedCosts - marketingCostsEUR - returnCostsEUR;
-    const totalProfitBRL = deliveredRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL - returnCostsBRL;
-    const profitMargin = deliveredRevenueBRL > 0 ? (totalProfitBRL / deliveredRevenueBRL) * 100 : 0;
+    // Calculate profit in original currency
+    const totalProfit = deliveredRevenue - totalCombinedCosts - marketingCostsEUR - returnCosts;
+    const totalProfitBRL = totalProfit; // Keep variable name for compatibility
+    const profitMargin = deliveredRevenue > 0 ? (totalProfit / deliveredRevenue) * 100 : 0;
     
-    console.log(`💰 LUCRO DEBUG - EUR: €${totalProfitEUR.toFixed(2)}, BRL: R$${totalProfitBRL.toFixed(2)}`);
-    console.log(`💰 Cálculo: €${deliveredRevenue} - €${totalCombinedCosts} - €${marketingCostsEUR} - €${returnCostsEUR} = €${totalProfitEUR.toFixed(2)}`);
+    console.log(`💰 LUCRO (original currency): ${totalProfit.toFixed(2)} ${operationCurrency}`);
+    console.log(`💰 Cálculo: ${deliveredRevenue} - ${totalCombinedCosts} - ${marketingCostsEUR} - ${returnCosts} = ${totalProfit.toFixed(2)}`);
     
     // Calculate ROI (return on investment) using delivered revenue
-    const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL + returnCostsBRL;
-    const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
+    const totalCosts = totalCombinedCosts + marketingCostsEUR + returnCosts;
+    const roi = totalCosts > 0 ? ((deliveredRevenue - totalCosts) / totalCosts) * 100 : 0;
     
     console.log(`🎯 CARRIER API CONFIRMATION (campo original da API):`);
     console.log(`   📊 Total Pedidos com carrier_imported=true: ${totalCarrierLeads}`);
@@ -647,9 +625,9 @@ export class DashboardService {
       marketingCostsBRL: marketingCosts.totalBRL, // Explicit BRL value
       marketingCostsEUR: marketingCosts.totalEUR, // EUR value for display
       deliveryRate,
-      totalProfit: totalProfitEUR, // EUR value for storage and cache
-      totalProfitEUR, // EUR value for display
-      totalProfitBRL, // BRL value for display
+      totalProfit, // Original currency value for storage and cache
+      totalProfitEUR: totalProfit, // Keep variable name for compatibility
+      totalProfitBRL, // Keep variable name for compatibility
       profitMargin,
       roi,
       averageOrderValue,
@@ -928,17 +906,11 @@ export class DashboardService {
     
     console.log(`💰 Cálculo final - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos: ${processedOrders}`);
     
-    // OTIMIZAÇÃO: Use taxas pré-carregadas para conversões rápidas
-    const totalProductCostsBRL = preloadedRates 
-      ? currencyService.convertToBRLSync(totalProductCosts, 'EUR', preloadedRates)
-      : await currencyService.convertToBRL(totalProductCosts, 'EUR');
-    const totalShippingCostsBRL = preloadedRates 
-      ? currencyService.convertToBRLSync(totalShippingCosts, 'EUR', preloadedRates) 
-      : await currencyService.convertToBRL(totalShippingCosts, 'EUR');
+    // NO CONVERSION - Use original currency values
+    const totalProductCostsBRL = totalProductCosts; // Keep variable name for compatibility
+    const totalShippingCostsBRL = totalShippingCosts; // Keep variable name for compatibility
     
-    if (preloadedRates) {
-      console.log(`💰 Conversões otimizadas - Produtos: €${totalProductCosts} = R$${totalProductCostsBRL.toFixed(2)}, Envio: €${totalShippingCosts} = R$${totalShippingCostsBRL.toFixed(2)}`);
-    }
+    console.log(`💰 NO CONVERSION - Produtos: ${totalProductCosts.toFixed(2)}, Envio: ${totalShippingCosts.toFixed(2)} (original currency)`);
     
     // Calculate total costs (product + shipping)
     const totalCombinedCosts = totalProductCosts + totalShippingCosts;
