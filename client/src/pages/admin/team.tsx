@@ -209,8 +209,7 @@ export default function TeamPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 bg-white/5 rounded-lg border border-dashed border-white/10">
-                      <Users className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                    <div className="text-center py-12">
                       <p className="text-gray-500 text-sm">
                         Nenhum membro nesta área ainda
                       </p>
