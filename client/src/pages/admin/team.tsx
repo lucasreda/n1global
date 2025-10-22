@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { AdminLayout } from "@/components/admin/admin-layout";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
@@ -99,8 +98,7 @@ export default function TeamPage() {
   };
 
   return (
-    <AdminLayout>
-      <div className="p-8 space-y-8">
+    <div className="p-8 space-y-8">
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="p-3 bg-white/5 rounded-lg border border-white/10">
@@ -196,6 +194,5 @@ export default function TeamPage() {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 }
