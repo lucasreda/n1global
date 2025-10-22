@@ -133,8 +133,8 @@ export default function AdminDashboard() {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-white">{store.storeName}</p>
-                        <p className="text-xs text-gray-400">{store.name}</p>
+                        <p className="font-medium text-sm text-white">{store.name}</p>
+                        <p className="text-xs text-gray-400">{store.storeName}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -175,8 +175,8 @@ export default function AdminDashboard() {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-white">{store.storeName}</p>
-                        <p className="text-xs text-gray-400">{store.name}</p>
+                        <p className="font-medium text-sm text-white">{store.name}</p>
+                        <p className="text-xs text-gray-400">{store.storeName}</p>
                       </div>
                     </div>
                     <div className="text-right">
