@@ -1952,7 +1952,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🔄 Iniciando sync completo para operação: ${currentOperation.name} (${currentOperation.id})`);
 
-      // Buscar credenciais do fulfillment integration desta operação (somente ativas)
+      // Verificar se tem Shopify configurado (obrigatório)
+      const shopifyIntegration = await storage.getShopifyIntegrationsByOperation(currentOperation.id);
+      if (shopifyIntegration.length === 0) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Configure uma loja Shopify primeiro antes de sincronizar." 
+        });
+      }
+
+      // Buscar credenciais do fulfillment integration desta operação (somente ativas) - OPCIONAL
       const fulfillmentIntegrationsList = await db
         .select()
         .from(fulfillmentIntegrations)
@@ -1963,27 +1972,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
       
-      if (fulfillmentIntegrationsList.length === 0) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Nenhum armazém ATIVO configurado para esta operação. Configure um armazém primeiro." 
-        });
-      }
-
-      // Usar a primeira integração de fulfillment ativa encontrada
-      const integration = fulfillmentIntegrationsList[0];
-      const credentials = integration.credentials as any;
-      console.log(`📦 Warehouse selecionado: ${integration.provider} | OperationId: ${currentOperation.id} | IntegrationId: ${integration.id}`);
-
-      // Criar fulfillment service com credenciais da integração usando a Factory
-      const { FulfillmentProviderFactory } = await import("./fulfillment-providers/fulfillment-factory");
-      const fulfillmentService = await FulfillmentProviderFactory.createProvider(integration.provider as any, credentials);
-
       // Usar o singleton compartilhado do smart sync service
       const { smartSyncService } = await import("./smart-sync-service");
       
-      // Configurar o fulfillment service autenticado no singleton
-      smartSyncService.setFulfillmentService(fulfillmentService);
+      // Se tem warehouse configurado, criar fulfillment service
+      if (fulfillmentIntegrationsList.length > 0) {
+        const integration = fulfillmentIntegrationsList[0];
+        const credentials = integration.credentials as any;
+        console.log(`📦 Warehouse selecionado: ${integration.provider} | OperationId: ${currentOperation.id} | IntegrationId: ${integration.id}`);
+
+        // Criar fulfillment service com credenciais da integração usando a Factory
+        const { FulfillmentProviderFactory } = await import("./fulfillment-providers/fulfillment-factory");
+        const fulfillmentService = await FulfillmentProviderFactory.createProvider(integration.provider as any, credentials);
+        
+        // Configurar o fulfillment service autenticado no singleton
+        smartSyncService.setFulfillmentService(fulfillmentService);
+      } else {
+        console.log(`📦 Nenhum warehouse configurado - sync apenas Shopify | OperationId: ${currentOperation.id}`);
+        // Limpar fulfillment service para fazer apenas sync Shopify
+        smartSyncService.setFulfillmentService(null);
+      }
       
       // Iniciar sincronização completa progressiva de forma assíncrona
       smartSyncService.performCompleteSyncProgressive({ 

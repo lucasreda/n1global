@@ -36,8 +36,8 @@ export class SmartSyncService {
   /**
    * Configura o fulfillment service com autenticação
    */
-  setFulfillmentService(fulfillmentService: BaseFulfillmentProvider) {
-    this.fulfillmentService = fulfillmentService;
+  setFulfillmentService(fulfillmentService: BaseFulfillmentProvider | null) {
+    this.fulfillmentService = fulfillmentService as any;
   }
 
   /**
@@ -1317,10 +1317,14 @@ export class SmartSyncService {
           // Continuar mesmo com erro do Shopify - pode não ter integração configurada
         }
 
-        // 🚀 ETAPA 2: Sincronizar com transportadora
-        console.log('🚚 Etapa 2/2: Sincronizando com transportadora...');
-        this.completeSyncStatus.message = "Sincronizando com transportadora...";
-        await this.executeCompleteSyncWithProgress(apiCountry, operationId, storeId);
+        // 🚀 ETAPA 2: Sincronizar com transportadora (se configurado)
+        if (this.fulfillmentService) {
+          console.log('🚚 Etapa 2/2: Sincronizando com transportadora...');
+          this.completeSyncStatus.message = "Sincronizando com transportadora...";
+          await this.executeCompleteSyncWithProgress(apiCountry, operationId, storeId);
+        } else {
+          console.log('⏭️  Pulando etapa 2 - nenhum warehouse configurado (operação usa FHB ou apenas Shopify)');
+        }
         
         // Sucesso - marcar como concluído
         this.completeSyncStatus.phase = 'completed';
