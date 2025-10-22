@@ -163,6 +163,9 @@ async function processUnprocessedOrders() {
               .set({
                 status: mapFHBStatus(fhbOrder.status),
                 trackingNumber: fhbOrder.tracking,
+                carrierImported: true,
+                carrierOrderId: fhbOrder.fhbOrderId,
+                provider: 'fhb',
                 syncedFromFhb: true,
                 lastSyncAt: new Date(),
                 needsSync: false,
