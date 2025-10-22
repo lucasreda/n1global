@@ -109,17 +109,30 @@ export default function TeamPage() {
   };
 
   return (
-    <div className="p-8 space-y-8">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-white/5 rounded-lg border border-white/10">
-            <Users className="h-6 w-6 text-white" />
+    <div className="p-8 space-y-10">
+        {/* Hero Header */}
+        <div className="text-center space-y-4 pb-8 border-b border-white/10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 mb-2">
+            <Users className="h-8 w-8 text-purple-400" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Nossa Equipe</h1>
-            <p className="text-gray-400 text-sm">
-              Conheça os profissionais que fazem a diferença
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-white">Nossa Equipe</h1>
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+              Juntos construímos mais do que produtos — criamos experiências que transformam vidas
             </p>
+            {!isLoading && internalUsers.length > 0 && (
+              <div className="flex items-center justify-center gap-6 pt-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-white">{internalUsers.length}</div>
+                  <div className="text-sm text-gray-400">Membros</div>
+                </div>
+                <div className="h-12 w-px bg-white/10"></div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-white">{departments.length}</div>
+                  <div className="text-sm text-gray-400">Áreas</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -129,52 +142,65 @@ export default function TeamPage() {
             <p className="text-gray-400 mt-4">Carregando equipe...</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-12">
             {departments.map(department => {
               const departmentUsers = getUsersByDepartment(department.roles);
               const Icon = department.icon;
 
               return (
-                <div key={department.id} className="space-y-4">
+                <div key={department.id} className="space-y-6">
                   {/* Department Header */}
-                  <div className="flex items-center gap-3 pb-2 border-b border-white/10">
-                    <Icon className="h-5 w-5 text-white" />
-                    <h2 className="text-lg font-semibold text-white">
-                      {department.name}
-                    </h2>
-                    <span className="text-sm text-gray-500">
-                      ({departmentUsers.length})
-                    </span>
+                  <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                    <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                      <Icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-xl font-semibold text-white">
+                        {department.name}
+                      </h2>
+                    </div>
+                    <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                      <span className="text-sm text-gray-400">
+                        {departmentUsers.length} {departmentUsers.length === 1 ? 'membro' : 'membros'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Team Members Grid */}
                   {departmentUsers.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {departmentUsers.map(user => (
                         <Card 
                           key={user.id}
-                          className="bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:border-white/20"
+                          className="group bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-500 hover:scale-[1.02] hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/10"
                           data-testid={`card-team-member-${user.id}`}
                         >
-                          <div className="p-6 text-center space-y-4">
+                          <div className="p-6 text-center space-y-5">
                             {/* Avatar */}
                             <div className="flex justify-center">
-                              <Avatar className="h-20 w-20 border-2 border-white/20">
-                                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white text-xl font-bold">
-                                  {user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
+                              <div className="relative">
+                                <Avatar className="h-24 w-24 border-2 border-white/20 group-hover:border-purple-400/50 transition-all duration-500">
+                                  <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white text-2xl font-bold group-hover:from-purple-400 group-hover:to-blue-400 transition-all duration-500">
+                                    {user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500/20 border-2 border-green-500/50 rounded-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                </div>
+                              </div>
                             </div>
 
                             {/* Info */}
-                            <div className="space-y-1">
-                              <h3 className="text-white font-semibold text-lg" data-testid={`text-member-name-${user.id}`}>
+                            <div className="space-y-2">
+                              <h3 className="text-white font-semibold text-lg leading-tight" data-testid={`text-member-name-${user.id}`}>
                                 {user.name}
                               </h3>
-                              <p className="text-gray-400 text-sm" data-testid={`text-member-role-${user.id}`}>
-                                {roleLabels[user.role] || user.role}
-                              </p>
-                              <p className="text-gray-500 text-xs" data-testid={`text-member-email-${user.id}`}>
+                              <div className="inline-block px-3 py-1 bg-purple-500/10 border border-purple-500/30 rounded-full">
+                                <p className="text-purple-300 text-xs font-medium" data-testid={`text-member-role-${user.id}`}>
+                                  {roleLabels[user.role] || user.role}
+                                </p>
+                              </div>
+                              <p className="text-gray-400 text-xs" data-testid={`text-member-email-${user.id}`}>
                                 {user.email}
                               </p>
                             </div>
@@ -183,22 +209,16 @@ export default function TeamPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500 text-sm">
-                      Nenhum membro nesta área ainda
+                    <div className="text-center py-12 bg-white/5 rounded-lg border border-dashed border-white/10">
+                      <Users className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                      <p className="text-gray-500 text-sm">
+                        Nenhum membro nesta área ainda
+                      </p>
                     </div>
                   )}
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {/* Summary */}
-        {!isLoading && internalUsers.length > 0 && (
-          <div className="text-center pt-4 border-t border-white/10">
-            <p className="text-gray-400 text-sm">
-              Total de <span className="text-white font-semibold">{internalUsers.length}</span> {internalUsers.length === 1 ? 'membro' : 'membros'} na equipe
-            </p>
           </div>
         )}
       </div>
