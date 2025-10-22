@@ -632,7 +632,20 @@ export const updateOperationSettingsSchema = z.object({
   operationType: operationTypeSchema.optional(),
   timezone: z.string().optional(),
   currency: z.string().optional(),
-  shopifyOrderPrefix: z.string().optional(),
+  shopifyOrderPrefix: z.string().optional().transform((val) => {
+    // If undefined (field not in request), return undefined to preserve existing value
+    if (val === undefined) return undefined;
+    
+    // If empty string, return empty string to clear the prefix
+    if (!val || val.trim() === '') return '';
+    
+    // Normalize: remove # if present, keep only first 3 chars, add # back
+    const normalized = val.trim();
+    const withoutHash = normalized.startsWith('#') ? normalized.substring(1) : normalized;
+    const prefix = withoutHash.substring(0, 3).toUpperCase();
+    
+    return prefix ? `#${prefix}` : '';
+  }),
 });
 
 // Facebook Ads integration schemas

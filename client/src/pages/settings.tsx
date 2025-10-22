@@ -118,8 +118,20 @@ export default function Settings() {
   };
 
   const handleShopifyPrefixChange = (value: string) => {
-    setShopifyPrefix(value);
-    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || value !== originalShopifyPrefix);
+    // Normalize prefix: always add # if not present, keep only first 3 chars after #
+    const normalized = value.trim();
+    let finalValue = '';
+    
+    if (normalized) {
+      // Remove # if present, then add it back
+      const withoutHash = normalized.startsWith('#') ? normalized.substring(1) : normalized;
+      // Keep only first 3 characters after #
+      const prefix = withoutHash.substring(0, 3).toUpperCase();
+      finalValue = prefix ? `#${prefix}` : '';
+    }
+    
+    setShopifyPrefix(finalValue);
+    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || finalValue !== originalShopifyPrefix);
   };
 
   const handleSave = async () => {
@@ -268,12 +280,13 @@ export default function Settings() {
                 type="text"
                 value={shopifyPrefix}
                 onChange={(e) => handleShopifyPrefixChange(e.target.value)}
-                placeholder="Ex: P32, #52, A72"
+                placeholder="Ex: 52, BG, CR (# será adicionado automaticamente)"
+                maxLength={4}
                 className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 hover:bg-black/30"
                 data-testid="input-shopify-prefix"
               />
               <p className="text-gray-400 text-xs mt-2">
-                Prefixo dos pedidos FHB para sincronização automática de status (deixe vazio se não usar FHB)
+                Digite os 3 caracteres do prefixo (# é adicionado automaticamente). Ex: 52 vira #52, BG vira #BG
               </p>
             </div>
             
