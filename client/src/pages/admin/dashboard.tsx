@@ -115,7 +115,7 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-white">
               <Trophy className="h-5 w-5 text-yellow-400" />
-              Top Lojas Hoje
+              Top Operações Hoje
             </CardTitle>
           </CardHeader>
           <CardContent>
