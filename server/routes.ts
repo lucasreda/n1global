@@ -1169,8 +1169,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔄 PATCH /api/operations/${operationId}/settings - User: ${req.user?.email}, Body:`, req.body);
       
       // Validate request body
-      const { operationType, timezone, currency } = updateOperationSettingsSchema.parse(req.body);
-      console.log('✅ Validation passed, operationType:', operationType, 'timezone:', timezone, 'currency:', currency);
+      const { operationType, timezone, currency, shopifyOrderPrefix } = updateOperationSettingsSchema.parse(req.body);
+      console.log('✅ Validation passed, operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'shopifyOrderPrefix:', shopifyOrderPrefix);
       
       // Verify user has access to this operation
       const userOperations = await storage.getUserOperations(req.user.id);
@@ -1185,6 +1185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (operationType !== undefined) updates.operationType = operationType;
       if (timezone !== undefined) updates.timezone = timezone;
       if (currency !== undefined) updates.currency = currency;
+      if (shopifyOrderPrefix !== undefined) updates.shopifyOrderPrefix = shopifyOrderPrefix;
 
       // Update operation settings
       const updatedOperation = await storage.updateOperation(operationId, updates);

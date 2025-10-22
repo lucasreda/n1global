@@ -1,7 +1,8 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Briefcase, PlayCircle, Clock } from "lucide-react";
+import { Briefcase, PlayCircle, Clock, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -53,6 +54,8 @@ export default function Settings() {
   const [originalTimezone, setOriginalTimezone] = useState<string>("Europe/Madrid");
   const [currency, setCurrency] = useState<string>("EUR");
   const [originalCurrency, setOriginalCurrency] = useState<string>("EUR");
+  const [shopifyPrefix, setShopifyPrefix] = useState<string>("");
+  const [originalShopifyPrefix, setOriginalShopifyPrefix] = useState<string>("");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -69,13 +72,13 @@ export default function Settings() {
     navigate('/');
   };
 
-  // Fetch full operations data to get operationType, timezone, and currency
-  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string; timezone?: string; currency?: string }>>({
+  // Fetch full operations data to get operationType, timezone, currency, and shopifyOrderPrefix
+  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string; timezone?: string; currency?: string; shopifyOrderPrefix?: string }>>({
     queryKey: ['/api/operations'],
     enabled: !!selectedOperation,
   });
 
-  // Set initial operationType, timezone, and currency from current operation
+  // Set initial operationType, timezone, currency, and shopifyPrefix from current operation
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
@@ -91,27 +94,36 @@ export default function Settings() {
         setCurrency(operation.currency);
         setOriginalCurrency(operation.currency);
       }
+      if (operation?.shopifyOrderPrefix !== undefined) {
+        setShopifyPrefix(operation.shopifyOrderPrefix || "");
+        setOriginalShopifyPrefix(operation.shopifyOrderPrefix || "");
+      }
       setHasChanges(false);
     }
   }, [operations, selectedOperation]);
 
   const handleOperationTypeChange = (value: string) => {
     setOperationType(value);
-    setHasChanges(value !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency);
+    setHasChanges(value !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || shopifyPrefix !== originalShopifyPrefix);
   };
 
   const handleTimezoneChange = (value: string) => {
     setTimezone(value);
-    setHasChanges(operationType !== originalOperationType || value !== originalTimezone || currency !== originalCurrency);
+    setHasChanges(operationType !== originalOperationType || value !== originalTimezone || currency !== originalCurrency || shopifyPrefix !== originalShopifyPrefix);
   };
 
   const handleCurrencyChange = (value: string) => {
     setCurrency(value);
-    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || value !== originalCurrency);
+    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || value !== originalCurrency || shopifyPrefix !== originalShopifyPrefix);
+  };
+
+  const handleShopifyPrefixChange = (value: string) => {
+    setShopifyPrefix(value);
+    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || value !== originalShopifyPrefix);
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency);
+    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'shopifyPrefix:', shopifyPrefix);
     
     if (!selectedOperation) {
       toast({
@@ -124,15 +136,16 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency });
+      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency, shopifyOrderPrefix: shopifyPrefix });
       
-      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency });
+      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, shopifyOrderPrefix: shopifyPrefix });
       
       console.log('✅ API response received:', response);
 
       setOriginalOperationType(operationType);
       setOriginalTimezone(timezone);
       setOriginalCurrency(currency);
+      setOriginalShopifyPrefix(shopifyPrefix);
       setHasChanges(false);
       
       // Invalidate cache to refresh operations data across the app
@@ -243,6 +256,24 @@ export default function Settings() {
               </Select>
               <p className="text-gray-400 text-xs mt-2">
                 Moeda em que os valores serão exibidos no dashboard
+              </p>
+            </div>
+
+            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+              <label className="text-gray-300 text-sm mb-3 block flex items-center">
+                <Hash className="mr-2" size={16} />
+                Prefixo Shopify (FHB Sync)
+              </label>
+              <Input
+                type="text"
+                value={shopifyPrefix}
+                onChange={(e) => handleShopifyPrefixChange(e.target.value)}
+                placeholder="Ex: P32, #52, A72"
+                className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 hover:bg-black/30"
+                data-testid="input-shopify-prefix"
+              />
+              <p className="text-gray-400 text-xs mt-2">
+                Prefixo dos pedidos FHB para sincronização automática de status (deixe vazio se não usar FHB)
               </p>
             </div>
             
