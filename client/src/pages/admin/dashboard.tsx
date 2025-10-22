@@ -195,52 +195,48 @@ export default function AdminDashboard() {
 
       {/* Orders by Country */}
       {adminStats?.ordersByCountry && adminStats.ordersByCountry.length > 0 && (
-        <Card className="backdrop-blur-sm text-white" style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-          <CardHeader>
-            <CardTitle className="text-lg text-white">Pedidos por País</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {adminStats.ordersByCountry.map((country) => {
-                const getCountryFlag = (countryName: string) => {
-                  const flags: { [key: string]: string } = {
-                    'Brazil': '🇧🇷',
-                    'Portugal': '🇵🇹',
-                    'Spain': '🇪🇸',
-                    'France': '🇫🇷',
-                    'Germany': '🇩🇪',
-                    'Italy': '🇮🇹',
-                    'United Kingdom': '🇬🇧',
-                    'Netherlands': '🇳🇱',
-                    'Belgium': '🇧🇪',
-                    'Austria': '🇦🇹',
-                    'Switzerland': '🇨🇭',
-                    'United States': '🇺🇸',
-                    'Canada': '🇨🇦',
-                    'Mexico': '🇲🇽',
-                    'Argentina': '🇦🇷',
-                    'Chile': '🇨🇱',
-                    'Colombia': '🇨🇴',
-                    'Peru': '🇵🇪',
-                    'Uruguay': '🇺🇾',
-                    'Ecuador': '🇪🇨'
-                  };
-                  return flags[countryName] || '🌍';
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Pedidos por País</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {adminStats.ordersByCountry.map((country) => {
+              const getCountryFlag = (countryName: string) => {
+                const flags: { [key: string]: string } = {
+                  'Brazil': '🇧🇷',
+                  'Portugal': '🇵🇹',
+                  'Spain': '🇪🇸',
+                  'France': '🇫🇷',
+                  'Germany': '🇩🇪',
+                  'Italy': '🇮🇹',
+                  'United Kingdom': '🇬🇧',
+                  'Netherlands': '🇳🇱',
+                  'Belgium': '🇧🇪',
+                  'Austria': '🇦🇹',
+                  'Switzerland': '🇨🇭',
+                  'United States': '🇺🇸',
+                  'Canada': '🇨🇦',
+                  'Mexico': '🇲🇽',
+                  'Argentina': '🇦🇷',
+                  'Chile': '🇨🇱',
+                  'Colombia': '🇨🇴',
+                  'Peru': '🇵🇪',
+                  'Uruguay': '🇺🇾',
+                  'Ecuador': '🇪🇨'
                 };
-                
-                return (
-                  <div key={country.country} className="text-center p-3 bg-black/30 backdrop-blur-sm border border-gray-700/50 rounded-lg">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <span className="text-xl">{getCountryFlag(country.country)}</span>
-                      <p className="text-lg font-bold text-white">{country.orders}</p>
-                    </div>
-                    <p className="text-sm text-gray-400">{country.country}</p>
+                return flags[countryName] || '🌍';
+              };
+              
+              return (
+                <div key={country.country} className="text-center p-3 bg-black/30 backdrop-blur-sm border border-gray-700/50 rounded-lg">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <span className="text-xl">{getCountryFlag(country.country)}</span>
+                    <p className="text-lg font-bold text-white">{country.orders}</p>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  <p className="text-sm text-gray-400">{country.country}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
