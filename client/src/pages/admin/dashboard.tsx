@@ -79,29 +79,22 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Banner */}
+      {/* Welcome Message */}
       {showWelcome && (
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white shadow-lg">
+        <div className="flex items-center justify-between pb-2 border-b border-gray-800">
+          <div>
+            <h1 className="text-2xl font-light text-white">
+              {getGreeting()}, <span className="font-normal">{user?.name}</span>
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">Painel Administrativo</p>
+          </div>
           <button
             onClick={handleDismissWelcome}
-            className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+            className="text-gray-500 hover:text-gray-300 transition-colors"
             data-testid="button-dismiss-welcome"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold mb-1">
-                {getGreeting()}, {user?.name}!
-              </h2>
-              <p className="text-white/90">
-                Bem-vindo de volta ao painel administrativo. Aqui está um resumo das suas operações.
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
