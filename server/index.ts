@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import cors from "cors";
+import { execSync } from "child_process";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
@@ -70,6 +71,18 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Push database schema in production
+  if (process.env.NODE_ENV === "production") {
+    try {
+      console.log('📦 Pushing database schema changes...');
+      execSync('npm run db:push -- --force', { stdio: 'inherit' });
+      console.log('✅ Database schema updated successfully');
+    } catch (error) {
+      console.error('❌ Failed to push database schema:', error);
+      // Continue anyway - schema might already be up to date
+    }
+  }
+  
   // Seed database with initial data
   await seedDatabase();
   
