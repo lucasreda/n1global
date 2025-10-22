@@ -32,8 +32,18 @@ const CURRENCIES = [
   { value: "BRL", label: "Real Brasileiro (R$)", symbol: "R$" },
   { value: "USD", label: "Dólar Americano ($)", symbol: "$" },
   { value: "GBP", label: "Libra Esterlina (£)", symbol: "£" },
+  { value: "CHF", label: "Franco Suíço (CHF)", symbol: "CHF" },
   { value: "PLN", label: "Zloty Polonês (zł)", symbol: "zł" },
   { value: "CZK", label: "Coroa Tcheca (Kč)", symbol: "Kč" },
+  { value: "SEK", label: "Coroa Sueca (kr)", symbol: "kr" },
+  { value: "NOK", label: "Coroa Norueguesa (kr)", symbol: "kr" },
+  { value: "DKK", label: "Coroa Dinamarquesa (kr)", symbol: "kr" },
+  { value: "RON", label: "Leu Romeno (lei)", symbol: "lei" },
+  { value: "HUF", label: "Forint Húngaro (Ft)", symbol: "Ft" },
+  { value: "BGN", label: "Lev Búlgaro (лв)", symbol: "лв" },
+  { value: "TRY", label: "Lira Turca (₺)", symbol: "₺" },
+  { value: "SAR", label: "Riyal Saudita (﷼)", symbol: "﷼" },
+  { value: "AED", label: "Dirham dos Emirados (د.إ)", symbol: "د.إ" },
 ];
 
 export default function Settings() {
