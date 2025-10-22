@@ -30,7 +30,7 @@ export class AdminService {
         })
         .from(operations)
         .leftJoin(stores, eq(stores.id, operations.storeId))
-        .leftJoin(orders, eq(orders.storeId, operations.storeId))
+        .leftJoin(orders, eq(orders.operationId, operations.id))
         .groupBy(operations.id, operations.name, stores.name)
         .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
@@ -62,7 +62,7 @@ export class AdminService {
         .from(operations)
         .leftJoin(stores, eq(stores.id, operations.storeId))
         .leftJoin(orders, and(
-          eq(orders.storeId, operations.storeId),
+          eq(orders.operationId, operations.id),
           eq(orders.dataSource, 'shopify'),
           sql`DATE(${orders.orderDate}) = ${today}`
         ))

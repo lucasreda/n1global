@@ -152,12 +152,12 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Top Stores Global */}
+        {/* Top Operations Global */}
         <Card className="backdrop-blur-sm text-white" style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-white">
               <TrendingUp className="h-5 w-5 text-green-400" />
-              Top Lojas Global
+              Top Operações Global
             </CardTitle>
           </CardHeader>
           <CardContent>
