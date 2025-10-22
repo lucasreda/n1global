@@ -67,6 +67,12 @@ const menuItems: MenuItem[] = [
     path: '/inside/users' 
   },
   { 
+    id: 'team', 
+    label: 'Equipe', 
+    icon: UserCog, 
+    path: '/inside/team' 
+  },
+  { 
     id: 'products', 
     label: 'Produtos', 
     icon: Package, 

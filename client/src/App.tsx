@@ -36,6 +36,7 @@ import AdminProducts from "@/pages/admin/products";
 import AdminStores from "@/pages/admin/stores";
 import AdminGlobal from "@/pages/admin/global";
 import AdminSettings from "@/pages/admin/settings";
+import TeamPage from "@/pages/admin/team";
 import AdminSupport from "@/pages/admin/support";
 import AdminRefundRequests from "@/pages/admin/refund-requests";
 import CustomerSupport from "@/pages/customer-support";
@@ -252,6 +253,7 @@ function Router() {
         {/* Admin Routes with Layout */}
         <Route path="/inside/orders" component={isSuperAdmin ? () => <AdminLayout><AdminOrders /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/users" component={isSuperAdmin ? () => <AdminLayout><AdminUsers /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/team" component={isSuperAdmin ? () => <AdminLayout><TeamPage /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/products" component={isSuperAdmin ? () => <AdminLayout><AdminProducts /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/stores" component={isSuperAdmin ? () => <AdminLayout><AdminStores /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/global" component={isSuperAdmin ? () => <AdminLayout><AdminGlobal /></AdminLayout> : () => <NotFound />} />
