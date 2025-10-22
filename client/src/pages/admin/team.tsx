@@ -138,16 +138,13 @@ export default function TeamPage() {
                 <div key={department.id} className="space-y-4">
                   {/* Department Header */}
                   <div className="flex items-center gap-3 pb-2 border-b border-white/10">
-                    <span className="text-2xl">{department.emoji}</span>
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-5 w-5 text-white" />
-                      <h2 className="text-lg font-semibold text-white">
-                        {department.name}
-                      </h2>
-                      <span className="text-sm text-gray-500">
-                        ({departmentUsers.length})
-                      </span>
-                    </div>
+                    <Icon className="h-5 w-5 text-white" />
+                    <h2 className="text-lg font-semibold text-white">
+                      {department.name}
+                    </h2>
+                    <span className="text-sm text-gray-500">
+                      ({departmentUsers.length})
+                    </span>
                   </div>
 
                   {/* Team Members Grid */}
