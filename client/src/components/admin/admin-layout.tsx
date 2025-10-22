@@ -92,12 +92,6 @@ const menuItems: MenuItem[] = [
     ]
   },
   { 
-    id: 'global', 
-    label: 'Global', 
-    icon: Globe, 
-    path: '/inside/global' 
-  },
-  { 
     id: 'support', 
     label: 'Suporte', 
     icon: MessageSquare,
