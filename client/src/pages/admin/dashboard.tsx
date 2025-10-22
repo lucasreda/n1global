@@ -46,6 +46,9 @@ export default function AdminDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
+    // TEMPORÁRIO: Limpar para testar
+    localStorage.removeItem('admin_welcome_shown');
+    
     const today = new Date().toDateString();
     const lastWelcomeDate = localStorage.getItem('admin_welcome_shown');
     
