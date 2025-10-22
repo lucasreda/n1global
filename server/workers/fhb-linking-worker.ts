@@ -10,15 +10,18 @@ let isLinkingRunning = false;
 
 /**
  * Map FHB status to orders table status
+ * Note: In COD operations, "rejected" means delivery attempted but customer refused
  */
 function mapFHBStatus(fhbStatus: string): string {
   const statusMap: Record<string, string> = {
     'pending': 'pending',
     'processing': 'confirmed',
     'shipped': 'shipped',
+    'sent': 'shipped',
     'delivered': 'delivered',
     'canceled': 'cancelled',
-    'cancelled': 'cancelled'
+    'cancelled': 'cancelled',
+    'rejected': 'delivered' // COD: delivered but customer rejected/didn't pay
   };
   
   return statusMap[fhbStatus.toLowerCase()] || 'pending';
