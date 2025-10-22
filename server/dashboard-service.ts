@@ -64,16 +64,16 @@ export class DashboardService {
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
-      // OTIMIZAÇÃO: Uma única chamada para taxas + conversões síncronas
-      const exchangeRates = await currencyService.getExchangeRates();
-      console.log('🚀 Cache hit - reutilizando taxas para conversões de cache');
+      // NO CONVERSION - Use cached values in original currency
+      const exchangeRates = await currencyService.getExchangeRates(); // Keep for compatibility
+      console.log('🚀 Cache hit - using cached values in original currency (NO conversion)');
       
-      const totalRevenueBRL = currencyService.convertToBRLSync(Number(cached.totalRevenue || 0), 'EUR', exchangeRates);
-      const deliveredRevenueBRL = currencyService.convertToBRLSync(Number(cached.deliveredRevenue || 0), 'EUR', exchangeRates);
-      const paidRevenueBRL = currencyService.convertToBRLSync(Number(cached.paidRevenue || 0), 'EUR', exchangeRates);
-      const totalProfitBRL = currencyService.convertToBRLSync(Number(cached.totalProfit || 0), 'EUR', exchangeRates);
+      const totalRevenueBRL = Number(cached.totalRevenue || 0); // Keep variable name for compatibility
+      const deliveredRevenueBRL = Number(cached.deliveredRevenue || 0);
+      const paidRevenueBRL = Number(cached.paidRevenue || 0);
+      const totalProfitBRL = Number(cached.totalProfit || 0);
       
-      console.log(`🚀 Using fully cached metrics for ${period} - no cost recalculation needed`);
+      console.log(`🚀 Using fully cached metrics for ${period} - no recalculation needed`);
       
       return {
         ...cached,
@@ -1147,36 +1147,17 @@ export class DashboardService {
       return [];
     }
     
-    // 🎯 APLICAR CONVERSÕES HISTÓRICAS PRECISAS ao revenue chart
-    const uniqueDates = revenueData.map(row => row.date).filter(Boolean);
-    const historicalRates = await currencyService.getHistoricalRates(uniqueDates);
-    const currentRates = await currencyService.getExchangeRates();
-    const today = new Date().toISOString().split('T')[0];
-    
-    console.log(`📈 Revenue Chart - Aplicando conversões históricas para ${uniqueDates.length} dias`);
+    // NO CONVERSION - Display revenue in original currency
+    console.log(`📈 Revenue Chart - NO CONVERSION (original currency for ${revenueData.length} days)`);
     
     return revenueData.map(row => {
-      const revenueEUR = Number(row.revenue || 0);
+      const revenue = Number(row.revenue || 0);
       
-      // Escolher taxa do dia específico
-      let dayRates;
-      if (row.date === today) {
-        dayRates = currentRates;
-      } else if (historicalRates[row.date]) {
-        dayRates = historicalRates[row.date];
-      } else {
-        dayRates = currentRates; // Fallback
-        console.warn(`⚠️ Revenue Chart - Taxa não encontrada para ${row.date}, usando atual`);
-      }
-      
-      // Converter com taxa específica do dia
-      const revenueBRL = currencyService.convertToBRLSync(revenueEUR, 'EUR', dayRates);
-      
-      console.log(`📊 Chart ${row.date}: €${revenueEUR} → R$${revenueBRL.toFixed(2)} (taxa: ${dayRates.EUR})`);
+      console.log(`📊 Chart ${row.date}: ${revenue.toFixed(2)} (original currency)`);
       
       return {
         date: row.date,
-        revenue: revenueBRL, // 🎯 Agora usando conversão histórica!
+        revenue, // Original currency value
         orders: Number(row.orderCount)
       };
     });
