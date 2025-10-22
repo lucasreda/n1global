@@ -1540,8 +1540,7 @@ export default function AdminOperations() {
                             operationIntegrations.fulfillments.map((warehouse) => {
                               const providerNames: Record<string, string> = {
                                 'european_fulfillment': 'European Fulfillment',
-                                'elogy': 'Elogy',
-                                'fhb': 'FHB'
+                                'elogy': 'Elogy'
                               };
                               
                               return (
@@ -1552,10 +1551,7 @@ export default function AdminOperations() {
                                         {providerNames[warehouse.provider] || warehouse.provider}
                                       </span>
                                       <span className="text-xs text-slate-400">
-                                        {warehouse.provider === 'fhb' 
-                                          ? `App ID: ${(warehouse.credentials as any)?.appId || 'N/A'}`
-                                          : `Usuário: ${(warehouse.credentials as any)?.username || 'N/A'}`
-                                        }
+                                        Usuário: {(warehouse.credentials as any)?.username || 'N/A'}
                                       </span>
                                     </div>
                                   </div>
@@ -1577,9 +1573,9 @@ export default function AdminOperations() {
                                         const credentials = warehouse.credentials as any;
                                         setFulfillmentData({
                                           provider: warehouse.provider,
-                                          username: warehouse.provider !== 'fhb' ? (credentials?.username || '') : '',
+                                          username: credentials?.username || '',
                                           password: '',
-                                          appId: warehouse.provider === 'fhb' ? (credentials?.appId || '') : '',
+                                          appId: '',
                                           secret: ''
                                         });
                                         setEditingWarehouseId(warehouse.id);
@@ -1968,60 +1964,31 @@ export default function AdminOperations() {
                 <SelectContent className="bg-gray-800 border-gray-600">
                   <SelectItem value="european_fulfillment" className="text-white hover:bg-gray-700">European Fulfillment</SelectItem>
                   <SelectItem value="elogy" className="text-white hover:bg-gray-700">Elogy</SelectItem>
-                  <SelectItem value="fhb" className="text-white hover:bg-gray-700">FHB</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            {fulfillmentData.provider === 'fhb' ? (
-              <>
-                <div>
-                  <Label htmlFor="fulfillment-appid" className="text-sm text-slate-400">App ID</Label>
-                  <Input
-                    id="fulfillment-appid"
-                    placeholder="App ID"
-                    value={fulfillmentData.appId}
-                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, appId: e.target.value })}
-                    className="bg-white/10 border-white/20 text-white"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fulfillment-secret" className="text-sm text-slate-400">Secret</Label>
-                  <Input
-                    id="fulfillment-secret"
-                    type="password"
-                    placeholder="Secret"
-                    value={fulfillmentData.secret}
-                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, secret: e.target.value })}
-                    className="bg-white/10 border-white/20 text-white"
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <Label htmlFor="fulfillment-username" className="text-sm text-slate-400">Usuário</Label>
-                  <Input
-                    id="fulfillment-username"
-                    placeholder="usuário"
-                    value={fulfillmentData.username}
-                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, username: e.target.value })}
-                    className="bg-white/10 border-white/20 text-white"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fulfillment-password" className="text-sm text-slate-400">Senha</Label>
-                  <Input
-                    id="fulfillment-password"
-                    type="password"
-                    placeholder="senha"
-                    value={fulfillmentData.password}
-                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, password: e.target.value })}
-                    className="bg-white/10 border-white/20 text-white"
-                  />
-                </div>
-              </>
-            )}
+            <div>
+              <Label htmlFor="fulfillment-username" className="text-sm text-slate-400">Usuário</Label>
+              <Input
+                id="fulfillment-username"
+                placeholder="usuário"
+                value={fulfillmentData.username}
+                onChange={(e) => setFulfillmentData({ ...fulfillmentData, username: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="fulfillment-password" className="text-sm text-slate-400">Senha</Label>
+              <Input
+                id="fulfillment-password"
+                type="password"
+                placeholder="senha"
+                value={fulfillmentData.password}
+                onChange={(e) => setFulfillmentData({ ...fulfillmentData, password: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowFulfillmentModal(false)} className="border-white/20 text-white hover:bg-white/10">
@@ -2031,10 +1998,8 @@ export default function AdminOperations() {
               onClick={() => saveFulfillmentIntegrationMutation.mutate(fulfillmentData)}
               disabled={
                 saveFulfillmentIntegrationMutation.isPending || 
-                (fulfillmentData.provider === 'fhb' 
-                  ? (!fulfillmentData.appId || !fulfillmentData.secret)
-                  : (!fulfillmentData.username || !fulfillmentData.password)
-                )
+                !fulfillmentData.username || 
+                !fulfillmentData.password
               }
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
