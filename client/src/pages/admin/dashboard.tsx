@@ -46,12 +46,11 @@ export default function AdminDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    const today = new Date().toDateString();
-    const lastWelcomeDate = localStorage.getItem('admin_welcome_shown');
+    const hasSeenWelcome = sessionStorage.getItem('admin_welcome_shown');
     
-    if (lastWelcomeDate !== today) {
+    if (!hasSeenWelcome) {
       setShowWelcome(true);
-      localStorage.setItem('admin_welcome_shown', today);
+      sessionStorage.setItem('admin_welcome_shown', 'true');
     }
   }, []);
 
