@@ -274,6 +274,7 @@ export class DatabaseStorage implements IStorage {
         currency: operations.currency, // CRITICAL: Include missing currency field
         timezone: operations.timezone, // Include timezone for dashboard calculations
         operationType: operations.operationType, // Include operationType field
+        shopifyOrderPrefix: operations.shopifyOrderPrefix, // Include FHB prefix for linking
         status: operations.status,
         createdAt: operations.createdAt,
         updatedAt: operations.updatedAt,

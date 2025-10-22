@@ -82,6 +82,7 @@ export default function Settings() {
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
+      console.log('📋 Settings - Current operation data:', operation);
       if (operation?.operationType) {
         setOperationType(operation.operationType);
         setOriginalOperationType(operation.operationType);
@@ -95,6 +96,7 @@ export default function Settings() {
         setOriginalCurrency(operation.currency);
       }
       if (operation?.shopifyOrderPrefix !== undefined) {
+        console.log('🏷️ Setting prefix from backend:', operation.shopifyOrderPrefix);
         setShopifyPrefix(operation.shopifyOrderPrefix || "");
         setOriginalShopifyPrefix(operation.shopifyOrderPrefix || "");
       }
