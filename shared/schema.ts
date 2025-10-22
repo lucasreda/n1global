@@ -631,6 +631,7 @@ export const updateOperationTypeSchema = z.object({
 export const updateOperationSettingsSchema = z.object({
   operationType: operationTypeSchema.optional(),
   timezone: z.string().optional(),
+  currency: z.string().optional(),
 });
 
 // Facebook Ads integration schemas

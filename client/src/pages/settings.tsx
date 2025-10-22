@@ -26,11 +26,23 @@ const TIMEZONES = [
   { value: "Europe/Athens", label: "Atenas (GMT+2)" },
 ];
 
+// Available currencies
+const CURRENCIES = [
+  { value: "EUR", label: "Euro (€)", symbol: "€" },
+  { value: "BRL", label: "Real Brasileiro (R$)", symbol: "R$" },
+  { value: "USD", label: "Dólar Americano ($)", symbol: "$" },
+  { value: "GBP", label: "Libra Esterlina (£)", symbol: "£" },
+  { value: "PLN", label: "Zloty Polonês (zł)", symbol: "zł" },
+  { value: "CZK", label: "Coroa Tcheca (Kč)", symbol: "Kč" },
+];
+
 export default function Settings() {
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
   const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
   const [timezone, setTimezone] = useState<string>("Europe/Madrid");
   const [originalTimezone, setOriginalTimezone] = useState<string>("Europe/Madrid");
+  const [currency, setCurrency] = useState<string>("EUR");
+  const [originalCurrency, setOriginalCurrency] = useState<string>("EUR");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -47,13 +59,13 @@ export default function Settings() {
     navigate('/');
   };
 
-  // Fetch full operations data to get operationType and timezone
-  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string; timezone?: string }>>({
+  // Fetch full operations data to get operationType, timezone, and currency
+  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string; timezone?: string; currency?: string }>>({
     queryKey: ['/api/operations'],
     enabled: !!selectedOperation,
   });
 
-  // Set initial operationType and timezone from current operation
+  // Set initial operationType, timezone, and currency from current operation
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
@@ -65,22 +77,31 @@ export default function Settings() {
         setTimezone(operation.timezone);
         setOriginalTimezone(operation.timezone);
       }
+      if (operation?.currency) {
+        setCurrency(operation.currency);
+        setOriginalCurrency(operation.currency);
+      }
       setHasChanges(false);
     }
   }, [operations, selectedOperation]);
 
   const handleOperationTypeChange = (value: string) => {
     setOperationType(value);
-    setHasChanges(value !== originalOperationType || timezone !== originalTimezone);
+    setHasChanges(value !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency);
   };
 
   const handleTimezoneChange = (value: string) => {
     setTimezone(value);
-    setHasChanges(operationType !== originalOperationType || value !== originalTimezone);
+    setHasChanges(operationType !== originalOperationType || value !== originalTimezone || currency !== originalCurrency);
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    setCurrency(value);
+    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || value !== originalCurrency);
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone);
+    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency);
     
     if (!selectedOperation) {
       toast({
@@ -93,14 +114,15 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone });
+      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency });
       
-      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone });
+      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency });
       
       console.log('✅ API response received:', response);
 
       setOriginalOperationType(operationType);
       setOriginalTimezone(timezone);
+      setOriginalCurrency(currency);
       setHasChanges(false);
       
       // Invalidate cache to refresh operations data across the app
@@ -189,6 +211,28 @@ export default function Settings() {
               </Select>
               <p className="text-gray-400 text-xs mt-2">
                 Este fuso horário será usado para calcular as métricas e relatórios do dashboard
+              </p>
+            </div>
+
+            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+              <label className="text-gray-300 text-sm mb-3 block">Moeda da Operação</label>
+              <Select value={currency} onValueChange={handleCurrencyChange}>
+                <SelectTrigger 
+                  className="bg-black/20 border-white/10 text-white hover:bg-black/30"
+                  data-testid="select-currency"
+                >
+                  <SelectValue placeholder="Selecione a moeda" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 border-white/10">
+                  {CURRENCIES.map((curr) => (
+                    <SelectItem key={curr.value} value={curr.value} data-testid={`option-currency-${curr.value}`}>
+                      {curr.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-gray-400 text-xs mt-2">
+                Moeda em que os valores serão exibidos no dashboard
               </p>
             </div>
             

@@ -1162,15 +1162,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update operation settings (type and timezone)
+  // Update operation settings (type, timezone, and currency)
   app.patch("/api/operations/:operationId/settings", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
       console.log(`🔄 PATCH /api/operations/${operationId}/settings - User: ${req.user?.email}, Body:`, req.body);
       
       // Validate request body
-      const { operationType, timezone } = updateOperationSettingsSchema.parse(req.body);
-      console.log('✅ Validation passed, operationType:', operationType, 'timezone:', timezone);
+      const { operationType, timezone, currency } = updateOperationSettingsSchema.parse(req.body);
+      console.log('✅ Validation passed, operationType:', operationType, 'timezone:', timezone, 'currency:', currency);
       
       // Verify user has access to this operation
       const userOperations = await storage.getUserOperations(req.user.id);
@@ -1184,6 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updates: any = {};
       if (operationType !== undefined) updates.operationType = operationType;
       if (timezone !== undefined) updates.timezone = timezone;
+      if (currency !== undefined) updates.currency = currency;
 
       // Update operation settings
       const updatedOperation = await storage.updateOperation(operationId, updates);
