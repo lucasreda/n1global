@@ -1954,12 +1954,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verificar se tem Shopify configurado (obrigatório)
       const shopifyIntegration = await storage.getShopifyIntegrationsByOperation(currentOperation.id);
+      console.log(`🔍 Shopify integrations found: ${shopifyIntegration.length}`);
       if (shopifyIntegration.length === 0) {
+        const errorMsg = "Configure uma loja Shopify primeiro antes de sincronizar.";
+        console.error(`❌ Sync rejected: ${errorMsg}`);
         return res.status(400).json({ 
           success: false,
-          message: "Configure uma loja Shopify primeiro antes de sincronizar." 
+          message: errorMsg
         });
       }
+      console.log(`✅ Shopify configured: ${shopifyIntegration[0].shopName}`);
 
       // Buscar credenciais do fulfillment integration desta operação (somente ativas) - OPCIONAL
       const fulfillmentIntegrationsList = await db
