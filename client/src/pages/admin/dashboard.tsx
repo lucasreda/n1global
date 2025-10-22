@@ -46,25 +46,12 @@ export default function AdminDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    // TEMPORÁRIO: Limpar para testar
-    localStorage.removeItem('admin_welcome_shown');
-    
     const today = new Date().toDateString();
     const lastWelcomeDate = localStorage.getItem('admin_welcome_shown');
-    
-    console.log('🎯 Welcome Debug:', { 
-      today, 
-      lastWelcomeDate, 
-      shouldShow: lastWelcomeDate !== today,
-      user: user?.name 
-    });
     
     if (lastWelcomeDate !== today) {
       setShowWelcome(true);
       localStorage.setItem('admin_welcome_shown', today);
-      console.log('✅ Welcome banner shown');
-    } else {
-      console.log('⏭️ Welcome already shown today');
     }
   }, [user]);
 

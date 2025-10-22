@@ -15,10 +15,12 @@ import {
   ChevronRight,
   Ticket,
   DollarSign,
-  UserCog
+  UserCog,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import logoImage from "@assets/INSIDE_1756100933599.png";
 
@@ -188,12 +190,25 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="h-screen bg-gradient-to-br from-black via-black to-gray-950 flex flex-col admin-layout">
       {/* Header */}
-      <div className="h-16 bg-black border-b border-gray-700 flex items-center px-6 relative z-50">
+      <div className="h-16 bg-black border-b border-gray-700 flex items-center justify-between px-6 relative z-50">
         <img 
           src={logoImage} 
           alt="Inside Logo" 
           className="h-6 object-contain"
         />
+        
+        {/* User Profile */}
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-sm font-medium text-white">{user?.name}</p>
+            <p className="text-xs text-gray-400 capitalize">{user?.role?.replace('_', ' ')}</p>
+          </div>
+          <Avatar className="h-9 w-9 border-2 border-gray-700">
+            <AvatarFallback className="bg-gray-800 text-white text-sm">
+              {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+        </div>
       </div>
 
       {/* Main Layout */}
