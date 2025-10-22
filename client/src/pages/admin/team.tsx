@@ -8,7 +8,8 @@ import {
   Target, 
   Wrench, 
   Headphones,
-  Users
+  Users,
+  Scale
 } from "lucide-react";
 
 interface User {
@@ -33,6 +34,13 @@ const departments: Department[] = [
     icon: Building2,
     roles: ['super_admin', 'admin_investimento'],
     emoji: '💼'
+  },
+  {
+    id: 'hr_legal',
+    name: 'Recursos Humanos e Jurídico',
+    icon: Scale,
+    roles: ['hr', 'legal', 'hr_manager'],
+    emoji: '⚖️'
   },
   {
     id: 'operations',
@@ -75,6 +83,9 @@ const roleLabels: Record<string, string> = {
   super_admin: 'Super Administrador',
   admin_investimento: 'Administrador de Investimentos',
   admin_financeiro: 'Administrador Financeiro',
+  hr: 'Recursos Humanos',
+  legal: 'Jurídico',
+  hr_manager: 'Gerente de RH',
   supplier: 'Fornecedor/Operações',
   marketing: 'Marketing',
   tech: 'Tecnologia',
