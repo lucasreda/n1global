@@ -5,8 +5,12 @@ import {
   Building2, 
   ShoppingCart, 
   TrendingUp,
-  Trophy
+  Trophy,
+  X,
+  Sparkles
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useState, useEffect } from "react";
 
 interface AdminStats {
   totalUsers: number;
@@ -34,9 +38,33 @@ interface AdminStats {
 }
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const { data: adminStats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/stats']
   });
+
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const lastWelcomeDate = localStorage.getItem('admin_welcome_shown');
+    
+    if (lastWelcomeDate !== today) {
+      setShowWelcome(true);
+      localStorage.setItem('admin_welcome_shown', today);
+    }
+  }, []);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
+
+  const handleDismissWelcome = () => {
+    setShowWelcome(false);
+  };
 
   if (statsLoading) {
     return (
@@ -51,6 +79,32 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Welcome Banner */}
+      {showWelcome && (
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white shadow-lg">
+          <button
+            onClick={handleDismissWelcome}
+            className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+            data-testid="button-dismiss-welcome"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold mb-1">
+                {getGreeting()}, {user?.name}!
+              </h2>
+              <p className="text-white/90">
+                Bem-vindo de volta ao painel administrativo. Aqui está um resumo das suas operações.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="backdrop-blur-sm text-white" style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
