@@ -124,14 +124,9 @@ export default function AdminDashboard() {
                 adminStats.topStoresToday.map((store, index) => (
                   <div key={store.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                        index === 1 ? 'bg-gray-100 text-gray-800' :
-                        index === 2 ? 'bg-orange-100 text-orange-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className="text-lg font-bold text-gray-400 min-w-[24px]">
                         {index + 1}
-                      </div>
+                      </span>
                       <div>
                         <p className="font-medium text-sm text-white">{store.name}</p>
                       </div>
@@ -165,14 +160,9 @@ export default function AdminDashboard() {
                 adminStats.topStoresGlobal.map((store, index) => (
                   <div key={store.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                        index === 1 ? 'bg-gray-100 text-gray-800' :
-                        index === 2 ? 'bg-orange-100 text-orange-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className="text-lg font-bold text-gray-400 min-w-[24px]">
                         {index + 1}
-                      </div>
+                      </span>
                       <div>
                         <p className="font-medium text-sm text-white">{store.name}</p>
                       </div>
