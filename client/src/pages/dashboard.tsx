@@ -371,40 +371,7 @@ export default function Dashboard() {
                   </Button>
                 )}
               </div>
-              <Calendar
-                mode="range"
-                selected={tempDateRange}
-                onSelect={setTempDateRange}
-                numberOfMonths={2}
-                initialFocus
-                disabled={(date) => date > new Date()}
-                toDate={new Date()}
-                locale={pt}
-                className="rounded-md border-0"
-                classNames={{
-                  months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                  month: "space-y-4",
-                  caption: "flex justify-center pt-1 relative items-center text-gray-200",
-                  caption_label: "text-sm font-medium",
-                  nav: "space-x-1 flex items-center",
-                  nav_button: "h-7 w-7 bg-transparent hover:bg-gray-700/50 p-0 opacity-50 hover:opacity-100",
-                  nav_button_previous: "absolute left-1",
-                  nav_button_next: "absolute right-1",
-                  table: "w-full border-collapse space-y-1",
-                  head_row: "flex",
-                  head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
-                  row: "flex w-full mt-2",
-                  cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-blue-600/20 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                  day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-700/50 rounded-md",
-                  day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white",
-                  day_today: "bg-gray-700/50 text-gray-200",
-                  day_outside: "text-gray-600 opacity-50",
-                  day_disabled: "text-gray-600 opacity-50 cursor-not-allowed",
-                  day_range_middle: "aria-selected:bg-blue-600/30 aria-selected:text-white rounded-none",
-                  day_hidden: "invisible",
-                }}
-              />
-              <div className="grid grid-cols-4 gap-2 pt-2 border-t border-gray-700">
+              <div className="grid grid-cols-4 gap-2 pb-2 border-b border-gray-700">
                 <Button
                   variant="outline"
                   size="sm"
@@ -454,6 +421,39 @@ export default function Dashboard() {
                   Total
                 </Button>
               </div>
+              <Calendar
+                mode="range"
+                selected={tempDateRange}
+                onSelect={setTempDateRange}
+                numberOfMonths={2}
+                initialFocus
+                disabled={(date) => date > new Date()}
+                toDate={new Date()}
+                locale={pt}
+                className="rounded-md border-0"
+                classNames={{
+                  months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                  month: "space-y-4",
+                  caption: "flex justify-center pt-1 relative items-center text-gray-200",
+                  caption_label: "text-sm font-medium",
+                  nav: "space-x-1 flex items-center",
+                  nav_button: "h-7 w-7 bg-transparent hover:bg-gray-700/50 p-0 opacity-50 hover:opacity-100",
+                  nav_button_previous: "absolute left-1",
+                  nav_button_next: "absolute right-1",
+                  table: "w-full border-collapse space-y-1",
+                  head_row: "flex",
+                  head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                  row: "flex w-full mt-2",
+                  cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-blue-600/20 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                  day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-700/50 rounded-md",
+                  day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white",
+                  day_today: "bg-gray-700/50 text-gray-200",
+                  day_outside: "text-gray-600 opacity-50",
+                  day_disabled: "text-gray-600 opacity-50 cursor-not-allowed",
+                  day_range_middle: "aria-selected:bg-blue-600/30 aria-selected:text-white rounded-none",
+                  day_hidden: "invisible",
+                }}
+              />
               <div className="flex gap-2 pt-2 border-t border-gray-700">
                 <Button
                   variant="outline"
@@ -526,68 +526,6 @@ export default function Dashboard() {
         period={dateRange?.from && dateRange?.to ? `${format(dateRange.from, 'dd/MM/yy')} - ${format(dateRange.to, 'dd/MM/yy')}` : 'Selecione um período'} 
         currency={operationCurrency} 
       />
-      
-      {/* Period Selectors - Above Map */}
-      <div className="flex items-center justify-center gap-2 mb-4">
-        <Button
-          variant={
-            dateRange?.from && dateRange?.to && 
-            format(dateRange.from, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') &&
-            format(dateRange.to, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-              ? "default" 
-              : "outline"
-          }
-          size="sm"
-          onClick={() => {
-            const today = new Date();
-            setDateRange({ from: today, to: today });
-          }}
-          className="text-sm"
-          data-testid="button-period-today"
-        >
-          Hoje
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const now = new Date();
-            const weekAgo = new Date(now);
-            weekAgo.setDate(now.getDate() - 7);
-            setDateRange({ from: weekAgo, to: now });
-          }}
-          className="text-sm"
-          data-testid="button-period-week"
-        >
-          Semana
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const now = new Date();
-            const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            setDateRange({ from: firstDayOfMonth, to: now });
-          }}
-          className="text-sm"
-          data-testid="button-period-month"
-        >
-          Mês
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const now = new Date();
-            const startOfYear = new Date(2020, 0, 1);
-            setDateRange({ from: startOfYear, to: now });
-          }}
-          className="text-sm"
-          data-testid="button-period-total"
-        >
-          Total
-        </Button>
-      </div>
       
       <ChartsSection 
         revenueData={revenueData || []}
