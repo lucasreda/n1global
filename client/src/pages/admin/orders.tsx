@@ -539,7 +539,7 @@ export default function AdminOrders() {
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-sm">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : '-'}
+                            {order.orderDate ? new Date(order.orderDate).toLocaleDateString('pt-BR') : '-'}
                           </span>
                         </td>
                         <td className="py-3 px-4">
