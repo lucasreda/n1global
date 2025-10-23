@@ -75,18 +75,24 @@ export default function AdminFHBAccounts() {
   // Delete account mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest(`/api/admin/fhb-accounts/${id}`, "DELETE"),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/fhb-accounts"] });
       toast({
         title: "Conta deletada",
-        description: "A conta foi deletada com sucesso",
+        description: data?.deletedSyncLogs 
+          ? `Conta deletada com sucesso. ${data.deletedSyncLogs} logs e ${data.deletedOrders} pedidos removidos.`
+          : "A conta foi deletada com sucesso",
       });
     },
     onError: (error: any) => {
+      // Mensagem mais específica quando conta está em uso
+      const errorMessage = error.message || "Falha ao deletar conta FHB";
+      
       toast({
-        title: "Erro",
-        description: error.message || "Falha ao deletar conta FHB",
+        title: "Não é possível deletar",
+        description: errorMessage,
         variant: "destructive",
+        duration: 8000, // Mais tempo para ler a mensagem completa
       });
     },
   });

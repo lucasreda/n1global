@@ -173,16 +173,27 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       console.log(`🗑️  Admin: Deletando conta FHB ${id}`);
       
       // Verificar se alguma operação está usando esta conta
-      const { fulfillmentIntegrations, fhbSyncLogs, fhbOrders } = await import("@shared/schema");
-      const operationsUsingAccount = await db
-        .select()
+      const { fulfillmentIntegrations, fhbSyncLogs, fhbOrders, operations } = await import("@shared/schema");
+      
+      // Buscar integrações com nome das operações
+      const integrationsWithOperations = await db
+        .select({
+          integrationId: fulfillmentIntegrations.id,
+          operationId: fulfillmentIntegrations.operationId,
+          operationName: operations.name
+        })
         .from(fulfillmentIntegrations)
+        .innerJoin(operations, eq(fulfillmentIntegrations.operationId, operations.id))
         .where(eq(fulfillmentIntegrations.fhbAccountId, id));
       
-      if (operationsUsingAccount.length > 0) {
+      if (integrationsWithOperations.length > 0) {
+        const operationNames = integrationsWithOperations.map(i => i.operationName).join(', ');
+        console.log(`⚠️  Não é possível deletar conta: usada por ${integrationsWithOperations.length} operação(ões): ${operationNames}`);
+        
         return res.status(400).json({ 
-          message: `Não é possível deletar: ${operationsUsingAccount.length} operação(ões) usando esta conta`,
-          operationsCount: operationsUsingAccount.length
+          message: `Não é possível deletar esta conta FHB porque ela está sendo usada pelas seguintes operações: ${operationNames}. Primeiro, remova ou altere a integração FHB dessas operações em Configurações > Fulfillment.`,
+          operationsCount: integrationsWithOperations.length,
+          operations: integrationsWithOperations
         });
       }
       
