@@ -527,6 +527,68 @@ export default function Dashboard() {
         currency={operationCurrency} 
       />
       
+      {/* Period Selectors - Above Map */}
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <Button
+          variant={
+            dateRange?.from && dateRange?.to && 
+            format(dateRange.from, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') &&
+            format(dateRange.to, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+              ? "default" 
+              : "outline"
+          }
+          size="sm"
+          onClick={() => {
+            const today = new Date();
+            setDateRange({ from: today, to: today });
+          }}
+          className="text-sm"
+          data-testid="button-period-today"
+        >
+          Hoje
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const now = new Date();
+            const weekAgo = new Date(now);
+            weekAgo.setDate(now.getDate() - 7);
+            setDateRange({ from: weekAgo, to: now });
+          }}
+          className="text-sm"
+          data-testid="button-period-week"
+        >
+          Semana
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const now = new Date();
+            const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            setDateRange({ from: firstDayOfMonth, to: now });
+          }}
+          className="text-sm"
+          data-testid="button-period-month"
+        >
+          Mês
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const now = new Date();
+            const startOfYear = new Date(2020, 0, 1);
+            setDateRange({ from: startOfYear, to: now });
+          }}
+          className="text-sm"
+          data-testid="button-period-total"
+        >
+          Total
+        </Button>
+      </div>
+      
       <ChartsSection 
         revenueData={revenueData || []}
         distributionData={getDistributionData()}
