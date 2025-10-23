@@ -24,7 +24,7 @@ export default function AdminFHBAccounts() {
   });
 
   // Fetch FHB accounts
-  const { data: accounts = [], isLoading } = useQuery({
+  const { data: accounts = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/fhb-accounts"],
   });
 

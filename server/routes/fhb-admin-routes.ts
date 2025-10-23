@@ -85,15 +85,21 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       // Isso garante que o histórico completo seja puxado imediatamente
       console.log(`🚀 Iniciando initial sync automático para conta ${newAccount.name}...`);
       
-      // Importar e executar o sync inicial de forma assíncrona (não bloqueia a resposta)
-      const { triggerInitialSync } = await import('../workers/fhb-sync-worker');
-      
-      // Executar em background - não esperar a conclusão
-      triggerInitialSync().catch(error => {
-        console.error(`❌ Erro no initial sync automático para ${newAccount.name}:`, error);
-      });
-      
-      console.log(`✅ Initial sync iniciado em background para ${newAccount.name}`);
+      try {
+        // Importar e executar o sync inicial de forma assíncrona (não bloqueia a resposta)
+        const { triggerInitialSync } = await import('../workers/fhb-sync-worker');
+        
+        // Executar em background - não esperar a conclusão
+        triggerInitialSync().then(() => {
+          console.log(`✅ Initial sync concluído para ${newAccount.name}`);
+        }).catch(error => {
+          console.error(`❌ Erro no initial sync automático para ${newAccount.name}:`, error);
+        });
+        
+        console.log(`✅ Initial sync iniciado em background para ${newAccount.name}`);
+      } catch (importError) {
+        console.error(`❌ Erro ao importar worker para ${newAccount.name}:`, importError);
+      }
       
       // Ocultar secret na resposta
       const sanitized = {
@@ -167,7 +173,7 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       console.log(`🗑️  Admin: Deletando conta FHB ${id}`);
       
       // Verificar se alguma operação está usando esta conta
-      const { fulfillmentIntegrations } = await import("@shared/schema");
+      const { fulfillmentIntegrations, fhbSyncLogs, fhbOrders } = await import("@shared/schema");
       const operationsUsingAccount = await db
         .select()
         .from(fulfillmentIntegrations)
@@ -180,6 +186,25 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
         });
       }
       
+      // Deletar sync logs relacionados primeiro (cascade manual)
+      console.log(`🧹 Deletando sync logs da conta ${id}...`);
+      const deletedLogs = await db
+        .delete(fhbSyncLogs)
+        .where(eq(fhbSyncLogs.fhbAccountId, id))
+        .returning();
+      
+      console.log(`✅ ${deletedLogs.length} sync logs deletados`);
+      
+      // Deletar pedidos FHB relacionados (tabela staging)
+      console.log(`🧹 Deletando pedidos FHB da conta ${id}...`);
+      const deletedOrders = await db
+        .delete(fhbOrders)
+        .where(eq(fhbOrders.fhbAccountId, id))
+        .returning();
+      
+      console.log(`✅ ${deletedOrders.length} pedidos FHB deletados`);
+      
+      // Agora deletar a conta FHB
       const deleted = await db
         .delete(fhbAccounts)
         .where(eq(fhbAccounts.id, id))
@@ -190,7 +215,11 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       }
       
       console.log(`✅ Conta FHB deletada: ${id}`);
-      res.json({ message: "Conta FHB deletada com sucesso" });
+      res.json({ 
+        message: "Conta FHB deletada com sucesso",
+        deletedSyncLogs: deletedLogs.length,
+        deletedOrders: deletedOrders.length
+      });
     } catch (error: any) {
       console.error("❌ Erro ao deletar conta FHB:", error);
       res.status(500).json({ message: "Erro ao deletar conta FHB" });
