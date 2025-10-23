@@ -22,6 +22,11 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
     try {
       console.log("📋 Admin: Listando contas FHB");
       
+      // Desabilitar cache HTTP para sempre buscar dados atualizados
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const accounts = await db
         .select()
         .from(fhbAccounts)
