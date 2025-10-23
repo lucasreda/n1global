@@ -255,6 +255,7 @@ export class AdminService {
           amount: orders.total,
           currency: orders.currency,
           orderDate: orders.orderDate,
+          createdAt: orders.createdAt,
           provider: orders.provider,
           dataSource: orders.dataSource,
           shopifyOrderNumber: orders.shopifyOrderNumber,
