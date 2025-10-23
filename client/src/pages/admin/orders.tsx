@@ -50,6 +50,22 @@ interface GlobalOrder {
   products?: OrderProduct[] | any;
 }
 
+// Convert country code to flag emoji
+function getCountryFlag(countryCode: string | undefined): string {
+  if (!countryCode || countryCode.length !== 2) {
+    return '🏳️'; // Default flag for unknown countries
+  }
+  
+  const code = countryCode.toUpperCase();
+  // Convert country code to Regional Indicator Symbols (Unicode)
+  // A = U+1F1E6, B = U+1F1E7, etc.
+  const codePoints = code.split('').map(char => 
+    0x1F1E6 + char.charCodeAt(0) - 'A'.charCodeAt(0)
+  );
+  
+  return String.fromCodePoint(...codePoints);
+}
+
 export default function AdminOrders() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -489,6 +505,7 @@ export default function AdminOrders() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-center py-3 px-2 font-semibold w-12">País</th>
                       <th className="text-left py-3 px-4 font-semibold">Cliente</th>
                       <th className="text-left py-3 px-4 font-semibold">Loja / Operação</th>
                       <th className="text-left py-3 px-4 font-semibold">Status</th>
@@ -500,6 +517,9 @@ export default function AdminOrders() {
                   <tbody>
                     {globalOrders.map((order: GlobalOrder) => (
                       <tr key={order.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="py-3 px-2 text-center text-2xl" data-testid={`flag-${order.id}`}>
+                          {getCountryFlag(order.customerCountry)}
+                        </td>
                         <td className="py-3 px-4">
                           <div>
                             <p className="font-medium">{order.customerName}</p>
