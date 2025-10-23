@@ -346,7 +346,7 @@ export const fhbSyncLogs = pgTable("fhb_sync_logs", {
 // FHB Orders Staging Table - raw FHB orders before processing to operations
 export const fhbOrders = pgTable("fhb_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  fhbAccountId: varchar("fhb_account_id").notNull().references(() => fhbAccounts.id),
+  fhbAccountId: varchar("fhb_account_id").references(() => fhbAccounts.id), // Nullable - permite desvincular ao deletar conta
   
   // FHB order identifiers
   fhbOrderId: text("fhb_order_id").notNull(), // FHB's internal order ID

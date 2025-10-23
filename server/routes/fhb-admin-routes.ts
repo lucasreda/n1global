@@ -2,7 +2,7 @@
 import type { Express, Response } from "express";
 import { db } from "../db";
 import { fhbAccounts, insertFhbAccountSchema, updateFhbAccountSchema } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { FHBService } from "../fulfillment-providers/fhb-service";
 import type { AuthRequest } from "../auth-middleware";
 
@@ -172,32 +172,20 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       const { id } = req.params;
       console.log(`🗑️  Admin: Deletando conta FHB ${id}`);
       
-      // Verificar se alguma operação está usando esta conta
-      const { fulfillmentIntegrations, fhbSyncLogs, fhbOrders, operations } = await import("@shared/schema");
+      const { fulfillmentIntegrations, fhbSyncLogs, fhbOrders } = await import("@shared/schema");
       
-      // Buscar integrações com nome das operações
-      const integrationsWithOperations = await db
-        .select({
-          integrationId: fulfillmentIntegrations.id,
-          operationId: fulfillmentIntegrations.operationId,
-          operationName: operations.name
-        })
-        .from(fulfillmentIntegrations)
-        .innerJoin(operations, eq(fulfillmentIntegrations.operationId, operations.id))
-        .where(eq(fulfillmentIntegrations.fhbAccountId, id));
+      // 1. Limpar fhbAccountId em integrações que usam esta conta (não bloqueia, apenas desvincula)
+      const clearedIntegrations = await db
+        .update(fulfillmentIntegrations)
+        .set({ fhbAccountId: null })
+        .where(eq(fulfillmentIntegrations.fhbAccountId, id))
+        .returning();
       
-      if (integrationsWithOperations.length > 0) {
-        const operationNames = integrationsWithOperations.map(i => i.operationName).join(', ');
-        console.log(`⚠️  Não é possível deletar conta: usada por ${integrationsWithOperations.length} operação(ões): ${operationNames}`);
-        
-        return res.status(400).json({ 
-          message: `Não é possível deletar esta conta FHB porque ela está sendo usada pelas seguintes operações: ${operationNames}. Primeiro, remova ou altere a integração FHB dessas operações em Configurações > Fulfillment.`,
-          operationsCount: integrationsWithOperations.length,
-          operations: integrationsWithOperations
-        });
+      if (clearedIntegrations.length > 0) {
+        console.log(`🔗 ${clearedIntegrations.length} integração(ões) desvinculadas da conta`);
       }
       
-      // Deletar sync logs relacionados primeiro (cascade manual)
+      // 2. Deletar sync logs relacionados (histórico de sincronizações)
       console.log(`🧹 Deletando sync logs da conta ${id}...`);
       const deletedLogs = await db
         .delete(fhbSyncLogs)
@@ -206,16 +194,27 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       
       console.log(`✅ ${deletedLogs.length} sync logs deletados`);
       
-      // Deletar pedidos FHB relacionados (tabela staging)
-      console.log(`🧹 Deletando pedidos FHB da conta ${id}...`);
-      const deletedOrders = await db
-        .delete(fhbOrders)
-        .where(eq(fhbOrders.fhbAccountId, id))
-        .returning();
+      // 3. Contar pedidos antes de desvincular
+      const orderCountBefore = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(fhbOrders)
+        .where(eq(fhbOrders.fhbAccountId, id));
       
-      console.log(`✅ ${deletedOrders.length} pedidos FHB deletados`);
+      const preservedOrders = Number(orderCountBefore[0]?.count) || 0;
       
-      // Agora deletar a conta FHB
+      // 4. Limpar fhbAccountId em pedidos (mantém pedidos, apenas remove referência)
+      // Isso permite deletar a conta sem violar foreign key
+      if (preservedOrders > 0) {
+        console.log(`🔗 Desvinculando ${preservedOrders} pedidos FHB da conta ${id}...`);
+        await db
+          .update(fhbOrders)
+          .set({ fhbAccountId: sql`NULL` })
+          .where(eq(fhbOrders.fhbAccountId, id));
+      }
+      
+      console.log(`✅ ${preservedOrders} pedidos FHB desvinculados (permanecem na staging table)`);
+      
+      // 5. Deletar a conta FHB
       const deleted = await db
         .delete(fhbAccounts)
         .where(eq(fhbAccounts.id, id))
@@ -227,9 +226,10 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       
       console.log(`✅ Conta FHB deletada: ${id}`);
       res.json({ 
-        message: "Conta FHB deletada com sucesso",
+        message: "Conta FHB deletada com sucesso. Pedidos importados permanecem disponíveis para as operações.",
+        clearedIntegrations: clearedIntegrations.length,
         deletedSyncLogs: deletedLogs.length,
-        deletedOrders: deletedOrders.length
+        preservedOrders
       });
     } catch (error: any) {
       console.error("❌ Erro ao deletar conta FHB:", error);

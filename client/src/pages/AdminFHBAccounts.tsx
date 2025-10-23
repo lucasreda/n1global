@@ -77,22 +77,23 @@ export default function AdminFHBAccounts() {
     mutationFn: (id: string) => apiRequest(`/api/admin/fhb-accounts/${id}`, "DELETE"),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/fhb-accounts"] });
+      
+      let description = data?.message || "A conta foi deletada com sucesso";
+      if (data?.preservedOrders > 0) {
+        description += ` ${data.preservedOrders.toLocaleString('pt-BR')} pedidos permanecem disponíveis.`;
+      }
+      
       toast({
         title: "Conta deletada",
-        description: data?.deletedSyncLogs 
-          ? `Conta deletada com sucesso. ${data.deletedSyncLogs} logs e ${data.deletedOrders} pedidos removidos.`
-          : "A conta foi deletada com sucesso",
+        description,
+        duration: 6000,
       });
     },
     onError: (error: any) => {
-      // Mensagem mais específica quando conta está em uso
-      const errorMessage = error.message || "Falha ao deletar conta FHB";
-      
       toast({
-        title: "Não é possível deletar",
-        description: errorMessage,
+        title: "Erro ao deletar",
+        description: error.message || "Falha ao deletar conta FHB",
         variant: "destructive",
-        duration: 8000, // Mais tempo para ler a mensagem completa
       });
     },
   });
