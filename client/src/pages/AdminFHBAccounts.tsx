@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Edit, TestTube, ArrowRight, Settings } from "lucide-react";
+import { Plus, Trash2, Edit, TestTube, ArrowRight, Settings, Database, CheckCircle, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function AdminFHBAccounts() {
@@ -37,7 +37,7 @@ export default function AdminFHBAccounts() {
       resetForm();
       toast({
         title: "Conta FHB criada",
-        description: "A conta foi criada com sucesso",
+        description: "A conta foi criada com sucesso. Initial sync iniciado automaticamente (pode levar alguns minutos).",
       });
     },
     onError: () => {
@@ -184,6 +184,7 @@ export default function AdminFHBAccounts() {
                   <TableHead>App ID</TableHead>
                   <TableHead>API URL</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Initial Sync</TableHead>
                   <TableHead>Último Teste</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -202,6 +203,19 @@ export default function AdminFHBAccounts() {
                       }`}>
                         {account.status}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {account.initialSyncCompleted ? (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-green-600">Concluído</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                          <span className="text-blue-600">Em andamento...</span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {account.lastTestedAt ? new Date(account.lastTestedAt).toLocaleString() : 'Nunca'}

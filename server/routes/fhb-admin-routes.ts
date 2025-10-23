@@ -81,6 +81,20 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       
       console.log(`✅ Conta FHB criada: ${newAccount.name} (${newAccount.id})`);
       
+      // 🚀 IMPORTANTE: Iniciar initial sync automaticamente para nova conta
+      // Isso garante que o histórico completo seja puxado imediatamente
+      console.log(`🚀 Iniciando initial sync automático para conta ${newAccount.name}...`);
+      
+      // Importar e executar o sync inicial de forma assíncrona (não bloqueia a resposta)
+      const { triggerInitialSync } = await import('../workers/fhb-sync-worker');
+      
+      // Executar em background - não esperar a conclusão
+      triggerInitialSync().catch(error => {
+        console.error(`❌ Erro no initial sync automático para ${newAccount.name}:`, error);
+      });
+      
+      console.log(`✅ Initial sync iniciado em background para ${newAccount.name}`);
+      
       // Ocultar secret na resposta
       const sanitized = {
         ...newAccount,
