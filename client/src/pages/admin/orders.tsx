@@ -507,7 +507,7 @@ export default function AdminOrders() {
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-center py-3 px-2 font-semibold w-12">País</th>
                       <th className="text-left py-3 px-4 font-semibold">Cliente</th>
-                      <th className="text-left py-3 px-4 font-semibold">Loja / Operação</th>
+                      <th className="text-left py-3 px-4 font-semibold">Operação</th>
                       <th className="text-left py-3 px-4 font-semibold">Status</th>
                       <th className="text-left py-3 px-4 font-semibold">Valor</th>
                       <th className="text-left py-3 px-4 font-semibold">Data</th>
@@ -527,10 +527,7 @@ export default function AdminOrders() {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div>
-                            <p className="font-medium">{order.storeName}</p>
-                            <p className="text-sm text-muted-foreground">{order.operationName}</p>
-                          </div>
+                          <p className="font-medium">{order.operationName}</p>
                         </td>
                         <td className="py-3 px-4">
                           {getStatusBadge(order.status)}
