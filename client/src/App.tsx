@@ -87,7 +87,6 @@ interface OnboardingStatus {
   onboardingSteps: {
     step1_operation: boolean;
     step2_shopify: boolean;
-    step3_shipping: boolean;
     step4_ads: boolean;
     step5_sync: boolean;
   };
