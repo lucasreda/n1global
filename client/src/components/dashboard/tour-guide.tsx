@@ -239,20 +239,6 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       placement: 'right',
       disableBeacon: true,
     },
-    {
-      target: '[data-tour-id="section-warehouses"]',
-      content: (
-        <div className="space-y-2">
-          <h4 className="font-semibold">Integração com Armazéns</h4>
-          <p className="text-sm">
-            Configure suas transportadoras e armazéns para gestão completa de envios.
-            Gerencie todo o processo logístico em um só lugar.
-          </p>
-        </div>
-      ),
-      placement: 'right',
-      disableBeacon: true,
-    },
   ];
 
   const getAdsSteps = (): Step[] => [
