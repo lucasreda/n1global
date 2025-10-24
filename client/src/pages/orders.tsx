@@ -243,10 +243,7 @@ export default function Orders() {
                         variant="outline"
                         size="sm"
                         onClick={() => setIsSyncDialogOpen(true)}
-                        disabled={
-                          !integrationsStatus?.hasPlatform || 
-                          !integrationsStatus?.hasWarehouse
-                        }
+                        disabled={!integrationsStatus?.hasPlatform}
                         className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap w-full ${
                           isSyncingInBackground ? 'animate-pulse ring-2 ring-blue-500/50' : ''
                         }`}
@@ -266,9 +263,9 @@ export default function Orders() {
                       </Button>
                     </div>
                   </TooltipTrigger>
-                  {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
+                  {!integrationsStatus?.hasPlatform && (
                     <TooltipContent className="max-w-xs">
-                      <p>É necessário conectar pelo menos uma plataforma (Shopify) {!integrationsStatus?.hasWarehouse && 'e configurar um armazém ou prefixo FHB'} para realizar a sincronização completa</p>
+                      <p>É necessário conectar pelo menos uma plataforma (Shopify) para realizar a sincronização completa</p>
                     </TooltipContent>
                   )}
                 </Tooltip>

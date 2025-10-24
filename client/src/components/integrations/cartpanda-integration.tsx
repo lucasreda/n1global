@@ -84,33 +84,17 @@ export function CartPandaIntegration() {
         description: "Integração CartPanda configurada com sucesso!",
       });
 
-      // Verificar se já tem armazém configurado (com tratamento de erro)
-      try {
-        const status = await queryClient.fetchQuery({
-          queryKey: ['/api/onboarding/integrations-status'],
-          queryFn: async () => {
-            const response = await apiRequest('/api/onboarding/integrations-status', 'GET');
-            return response.json();
-          },
-        });
-
-        // Se já tem armazém, redirecionar para orders e iniciar tour
-        if (status?.hasWarehouse) {
-          toast({
-            title: "Pronto para Sincronizar!",
-            description: "Agora você pode importar seus pedidos.",
-          });
-          setTimeout(() => {
-            setLocation('/orders');
-            setTimeout(() => {
-              startSyncTour();
-            }, 1000);
-          }, 1500);
-        }
-      } catch (error) {
-        console.error('Erro ao verificar status das integrações:', error);
-        // Silenciosamente falhar - não atrapalhar o fluxo do usuário
-      }
+      // Redirecionar para orders e iniciar tour
+      toast({
+        title: "Pronto para Sincronizar!",
+        description: "Agora você pode importar seus pedidos.",
+      });
+      setTimeout(() => {
+        setLocation('/orders');
+        setTimeout(() => {
+          startSyncTour();
+        }, 1000);
+      }, 1500);
     },
     onError: (error: any) => {
       toast({

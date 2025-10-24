@@ -491,10 +491,7 @@ export default function Dashboard() {
               <div>
                 <Button
                   onClick={() => setIsSyncDialogOpen(true)}
-                  disabled={
-                    !integrationsStatus?.hasPlatform || 
-                    !integrationsStatus?.hasWarehouse
-                  }
+                  disabled={!integrationsStatus?.hasPlatform}
                   variant="outline"
                   size="sm"
                   className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0 ${
@@ -509,9 +506,9 @@ export default function Dashboard() {
                 </Button>
               </div>
             </TooltipTrigger>
-            {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
+            {!integrationsStatus?.hasPlatform && (
               <TooltipContent className="max-w-xs">
-                <p>É necessário conectar pelo menos uma plataforma (Shopify) {!integrationsStatus?.hasWarehouse && 'e configurar um armazém ou prefixo FHB'} para realizar a sincronização completa</p>
+                <p>É necessário conectar pelo menos uma plataforma (Shopify) para realizar a sincronização completa</p>
               </TooltipContent>
             )}
           </Tooltip>
