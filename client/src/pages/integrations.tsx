@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { MultiProviderPanel } from "@/components/integration/multi-provider-panel";
 import { ShopifyIntegration } from "@/components/integrations/shopify-integration";
 import { CartPandaIntegration } from "../components/integrations/cartpanda-integration";
 import { OperationalAppIntegration } from "../components/integrations/operational-app-integration";
@@ -212,11 +211,6 @@ export default function Integrations() {
             );
           })}
         </div>
-      </div>
-
-      {/* Armazéns - Multi-Provider */}
-      <div data-tour-id="section-warehouses">
-        <MultiProviderPanel />
       </div>
 
       {/* Aplicativos da Operação */}
