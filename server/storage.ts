@@ -95,14 +95,50 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Helper to migrate legacy onboarding step IDs to new format
+  private migrateOnboardingSteps(user: User): User {
+    if (!user.onboardingSteps) return user;
+    
+    const steps = user.onboardingSteps as any;
+    let needsMigration = false;
+    
+    // Map old step IDs to new ones
+    if ('step3_shipping' in steps) {
+      needsMigration = true;
+      delete steps.step3_shipping; // Remove obsolete shipping step
+    }
+    if ('step4_ads' in steps) {
+      steps.step3_ads = steps.step4_ads;
+      delete steps.step4_ads;
+      needsMigration = true;
+    }
+    if ('step5_sync' in steps) {
+      steps.step4_sync = steps.step5_sync;
+      delete steps.step5_sync;
+      needsMigration = true;
+    }
+    
+    // Persist migration if needed
+    if (needsMigration) {
+      db.update(users)
+        .set({ onboardingSteps: steps })
+        .where(eq(users.id, user.id))
+        .catch(err => console.error('Error migrating onboarding steps:', err));
+    }
+    
+    return { ...user, onboardingSteps: steps };
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
-    return result[0] || undefined;
+    if (!result[0]) return undefined;
+    return this.migrateOnboardingSteps(result[0]);
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.email, email));
-    return result[0] || undefined;
+    if (!result[0]) return undefined;
+    return this.migrateOnboardingSteps(result[0]);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -307,9 +343,8 @@ export class DatabaseStorage implements IStorage {
     const currentSteps = user.onboardingSteps as any || {
       step1_operation: false,
       step2_shopify: false,
-      step3_shipping: false,
-      step4_ads: false,
-      step5_sync: false
+      step3_ads: false,
+      step4_sync: false
     };
 
     currentSteps[stepId] = completed;
@@ -328,9 +363,8 @@ export class DatabaseStorage implements IStorage {
         onboardingSteps: {
           step1_operation: true,
           step2_shopify: true,
-          step3_shipping: true,
-          step4_ads: true,
-          step5_sync: true
+          step3_ads: true,
+          step4_sync: true
         }
       })
       .where(eq(users.id, userId));
@@ -354,9 +388,8 @@ export class DatabaseStorage implements IStorage {
         onboardingSteps: {
           step1_operation: true,
           step2_shopify: true,
-          step3_shipping: true,
-          step4_ads: true,
-          step5_sync: true
+          step3_ads: true,
+          step4_sync: true
         }
       })
       .where(eq(users.id, userId));

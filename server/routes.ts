@@ -231,15 +231,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         onboardingSteps: userData.role === 'super_admin' || userData.role === 'supplier' ? {
           step1_operation: true,
           step2_shopify: true,
-          step3_shipping: true,
-          step4_ads: true,
-          step5_sync: true
+          step3_ads: true,
+          step4_sync: true
         } : {
           step1_operation: false,
           step2_shopify: false,
-          step3_shipping: false,
-          step4_ads: false,
-          step5_sync: false
+          step3_ads: false,
+          step4_sync: false
         }
       };
 
@@ -1439,15 +1437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1)
         .then(rows => rows[0]);
 
-      // Check if has at least one warehouse configured (shipping provider OR fulfillment integration OR FHB via prefix)
-      const shippingProviders = await storage.getShippingProvidersByOperation(operationId);
-      const fulfillmentIntegrationsCheck = await db
-        .select()
-        .from(fulfillmentIntegrations)
-        .where(eq(fulfillmentIntegrations.operationId, operationId))
-        .limit(1);
-      const hasFHBPrefix = !!(operation?.shopifyOrderPrefix);
-      const hasWarehouse = shippingProviders.length > 0 || fulfillmentIntegrationsCheck.length > 0 || hasFHBPrefix;
+      // Warehouse is no longer required - always return true
+      const hasWarehouse = true;
 
       // Check if has at least one ad account
       const adAccounts = await storage.getAdAccountsByOperation(operationId);
@@ -1458,7 +1449,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasSupportEmail = !!supportConfig && !!supportConfig.supportEmail;
 
       // Only check visible steps in the onboarding card (operation is checked on frontend)
-      const allCompleted = hasPlatform && hasWarehouse && hasAdAccount;
+      // Warehouse is no longer required, only platform and ads
+      const allCompleted = hasPlatform && hasAdAccount;
 
       res.json({
         hasPlatform,
@@ -6323,9 +6315,8 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
         onboardingSteps: {
           step1_operation: true,
           step2_shopify: true,
-          step3_shipping: true,
-          step4_ads: true,
-          step5_sync: true
+          step3_ads: true,
+          step4_sync: true
         }
       });
       
