@@ -2,8 +2,8 @@
 // Processes fhb_orders table and creates/updates orders based on operation prefix
 
 import { db } from '../db';
-import { fhbOrders, orders, operations, fulfillmentIntegrations } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { fhbOrders, orders, operations, fulfillmentIntegrations, userWarehouseAccountOperations, userWarehouseAccounts } from '@shared/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 
 // Reentrancy guard
 let isLinkingRunning = false;
@@ -45,19 +45,37 @@ function findOperationByPrefix(
 }
 
 /**
- * Build a cache of all FHB account operations
+ * Build a cache of all FHB warehouse account operations
+ * Maps warehouse account ID → operations array
  */
 async function buildAccountOperationsCache(): Promise<Map<string, typeof operations.$inferSelect[]>> {
+  // Step 1: Get active FHB warehouse account IDs
+  const activeAccounts = await db.select({ id: userWarehouseAccounts.id })
+    .from(userWarehouseAccounts)
+    .where(
+      and(
+        eq(userWarehouseAccounts.providerKey, 'fhb'),
+        eq(userWarehouseAccounts.status, 'active')
+      )
+    );
+  
+  if (activeAccounts.length === 0) {
+    console.log('📦 No active FHB warehouse accounts found');
+    return new Map();
+  }
+  
+  const accountIds = activeAccounts.map(a => a.id);
+  
+  // Step 2: Fetch operations for these accounts
   const accountOperations = await db.select()
-    .from(fulfillmentIntegrations)
-    .innerJoin(operations, eq(fulfillmentIntegrations.operationId, operations.id))
-    .where(eq(fulfillmentIntegrations.status, 'active'));
+    .from(userWarehouseAccountOperations)
+    .innerJoin(operations, eq(userWarehouseAccountOperations.operationId, operations.id))
+    .where(inArray(userWarehouseAccountOperations.accountId, accountIds));
   
   const cache = new Map<string, typeof operations.$inferSelect[]>();
   
   for (const row of accountOperations) {
-    const accountId = row.fulfillment_integrations.fhbAccountId;
-    if (!accountId) continue;
+    const accountId = row.user_warehouse_account_operations.accountId;
     
     if (!cache.has(accountId)) {
       cache.set(accountId, []);
@@ -65,6 +83,7 @@ async function buildAccountOperationsCache(): Promise<Map<string, typeof operati
     cache.get(accountId)!.push(row.operations);
   }
   
+  console.log(`📦 Cached ${cache.size} FHB warehouse accounts with ${accountOperations.length} total operations`);
   return cache;
 }
 

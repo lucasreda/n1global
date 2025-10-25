@@ -3,7 +3,7 @@
 // Operations filter orders by configured prefix
 
 import { db } from '../db';
-import { orders, fhbAccounts, fhbSyncLogs, fhbOrders, operations, fulfillmentIntegrations } from '@shared/schema';
+import { orders, fhbAccounts, fhbSyncLogs, fhbOrders, operations, fulfillmentIntegrations, userWarehouseAccounts } from '@shared/schema';
 import { eq, and, gte, inArray, sql } from 'drizzle-orm';
 import { FHBService } from '../fulfillment-providers/fhb-service';
 
@@ -49,14 +49,21 @@ export class FHBSyncService {
   async syncDeep(): Promise<void> {
     console.log('🔄 FHB Deep Sync started (30 days)');
     
+    // Fetch active FHB warehouse accounts
     const activeAccounts = await db.select()
-      .from(fhbAccounts)
-      .where(eq(fhbAccounts.status, 'active'));
+      .from(userWarehouseAccounts)
+      .where(
+        and(
+          eq(userWarehouseAccounts.providerKey, 'fhb'),
+          eq(userWarehouseAccounts.status, 'active')
+        )
+      );
     
-    console.log(`📊 Found ${activeAccounts.length} active FHB accounts`);
+    console.log(`📊 Found ${activeAccounts.length} active FHB warehouse accounts`);
     
     for (const account of activeAccounts) {
-      await this.syncAccount(account, 'deep', 30);
+      // Convert user_warehouse_account to fhbAccount format for compatibility
+      await this.syncWarehouseAccount(account, 'deep', 30);
     }
     
     console.log('✅ FHB Deep Sync completed');
@@ -69,14 +76,20 @@ export class FHBSyncService {
   async syncFast(): Promise<void> {
     console.log('⚡ FHB Fast Sync started (10 days)');
     
+    // Fetch active FHB warehouse accounts
     const activeAccounts = await db.select()
-      .from(fhbAccounts)
-      .where(eq(fhbAccounts.status, 'active'));
+      .from(userWarehouseAccounts)
+      .where(
+        and(
+          eq(userWarehouseAccounts.providerKey, 'fhb'),
+          eq(userWarehouseAccounts.status, 'active')
+        )
+      );
     
-    console.log(`📊 Found ${activeAccounts.length} active FHB accounts`);
+    console.log(`📊 Found ${activeAccounts.length} active FHB warehouse accounts`);
     
     for (const account of activeAccounts) {
-      await this.syncAccount(account, 'fast', 10);
+      await this.syncWarehouseAccount(account, 'fast', 10);
     }
     
     console.log('✅ FHB Fast Sync completed');
@@ -89,12 +102,14 @@ export class FHBSyncService {
   async syncInitial(): Promise<void> {
     console.log('🚀 FHB Initial Sync started (2 years backfill)');
     
+    // Fetch FHB warehouse accounts needing initial sync
     const accountsNeedingInitialSync = await db.select()
-      .from(fhbAccounts)
+      .from(userWarehouseAccounts)
       .where(
         and(
-          eq(fhbAccounts.status, 'active'),
-          eq(fhbAccounts.initialSyncCompleted, false)
+          eq(userWarehouseAccounts.providerKey, 'fhb'),
+          eq(userWarehouseAccounts.status, 'active'),
+          eq(userWarehouseAccounts.initialSyncCompleted, false)
         )
       );
     
@@ -106,10 +121,186 @@ export class FHBSyncService {
     console.log(`📊 Found ${accountsNeedingInitialSync.length} accounts needing initial sync`);
     
     for (const account of accountsNeedingInitialSync) {
-      await this.performInitialSync(account);
+      await this.performInitialSyncWarehouse(account);
     }
     
     console.log('✅ FHB Initial Sync completed');
+  }
+  
+  /**
+   * Helper: Convert userWarehouseAccount to legacy fhbAccount format
+   * This allows reusing existing sync logic
+   */
+  private convertToLegacyFormat(warehouseAccount: typeof userWarehouseAccounts.$inferSelect): typeof fhbAccounts.$inferSelect {
+    const credentials = warehouseAccount.credentials as Record<string, any>;
+    
+    return {
+      id: warehouseAccount.id,
+      name: warehouseAccount.displayName,
+      appId: credentials.appId || credentials.app_id || '',
+      secret: credentials.secret || '',
+      apiUrl: credentials.apiUrl || credentials.api_url || undefined,
+      status: warehouseAccount.status,
+      initialSyncCompleted: warehouseAccount.initialSyncCompleted || false,
+      initialSyncCompletedAt: warehouseAccount.initialSyncCompletedAt || null,
+      createdAt: warehouseAccount.createdAt,
+      updatedAt: warehouseAccount.updatedAt
+    } as typeof fhbAccounts.$inferSelect;
+  }
+  
+  /**
+   * Sync a user warehouse account (wrapper for legacy syncAccount)
+   */
+  private async syncWarehouseAccount(
+    warehouseAccount: typeof userWarehouseAccounts.$inferSelect,
+    syncType: 'deep' | 'fast',
+    days: number
+  ): Promise<void> {
+    const legacyAccount = this.convertToLegacyFormat(warehouseAccount);
+    await this.syncAccount(legacyAccount, syncType, days);
+  }
+  
+  /**
+   * Perform initial sync for warehouse account
+   * Full implementation that updates user_warehouse_accounts table
+   */
+  private async performInitialSyncWarehouse(warehouseAccount: typeof userWarehouseAccounts.$inferSelect): Promise<void> {
+    const legacyAccount = this.convertToLegacyFormat(warehouseAccount);
+    console.log(`🚀 Starting initial sync for warehouse account: ${warehouseAccount.displayName} (2 years backfill)`);
+    
+    const startTime = Date.now();
+    let totalStats: SyncStats = {
+      ordersProcessed: 0,
+      ordersCreated: 0,
+      ordersUpdated: 0,
+      ordersSkipped: 0
+    };
+    
+    let hadErrors = false;
+    const errorWindows: string[] = [];
+    
+    // Create overall sync log entry
+    const [syncLog] = await db.insert(fhbSyncLogs).values({
+      fhbAccountId: legacyAccount.id,
+      syncType: 'initial',
+      status: 'started',
+      startedAt: new Date()
+    }).returning();
+    
+    try {
+      // Initialize FHB service
+      const fhbService = new FHBService({
+        appId: legacyAccount.appId,
+        secret: legacyAccount.secret,
+        apiUrl: legacyAccount.apiUrl
+      });
+      
+      // Calculate 2 years back from today (730 days)
+      const today = new Date();
+      const twoYearsAgo = new Date(today.getTime() - 730 * 24 * 60 * 60 * 1000);
+      
+      // Build windows dynamically to cover exactly 730 days
+      const windowSizeDays = 30;
+      let windowStart = new Date(twoYearsAgo);
+      let windowNumber = 1;
+      
+      while (windowStart < today) {
+        const windowEnd = new Date(Math.min(
+          windowStart.getTime() + windowSizeDays * 24 * 60 * 60 * 1000,
+          today.getTime()
+        ));
+        
+        // Process window with automatic splitting
+        const result = await this.processWindowWithAutoSplit(
+          fhbService,
+          legacyAccount,
+          windowStart,
+          windowEnd,
+          windowNumber,
+          totalStats
+        );
+        
+        if (!result.success) {
+          hadErrors = true;
+          const fromStr = windowStart.toISOString().split('T')[0];
+          const toStr = windowEnd.toISOString().split('T')[0];
+          errorWindows.push(`${fromStr} to ${toStr} (${result.error})`);
+        }
+        
+        // Move to next window
+        windowStart = new Date(windowEnd);
+        windowNumber++;
+      }
+      
+      const duration = Date.now() - startTime;
+      
+      // Only mark as completed if NO errors occurred
+      if (!hadErrors) {
+        // Mark warehouse account as completed
+        await db.update(userWarehouseAccounts)
+          .set({
+            initialSyncCompleted: true,
+            initialSyncCompletedAt: new Date()
+          })
+          .where(eq(userWarehouseAccounts.id, warehouseAccount.id));
+        
+        // Also update legacy table for backward compatibility
+        await db.update(fhbAccounts)
+          .set({
+            initialSyncCompleted: true,
+            initialSyncCompletedAt: new Date()
+          })
+          .where(eq(fhbAccounts.id, legacyAccount.id));
+        
+        // Mark sync log as completed
+        await db.update(fhbSyncLogs)
+          .set({
+            status: 'completed',
+            ordersProcessed: totalStats.ordersProcessed,
+            ordersCreated: totalStats.ordersCreated,
+            ordersUpdated: totalStats.ordersUpdated,
+            ordersSkipped: totalStats.ordersSkipped,
+            completedAt: new Date(),
+            durationMs: duration
+          })
+          .where(eq(fhbSyncLogs.id, syncLog.id));
+        
+        console.log(`✅ Initial sync completed successfully for ${warehouseAccount.displayName}`);
+        console.log(`   📊 Stats: ${totalStats.ordersCreated} created, ${totalStats.ordersUpdated} updated, ${totalStats.ordersSkipped} skipped`);
+        console.log(`   ⏱️ Duration: ${(duration / 1000 / 60).toFixed(1)} minutes`);
+      } else {
+        // Had errors - mark as failed
+        await db.update(fhbSyncLogs)
+          .set({
+            status: 'failed',
+            ordersProcessed: totalStats.ordersProcessed,
+            ordersCreated: totalStats.ordersCreated,
+            ordersUpdated: totalStats.ordersUpdated,
+            ordersSkipped: totalStats.ordersSkipped,
+            errorMessage: `Failed windows: ${errorWindows.join('; ')}`,
+            completedAt: new Date(),
+            durationMs: duration
+          })
+          .where(eq(fhbSyncLogs.id, syncLog.id));
+        
+        console.warn(`⚠️ Initial sync completed with errors for ${warehouseAccount.displayName}`);
+        console.warn(`   Failed windows (${errorWindows.length}): ${errorWindows.join('; ')}`);
+        console.warn(`   ⏭️ Sync will retry on next cycle`);
+      }
+    } catch (error: any) {
+      // Fatal error during sync
+      await db.update(fhbSyncLogs)
+        .set({
+          status: 'failed',
+          errorMessage: error.message,
+          completedAt: new Date(),
+          durationMs: Date.now() - startTime
+        })
+        .where(eq(fhbSyncLogs.id, syncLog.id));
+      
+      console.error(`❌ Fatal error during initial sync for ${warehouseAccount.displayName}:`, error);
+      throw error;
+    }
   }
   
   /**
@@ -660,10 +851,15 @@ export class FHBSyncService {
    * Get sync status for admin dashboard
    */
   async getSyncStatus() {
-    // Get last sync for each account
+    // Get last sync for each FHB warehouse account
     const accounts = await db.select()
-      .from(fhbAccounts)
-      .where(eq(fhbAccounts.status, 'active'));
+      .from(userWarehouseAccounts)
+      .where(
+        and(
+          eq(userWarehouseAccounts.providerKey, 'fhb'),
+          eq(userWarehouseAccounts.status, 'active')
+        )
+      );
     
     const status = [];
     let pendingInitialCount = 0;
@@ -684,7 +880,7 @@ export class FHBSyncService {
       status.push({
         account: {
           id: account.id,
-          name: account.name,
+          name: account.displayName,
           needsInitialSync,
           initialSyncCompletedAt: account.initialSyncCompletedAt
         },
