@@ -444,6 +444,150 @@ export const cartpandaIntegrations = pgTable("cartpanda_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Warehouse Providers - Catalog of available warehouse providers
+export const warehouseProviders = pgTable("warehouse_providers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(), // 'fhb', 'european_fulfillment', 'elogy'
+  name: text("name").notNull(), // 'FHB', 'European Fulfillment', 'eLogy'
+  description: text("description"),
+  
+  // Metadata about required fields for configuration
+  requiredFields: jsonb("required_fields").$type<{
+    fieldName: string;
+    fieldType: string;
+    label: string;
+    placeholder?: string;
+    required: boolean;
+  }[]>(),
+  
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User Warehouse Accounts - User-level warehouse integrations (multi-account support)
+export const userWarehouseAccounts = pgTable("user_warehouse_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  providerKey: text("provider_key").notNull().references(() => warehouseProviders.key), // 'fhb', 'european_fulfillment', 'elogy'
+  
+  displayName: text("display_name").notNull(), // User-friendly name: "FHB Account PT", "Main European"
+  
+  // Encrypted credentials (JSON structure varies by provider)
+  credentials: jsonb("credentials").notNull().$type<{
+    appId?: string;
+    secret?: string;
+    apiUrl?: string;
+    token?: string;
+    username?: string;
+    password?: string;
+    [key: string]: any;
+  }>(),
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
+  lastTestedAt: timestamp("last_tested_at"),
+  testResult: text("test_result"), // Last connection test result
+  
+  // Sync tracking
+  lastSyncAt: timestamp("last_sync_at"),
+  initialSyncCompleted: boolean("initial_sync_completed").notNull().default(false),
+  initialSyncCompletedAt: timestamp("initial_sync_completed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Index for fetching accounts by user
+  userIdIdx: index("user_warehouse_accounts_user_id_idx").on(table.userId),
+  // Index for fetching by provider
+  providerKeyIdx: index("user_warehouse_accounts_provider_key_idx").on(table.providerKey),
+}));
+
+// User Warehouse Account Operations - Links user warehouse accounts to specific operations (optional)
+export const userWarehouseAccountOperations = pgTable("user_warehouse_account_operations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").notNull().references(() => userWarehouseAccounts.id),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  isDefault: boolean("is_default").notNull().default(false), // Default account for this operation
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint: one account-operation pair
+  uniqueAccountOperation: unique().on(table.accountId, table.operationId),
+  // Index for fetching operations by account
+  accountIdIdx: index("user_warehouse_account_operations_account_id_idx").on(table.accountId),
+  // Index for fetching accounts by operation
+  operationIdIdx: index("user_warehouse_account_operations_operation_id_idx").on(table.operationId),
+}));
+
+// European Fulfillment Orders Staging Table - raw orders before processing to operations
+export const europeanFulfillmentOrders = pgTable("european_fulfillment_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").references(() => userWarehouseAccounts.id), // Nullable - permite desvincular ao deletar conta
+  
+  // European Fulfillment order identifiers
+  europeanOrderId: text("european_order_id").notNull(), // European's internal order ID
+  orderNumber: text("order_number").notNull(), // Order number with prefix (e.g., "LOJA01-1234")
+  
+  // Order data
+  status: text("status").notNull(), // European status
+  tracking: text("tracking"), // Tracking number
+  value: decimal("value", { precision: 10, scale: 2 }), // Order value
+  
+  // Structured data
+  recipient: jsonb("recipient"), // Customer/recipient information
+  items: jsonb("items"), // Order items
+  rawData: jsonb("raw_data").notNull(), // Complete European order object
+  
+  // Processing tracking
+  processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicates
+  uniqueEuropeanOrder: unique().on(table.accountId, table.europeanOrderId),
+  // Index for unprocessed orders
+  unprocessedIdx: index("european_fulfillment_orders_unprocessed_idx").on(table.processedToOrders),
+  // Index for order number lookup
+  orderNumberIdx: index("european_fulfillment_orders_order_number_idx").on(table.orderNumber),
+}));
+
+// eLogy Orders Staging Table - raw orders before processing to operations
+export const elogyOrders = pgTable("elogy_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").references(() => userWarehouseAccounts.id), // Nullable - permite desvincular ao deletar conta
+  
+  // eLogy order identifiers
+  elogyOrderId: text("elogy_order_id").notNull(), // eLogy's internal order ID
+  orderNumber: text("order_number").notNull(), // Order number with prefix (e.g., "LOJA01-1234")
+  
+  // Order data
+  status: text("status").notNull(), // eLogy status
+  tracking: text("tracking"), // Tracking number
+  value: decimal("value", { precision: 10, scale: 2 }), // Order value
+  
+  // Structured data
+  recipient: jsonb("recipient"), // Customer/recipient information
+  items: jsonb("items"), // Order items
+  rawData: jsonb("raw_data").notNull(), // Complete eLogy order object
+  
+  // Processing tracking
+  processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicates
+  uniqueElogyOrder: unique().on(table.accountId, table.elogyOrderId),
+  // Index for unprocessed orders
+  unprocessedIdx: index("elogy_orders_unprocessed_idx").on(table.processedToOrders),
+  // Index for order number lookup
+  orderNumberIdx: index("elogy_orders_order_number_idx").on(table.orderNumber),
+}));
+
 // User operation access - defines which operations a user can access
 export const userOperationAccess = pgTable("user_operation_access", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -690,6 +834,67 @@ export const insertFhbOrderSchema = createInsertSchema(fhbOrders).omit({
 
 export type InsertFhbOrder = z.infer<typeof insertFhbOrderSchema>;
 export type FhbOrder = typeof fhbOrders.$inferSelect;
+
+// Warehouse Providers schemas
+export const insertWarehouseProviderSchema = createInsertSchema(warehouseProviders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWarehouseProvider = z.infer<typeof insertWarehouseProviderSchema>;
+export type WarehouseProvider = typeof warehouseProviders.$inferSelect;
+
+// User Warehouse Accounts schemas
+export const insertUserWarehouseAccountSchema = createInsertSchema(userWarehouseAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastTestedAt: true,
+  testResult: true,
+  lastSyncAt: true,
+  initialSyncCompleted: true,
+  initialSyncCompletedAt: true,
+});
+
+export const updateUserWarehouseAccountSchema = createInsertSchema(userWarehouseAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertUserWarehouseAccount = z.infer<typeof insertUserWarehouseAccountSchema>;
+export type UpdateUserWarehouseAccount = z.infer<typeof updateUserWarehouseAccountSchema>;
+export type UserWarehouseAccount = typeof userWarehouseAccounts.$inferSelect;
+
+// User Warehouse Account Operations schemas
+export const insertUserWarehouseAccountOperationSchema = createInsertSchema(userWarehouseAccountOperations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUserWarehouseAccountOperation = z.infer<typeof insertUserWarehouseAccountOperationSchema>;
+export type UserWarehouseAccountOperation = typeof userWarehouseAccountOperations.$inferSelect;
+
+// European Fulfillment Orders schemas
+export const insertEuropeanFulfillmentOrderSchema = createInsertSchema(europeanFulfillmentOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEuropeanFulfillmentOrder = z.infer<typeof insertEuropeanFulfillmentOrderSchema>;
+export type EuropeanFulfillmentOrder = typeof europeanFulfillmentOrders.$inferSelect;
+
+// eLogy Orders schemas
+export const insertElogyOrderSchema = createInsertSchema(elogyOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertElogyOrder = z.infer<typeof insertElogyOrderSchema>;
+export type ElogyOrder = typeof elogyOrders.$inferSelect;
 
 // Fulfillment integration schemas
 export const insertFulfillmentIntegrationSchema = createInsertSchema(fulfillmentIntegrations).omit({

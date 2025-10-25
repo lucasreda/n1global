@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, stores, orders, products, userProducts, shippingProviders, operations, userOperationAccess, aiDirectives, marketplaceProducts, productOperationLinks, announcements, User, Order, Product, UserProduct, ShippingProvider, Operation, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, LinkProductBySku, MarketplaceProduct, InsertMarketplaceProduct, ProductOperationLink, InsertProductOperationLink, Announcement, InsertAnnouncement } from "@shared/schema";
+import { users, stores, orders, products, userProducts, shippingProviders, operations, userOperationAccess, aiDirectives, marketplaceProducts, productOperationLinks, announcements, warehouseProviders, userWarehouseAccounts, userWarehouseAccountOperations, User, Order, Product, UserProduct, ShippingProvider, Operation, WarehouseProvider, UserWarehouseAccount, UserWarehouseAccountOperation, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserWarehouseAccount, UpdateUserWarehouseAccount, InsertUserWarehouseAccountOperation, LinkProductBySku, MarketplaceProduct, InsertMarketplaceProduct, ProductOperationLink, InsertProductOperationLink, Announcement, InsertAnnouncement } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -92,6 +92,25 @@ export interface IStorage {
   createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
   updateAnnouncement(id: string, updates: Partial<Announcement>): Promise<Announcement | undefined>;
   deleteAnnouncement(id: string): Promise<boolean>;
+
+  // Warehouse Providers methods
+  getWarehouseProviders(): Promise<WarehouseProvider[]>;
+  getWarehouseProvider(key: string): Promise<WarehouseProvider | undefined>;
+  
+  // User Warehouse Accounts methods
+  getUserWarehouseAccounts(userId: string): Promise<UserWarehouseAccount[]>;
+  getUserWarehouseAccountsByProvider(userId: string, providerKey: string): Promise<UserWarehouseAccount[]>;
+  getUserWarehouseAccount(id: string): Promise<UserWarehouseAccount | undefined>;
+  createUserWarehouseAccount(account: InsertUserWarehouseAccount): Promise<UserWarehouseAccount>;
+  updateUserWarehouseAccount(id: string, updates: UpdateUserWarehouseAccount): Promise<UserWarehouseAccount | undefined>;
+  deleteUserWarehouseAccount(id: string): Promise<boolean>;
+  testUserWarehouseAccount(id: string): Promise<{ success: boolean; message: string }>;
+  
+  // User Warehouse Account Operations methods
+  linkAccountToOperation(link: InsertUserWarehouseAccountOperation): Promise<UserWarehouseAccountOperation>;
+  getAccountOperationLinks(accountId: string): Promise<UserWarehouseAccountOperation[]>;
+  getOperationAccountLinks(operationId: string): Promise<UserWarehouseAccountOperation[]>;
+  deleteAccountOperationLink(accountId: string, operationId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1317,6 +1336,117 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAnnouncement(id: string): Promise<boolean> {
     const result = await db.delete(announcements).where(eq(announcements.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Warehouse Providers methods
+  async getWarehouseProviders(): Promise<WarehouseProvider[]> {
+    return await db.select().from(warehouseProviders).where(eq(warehouseProviders.isActive, true));
+  }
+
+  async getWarehouseProvider(key: string): Promise<WarehouseProvider | undefined> {
+    const [provider] = await db.select().from(warehouseProviders).where(eq(warehouseProviders.key, key));
+    return provider || undefined;
+  }
+
+  // User Warehouse Accounts methods
+  async getUserWarehouseAccounts(userId: string): Promise<UserWarehouseAccount[]> {
+    return await db
+      .select()
+      .from(userWarehouseAccounts)
+      .where(eq(userWarehouseAccounts.userId, userId))
+      .orderBy(desc(userWarehouseAccounts.createdAt));
+  }
+
+  async getUserWarehouseAccountsByProvider(userId: string, providerKey: string): Promise<UserWarehouseAccount[]> {
+    return await db
+      .select()
+      .from(userWarehouseAccounts)
+      .where(
+        and(
+          eq(userWarehouseAccounts.userId, userId),
+          eq(userWarehouseAccounts.providerKey, providerKey)
+        )
+      )
+      .orderBy(desc(userWarehouseAccounts.createdAt));
+  }
+
+  async getUserWarehouseAccount(id: string): Promise<UserWarehouseAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(userWarehouseAccounts)
+      .where(eq(userWarehouseAccounts.id, id));
+    return account || undefined;
+  }
+
+  async createUserWarehouseAccount(account: InsertUserWarehouseAccount): Promise<UserWarehouseAccount> {
+    const [newAccount] = await db
+      .insert(userWarehouseAccounts)
+      .values(account)
+      .returning();
+    return newAccount;
+  }
+
+  async updateUserWarehouseAccount(id: string, updates: UpdateUserWarehouseAccount): Promise<UserWarehouseAccount | undefined> {
+    const [updated] = await db
+      .update(userWarehouseAccounts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(userWarehouseAccounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteUserWarehouseAccount(id: string): Promise<boolean> {
+    const result = await db
+      .delete(userWarehouseAccounts)
+      .where(eq(userWarehouseAccounts.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async testUserWarehouseAccount(id: string): Promise<{ success: boolean; message: string }> {
+    // This will be implemented by calling the appropriate provider service
+    // For now, return a placeholder
+    const account = await this.getUserWarehouseAccount(id);
+    if (!account) {
+      return { success: false, message: "Account not found" };
+    }
+    
+    // TODO: Implement actual provider testing logic
+    return { success: true, message: "Test connection placeholder - to be implemented with provider services" };
+  }
+
+  // User Warehouse Account Operations methods
+  async linkAccountToOperation(link: InsertUserWarehouseAccountOperation): Promise<UserWarehouseAccountOperation> {
+    const [newLink] = await db
+      .insert(userWarehouseAccountOperations)
+      .values(link)
+      .returning();
+    return newLink;
+  }
+
+  async getAccountOperationLinks(accountId: string): Promise<UserWarehouseAccountOperation[]> {
+    return await db
+      .select()
+      .from(userWarehouseAccountOperations)
+      .where(eq(userWarehouseAccountOperations.accountId, accountId));
+  }
+
+  async getOperationAccountLinks(operationId: string): Promise<UserWarehouseAccountOperation[]> {
+    return await db
+      .select()
+      .from(userWarehouseAccountOperations)
+      .where(eq(userWarehouseAccountOperations.operationId, operationId));
+  }
+
+  async deleteAccountOperationLink(accountId: string, operationId: string): Promise<boolean> {
+    const result = await db
+      .delete(userWarehouseAccountOperations)
+      .where(
+        and(
+          eq(userWarehouseAccountOperations.accountId, accountId),
+          eq(userWarehouseAccountOperations.operationId, operationId)
+        )
+      );
     return result.rowCount !== null && result.rowCount > 0;
   }
 }
