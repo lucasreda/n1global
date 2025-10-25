@@ -765,474 +765,90 @@ export default function AdminUsers() {
             </DialogDescription>
           </DialogHeader>
           
-          <Tabs value={createWizardStep} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="basic" disabled>
-                1. Informações Básicas
-              </TabsTrigger>
-              <TabsTrigger 
-                value="integrations" 
-                disabled={newUserData.role !== 'user'}
-                className="disabled:opacity-50"
-              >
-                2. Integrações{newUserData.role !== 'user' && ' (somente clientes)'}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="basic" className="space-y-4 mt-4">
-              <div>
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  value={newUserData.name}
-                  onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
-                  placeholder="Nome completo"
-                  data-testid="input-new-user-name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUserData.email}
-                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                  placeholder="email@exemplo.com"
-                  data-testid="input-new-user-email"
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newUserData.password}
-                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
-                  placeholder="Senha segura"
-                  data-testid="input-new-user-password"
-                />
-              </div>
-              <div>
-                <Label htmlFor="role">Função</Label>
-                <Select 
-                  value={newUserData.role} 
-                  onValueChange={(value) => {
-                    setNewUserData({ ...newUserData, role: value });
-                    // Reset to basic step when changing away from 'user' role
-                    if (value !== 'user' && createWizardStep === 'integrations') {
-                      setCreateWizardStep('basic');
-                    }
-                  }}
-                >
-                  <SelectTrigger data-testid="select-new-user-role">
-                    <SelectValue placeholder="Selecione a função" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Cliente</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
-                    <SelectItem value="supplier">Fornecedor</SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Operations Selection */}
-              {(newUserData.role === 'user' || newUserData.role === 'store') && (
-                <div className="space-y-2">
-                  <Label>Operações</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Selecione quais operações este usuário terá acesso
-                  </p>
-                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
-                    {allOperations && allOperations.length > 0 ? (
-                      allOperations.map((op) => (
-                        <div key={op.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`new-op-${op.id}`}
-                            checked={newUserData.operationIds.includes(op.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setNewUserData({
-                                  ...newUserData,
-                                  operationIds: [...newUserData.operationIds, op.id]
-                                });
-                              } else {
-                                setNewUserData({
-                                  ...newUserData,
-                                  operationIds: newUserData.operationIds.filter(id => id !== op.id)
-                                });
-                              }
-                            }}
-                            data-testid={`checkbox-new-operation-${op.id}`}
-                          />
-                          <label
-                            htmlFor={`new-op-${op.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            {op.name}
-                          </label>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Nenhuma operação disponível</p>
-                    )}
-                  </div>
-                  {newUserData.operationIds.length > 0 && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      {newUserData.operationIds.length} operação(ões) selecionada(s)
-                    </p>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="integrations" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                      Integrações de Warehouse (Opcional)
-                    </h4>
-                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                      Configure contas de warehouse (FHB, European Fulfillment, eLogy) para este usuário. 
-                      Você pode pular esta etapa e configurar depois.
-                    </p>
-                  </div>
-                </div>
-
-                {warehouseProvidersLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-                    <p className="text-sm text-muted-foreground mt-2">Carregando providers...</p>
-                  </div>
-                ) : warehouseProvidersError ? (
-                  <div className="text-center py-8">
-                    <Badge variant="destructive">Erro ao carregar providers</Badge>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Você pode configurar as integrações depois na edição do usuário
-                    </p>
-                  </div>
-                ) : warehouseProviders && warehouseProviders.length > 0 ? (
-                  <Accordion type="single" collapsible className="w-full">
-                    {warehouseProviders.map((provider) => (
-                      <AccordionItem key={provider.key} value={provider.key} data-testid={`accordion-provider-${provider.key}`}>
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex items-center justify-between w-full pr-4">
-                            <div className="flex items-center gap-3">
-                              <Truck className="h-4 w-4 text-muted-foreground" />
-                              <div className="text-left">
-                                <p className="font-medium">{provider.name}</p>
-                                {provider.description && (
-                                  <p className="text-xs text-muted-foreground">{provider.description}</p>
-                                )}
-                              </div>
-                            </div>
-                            <Badge variant="outline" className="ml-auto mr-2">
-                              {newWarehouseAccounts.filter(acc => acc.providerKey === provider.key).length} conta(s)
-                            </Badge>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="space-y-3 pt-2">
-                            {/* Lista de contas já adicionadas */}
-                            {newWarehouseAccounts
-                              .filter(acc => acc.providerKey === provider.key)
-                              .map((account) => (
-                                <div 
-                                  key={account.tempId} 
-                                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                                  data-testid={`warehouse-account-${account.tempId}`}
-                                >
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">{account.accountName}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {account.operationIds.length} operação(ões) vinculada(s)
-                                    </p>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setNewWarehouseAccounts(prev => prev.filter(a => a.tempId !== account.tempId));
-                                      toast({
-                                        title: "Conta removida",
-                                        description: "A conta foi removida da lista."
-                                      });
-                                    }}
-                                    data-testid={`button-remove-account-${account.tempId}`}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ))}
-
-                            {/* Formulário para adicionar nova conta */}
-                            {addingAccount?.providerKey === provider.key ? (
-                              <div className="p-4 border rounded-lg space-y-3" data-testid={`form-add-account-${provider.key}`}>
-                                <div>
-                                  <Label htmlFor={`account-name-${provider.key}`}>Nome da Conta</Label>
-                                  <Input
-                                    id={`account-name-${provider.key}`}
-                                    placeholder="Ex: FHB Principal"
-                                    value={addingAccount.accountName}
-                                    onChange={(e) => setAddingAccount({ ...addingAccount, accountName: e.target.value })}
-                                    data-testid={`input-account-name-${provider.key}`}
-                                  />
-                                </div>
-
-                                {provider.requiredFields.map((field) => (
-                                  <div key={field.key}>
-                                    <Label htmlFor={`${provider.key}-${field.key}`}>
-                                      {field.label} {field.required && <span className="text-destructive">*</span>}
-                                    </Label>
-                                    <Input
-                                      id={`${provider.key}-${field.key}`}
-                                      type={field.type === 'password' ? 'password' : 'text'}
-                                      placeholder={`Digite ${field.label.toLowerCase()}`}
-                                      value={addingAccount.credentials[field.key] || ''}
-                                      onChange={(e) => setAddingAccount({
-                                        ...addingAccount,
-                                        credentials: { ...addingAccount.credentials, [field.key]: e.target.value }
-                                      })}
-                                      data-testid={`input-credential-${provider.key}-${field.key}`}
-                                    />
-                                  </div>
-                                ))}
-
-                                <div>
-                                  <Label>Operações Vinculadas</Label>
-                                  <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border rounded-lg p-3">
-                                    {newUserData.operationIds.length > 0 ? (
-                                      allOperations?.filter(op => newUserData.operationIds.includes(op.id)).map(op => (
-                                        <div key={op.id} className="flex items-center gap-2">
-                                          <Checkbox
-                                            id={`account-op-${op.id}`}
-                                            checked={addingAccount.operationIds.includes(op.id)}
-                                            onCheckedChange={(checked) => {
-                                              if (checked) {
-                                                setAddingAccount({
-                                                  ...addingAccount,
-                                                  operationIds: [...addingAccount.operationIds, op.id]
-                                                });
-                                              } else {
-                                                setAddingAccount({
-                                                  ...addingAccount,
-                                                  operationIds: addingAccount.operationIds.filter(id => id !== op.id)
-                                                });
-                                              }
-                                            }}
-                                            data-testid={`checkbox-account-operation-${op.id}`}
-                                          />
-                                          <label htmlFor={`account-op-${op.id}`} className="text-sm cursor-pointer">
-                                            {op.name}
-                                          </label>
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <p className="text-xs text-muted-foreground">
-                                        Selecione operações na etapa anterior primeiro
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="flex gap-2 justify-end">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setAddingAccount(null)}
-                                    data-testid={`button-cancel-add-${provider.key}`}
-                                  >
-                                    Cancelar
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      // Validação
-                                      if (!addingAccount.accountName.trim()) {
-                                        toast({
-                                          title: "Nome obrigatório",
-                                          description: "Preencha o nome da conta.",
-                                          variant: "destructive"
-                                        });
-                                        return;
-                                      }
-
-                                      const missingFields = provider.requiredFields
-                                        .filter(f => f.required && !addingAccount.credentials[f.key]?.trim());
-                                      
-                                      if (missingFields.length > 0) {
-                                        toast({
-                                          title: "Campos obrigatórios faltando",
-                                          description: `Preencha: ${missingFields.map(f => f.label).join(', ')}`,
-                                          variant: "destructive"
-                                        });
-                                        return;
-                                      }
-
-                                      if (addingAccount.operationIds.length === 0) {
-                                        toast({
-                                          title: "Selecione operações",
-                                          description: "Vincule pelo menos uma operação a esta conta.",
-                                          variant: "destructive"
-                                        });
-                                        return;
-                                      }
-
-                                      // Adicionar conta à lista
-                                      const newAccount = {
-                                        ...addingAccount,
-                                        tempId: `temp-${Date.now()}-${Math.random()}`
-                                      };
-                                      setNewWarehouseAccounts(prev => [...prev, newAccount]);
-                                      setAddingAccount(null);
-                                      toast({
-                                        title: "Conta adicionada",
-                                        description: `${addingAccount.accountName} foi adicionada.`
-                                      });
-                                    }}
-                                    data-testid={`button-save-add-${provider.key}`}
-                                  >
-                                    <Check className="h-4 w-4 mr-1" />
-                                    Adicionar Conta
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => setAddingAccount({
-                                  providerKey: provider.key,
-                                  accountName: '',
-                                  credentials: {},
-                                  operationIds: []
-                                })}
-                                disabled={newUserData.operationIds.length === 0}
-                                data-testid={`button-add-account-${provider.key}`}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Adicionar Conta {provider.name}
-                                {newUserData.operationIds.length === 0 && (
-                                  <span className="ml-2 text-xs text-muted-foreground">
-                                    (selecione operações primeiro)
-                                  </span>
-                                )}
-                              </Button>
-                            )}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground">Nenhum provider disponível</p>
-                  </div>
-                )}
-
-                {newWarehouseAccounts.length > 0 && (
-                  <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                    <p className="text-sm text-green-900 dark:text-green-100">
-                      <Check className="h-4 w-4 inline mr-1" />
-                      {newWarehouseAccounts.length} conta(s) de warehouse configurada(s)
-                    </p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter className="flex justify-between items-center">
+          <div className="space-y-4 mt-4">
             <div>
-              {createWizardStep === 'integrations' && (
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setCreateWizardStep('basic')}
-                  data-testid="button-wizard-back"
-                >
-                  ← Voltar
-                </Button>
-              )}
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={newUserData.name}
+                onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                placeholder="Nome completo"
+                data-testid="input-new-user-name"
+              />
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateUserModal(false)}
-                data-testid="button-cancel-create-user"
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                placeholder="email@exemplo.com"
+                data-testid="input-new-user-email"
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={newUserData.password}
+                onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                placeholder="Senha segura"
+                data-testid="input-new-user-password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="role">Função</Label>
+              <Select 
+                value={newUserData.role} 
+                onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}
               >
-                Cancelar
-              </Button>
-              {createWizardStep === 'basic' ? (
-                newUserData.role === 'user' ? (
-                  <Button 
-                    onClick={() => {
-                      // Basic validation
-                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
-                        toast({
-                          title: "Campos obrigatórios",
-                          description: "Preencha nome, email e senha antes de continuar.",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      // Validate operations for user role
-                      if (newUserData.operationIds.length === 0) {
-                        toast({
-                          title: "Operações obrigatórias",
-                          description: "Selecione pelo menos uma operação para este usuário.",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      setCreateWizardStep('integrations');
-                    }}
-                    data-testid="button-wizard-next"
-                  >
-                    Próximo →
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => {
-                      // Basic validation for all roles
-                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
-                        toast({
-                          title: "Campos obrigatórios",
-                          description: "Preencha nome, email e senha antes de criar o usuário.",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      // Validate operations for store role
-                      if (newUserData.role === 'store' && newUserData.operationIds.length === 0) {
-                        toast({
-                          title: "Operações obrigatórias",
-                          description: "Selecione pelo menos uma operação para este usuário.",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      createUserMutation.mutate(newUserData);
-                    }}
-                    disabled={createUserMutation.isPending}
-                    data-testid="button-create-user-submit"
-                  >
-                    {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
-                  </Button>
-                )
-              ) : (
-                <Button 
-                  onClick={() => createUserMutation.mutate(newUserData)}
-                  disabled={createUserMutation.isPending}
-                  data-testid="button-create-user-complete"
-                >
-                  {createUserMutation.isPending ? 'Criando...' : 'Concluir e Criar'}
-                </Button>
-              )}
+                <SelectTrigger data-testid="select-new-user-role">
+                  <SelectValue placeholder="Selecione a função" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">Cliente</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
+                  <SelectItem value="supplier">Fornecedor</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Após criar o usuário, você poderá configurar operações e integrações de warehouse através do painel de edição.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCreateUserModal(false)}
+              data-testid="button-cancel-create-user"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => {
+                if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
+                  toast({
+                    title: "Campos obrigatórios",
+                    description: "Preencha nome, email e senha antes de criar o usuário.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                createUserMutation.mutate(newUserData);
+              }}
+              disabled={createUserMutation.isPending}
+              data-testid="button-create-user-submit"
+            >
+              {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
