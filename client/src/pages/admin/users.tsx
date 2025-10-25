@@ -28,6 +28,14 @@ import {
   X,
   Check
 } from "lucide-react";
+import { WarehouseAccountCard } from "@/components/admin/warehouse-account-card";
+import { 
+  FHBIntegrationForm, 
+  EuropeanFulfillmentIntegrationForm, 
+  ElogyIntegrationForm,
+  type WarehouseFormData 
+} from "@/components/admin/warehouse-integration-forms";
+import { apiRequest } from "@/lib/queryClient";
 
 // Define available pages for different user types
 const USER_PAGES = [
@@ -111,6 +119,13 @@ export default function AdminUsers() {
     forcePasswordChange: false
   });
   const [activeTab, setActiveTab] = useState("general");
+  
+  // State for warehouse accounts in edit modal
+  const [addingEditWarehouseAccount, setAddingEditWarehouseAccount] = useState<{
+    providerKey: string;
+    formData: WarehouseFormData;
+  } | null>(null);
+  const [editingWarehouseAccountId, setEditingWarehouseAccountId] = useState<string | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -127,7 +142,7 @@ export default function AdminUsers() {
     requiredFields: Array<{ key: string; label: string; type: string; required: boolean }>;
   }>>({
     queryKey: ['/api/warehouse/providers'],
-    enabled: showCreateUserModal && createWizardStep === 'integrations'
+    enabled: (showCreateUserModal && createWizardStep === 'integrations') || (showEditModal && activeTab === 'warehouse')
   });
 
   // Buscar todas as operações disponíveis
@@ -168,6 +183,109 @@ export default function AdminUsers() {
       });
       if (!response.ok) throw new Error('Erro ao buscar operações do usuário');
       return response.json();
+    }
+  });
+
+  // Buscar warehouse accounts do usuário em edição
+  const { data: userWarehouseAccounts } = useQuery<Array<{
+    id: string;
+    displayName: string;
+    providerKey: string;
+    providerName: string;
+    isActive: boolean;
+    initialSyncCompleted: boolean;
+    initialSyncCompletedAt?: string | null;
+    lastTestedAt?: string | null;
+    lastSyncAt?: string | null;
+    operationIds?: string[];
+  }>>({
+    queryKey: ['/api/user/warehouse-accounts', userToEdit?.id],
+    enabled: !!userToEdit?.id,
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/user/warehouse-accounts?userId=${userToEdit?.id}`, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error('Erro ao buscar warehouse accounts');
+      return response.json();
+    }
+  });
+
+  // Mutation para criar warehouse account
+  const createWarehouseAccountMutation = useMutation({
+    mutationFn: async (accountData: {
+      userId: string;
+      providerKey: string;
+      accountName: string;
+      credentials: Record<string, string>;
+      operationIds: string[];
+    }) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch('/api/user/warehouse-accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify(accountData)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao criar conta');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/warehouse-accounts', userToEdit?.id] });
+      toast({
+        title: "Conta criada",
+        description: "A conta de warehouse foi criada com sucesso."
+      });
+      setAddingEditWarehouseAccount(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao criar conta",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation para deletar warehouse account
+  const deleteWarehouseAccountMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/user/warehouse-accounts/${accountId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include"
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao deletar conta');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/warehouse-accounts', userToEdit?.id] });
+      toast({
+        title: "Conta excluída",
+        description: "A conta de warehouse foi removida com sucesso."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir conta",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   });
 
@@ -1139,7 +1257,7 @@ export default function AdminUsers() {
           </DialogHeader>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-white/10 border border-white/20">
+            <TabsList className="grid w-full grid-cols-4 bg-white/10 border border-white/20">
               <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
                 Informações Gerais
               </TabsTrigger>
@@ -1148,6 +1266,9 @@ export default function AdminUsers() {
               </TabsTrigger>
               <TabsTrigger value="operations" className="data-[state=active]:bg-blue-600">
                 Operações
+              </TabsTrigger>
+              <TabsTrigger value="warehouse" className="data-[state=active]:bg-blue-600" data-testid="tab-warehouse">
+                Warehouse
               </TabsTrigger>
             </TabsList>
             
@@ -1504,6 +1625,175 @@ export default function AdminUsers() {
                       </div>
                     </div>
                   )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="warehouse" className="mt-4">
+                <div className="space-y-4">
+                  <div className="text-sm text-slate-400">
+                    Gerencie as contas de warehouse (FHB, European Fulfillment, eLogy) deste usuário.
+                  </div>
+                  
+                  {/* Lista de warehouse accounts existentes */}
+                  {!userWarehouseAccounts ? (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-6 text-center">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-slate-400 text-sm">
+                        Carregando warehouse accounts...
+                      </p>
+                    </div>
+                  ) : userWarehouseAccounts.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-white">
+                        Contas Configuradas ({userWarehouseAccounts.length})
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {userWarehouseAccounts.map((account) => (
+                          <WarehouseAccountCard
+                            key={account.id}
+                            account={account}
+                            operations={allOperations}
+                            onDelete={(accountId) => {
+                              if (confirm(`Tem certeza que deseja excluir a conta "${account.displayName}"?`)) {
+                                deleteWarehouseAccountMutation.mutate(accountId);
+                              }
+                            }}
+                            showActions={true}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-8 text-center">
+                      <div className="w-16 h-16 rounded-full bg-gray-500/20 flex items-center justify-center mx-auto mb-4">
+                        <Truck className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h4 className="text-sm font-medium text-white mb-2">
+                        Nenhuma conta configurada
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Adicione contas de warehouse para sincronizar pedidos.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Adicionar nova conta */}
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Adicionar Nova Conta
+                    </h4>
+                    
+                    {warehouseProvidersLoading ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
+                        <p className="text-xs text-muted-foreground mt-2">Carregando providers...</p>
+                      </div>
+                    ) : warehouseProvidersError ? (
+                      <div className="text-center py-4">
+                        <Badge variant="destructive">Erro ao carregar providers</Badge>
+                      </div>
+                    ) : warehouseProviders && warehouseProviders.length > 0 ? (
+                      <Accordion type="single" collapsible className="w-full">
+                        {warehouseProviders.map((provider) => (
+                          <AccordionItem key={provider.key} value={provider.key} data-testid={`accordion-edit-provider-${provider.key}`}>
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-3">
+                                <Truck className="h-4 w-4 text-muted-foreground" />
+                                <div className="text-left">
+                                  <p className="font-medium">{provider.name}</p>
+                                  {provider.description && (
+                                    <p className="text-xs text-muted-foreground">{provider.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              {addingEditWarehouseAccount?.providerKey === provider.key ? (
+                                <div className="p-4 border border-white/20 rounded-lg space-y-3 bg-white/5">
+                                  {provider.key === 'fhb' && (
+                                    <FHBIntegrationForm
+                                      formData={addingEditWarehouseAccount.formData}
+                                      onChange={(formData) => setAddingEditWarehouseAccount({ providerKey: provider.key, formData })}
+                                      availableOperations={userOperations ? allOperations?.filter(op => userOperations.some(uo => uo.operationId === op.id)) || [] : []}
+                                    />
+                                  )}
+                                  {provider.key === 'european_fulfillment' && (
+                                    <EuropeanFulfillmentIntegrationForm
+                                      formData={addingEditWarehouseAccount.formData}
+                                      onChange={(formData) => setAddingEditWarehouseAccount({ providerKey: provider.key, formData })}
+                                      availableOperations={userOperations ? allOperations?.filter(op => userOperations.some(uo => uo.operationId === op.id)) || [] : []}
+                                    />
+                                  )}
+                                  {provider.key === 'elogy' && (
+                                    <ElogyIntegrationForm
+                                      formData={addingEditWarehouseAccount.formData}
+                                      onChange={(formData) => setAddingEditWarehouseAccount({ providerKey: provider.key, formData })}
+                                      availableOperations={userOperations ? allOperations?.filter(op => userOperations.some(uo => uo.operationId === op.id)) || [] : []}
+                                    />
+                                  )}
+                                  
+                                  <div className="flex gap-2 justify-end">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setAddingEditWarehouseAccount(null)}
+                                      data-testid={`button-cancel-add-${provider.key}`}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        if (!addingEditWarehouseAccount.formData.accountName.trim()) {
+                                          toast({
+                                            title: "Campo obrigatório",
+                                            description: "Preencha o nome da conta.",
+                                            variant: "destructive"
+                                          });
+                                          return;
+                                        }
+                                        if (!userToEdit?.id) return;
+                                        createWarehouseAccountMutation.mutate({
+                                          userId: userToEdit.id,
+                                          providerKey: provider.key,
+                                          accountName: addingEditWarehouseAccount.formData.accountName,
+                                          credentials: addingEditWarehouseAccount.formData.credentials,
+                                          operationIds: addingEditWarehouseAccount.formData.operationIds
+                                        });
+                                      }}
+                                      disabled={createWarehouseAccountMutation.isPending}
+                                      data-testid={`button-save-add-${provider.key}`}
+                                    >
+                                      {createWarehouseAccountMutation.isPending ? 'Salvando...' : 'Salvar Conta'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => setAddingEditWarehouseAccount({
+                                    providerKey: provider.key,
+                                    formData: { accountName: '', credentials: {}, operationIds: [] }
+                                  })}
+                                  data-testid={`button-add-${provider.key}`}
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Adicionar Conta {provider.name}
+                                </Button>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Nenhum provider disponível
+                      </p>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
               
