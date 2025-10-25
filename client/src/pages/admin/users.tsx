@@ -935,17 +935,38 @@ export default function AdminUsers() {
                                     <Label htmlFor={`${provider.key}-${field.key}`}>
                                       {field.label} {field.required && <span className="text-destructive">*</span>}
                                     </Label>
-                                    <Input
-                                      id={`${provider.key}-${field.key}`}
-                                      type={field.type === 'password' ? 'password' : 'text'}
-                                      placeholder={`Digite ${field.label.toLowerCase()}`}
-                                      value={addingAccount.credentials[field.key] || ''}
-                                      onChange={(e) => setAddingAccount({
-                                        ...addingAccount,
-                                        credentials: { ...addingAccount.credentials, [field.key]: e.target.value }
-                                      })}
-                                      data-testid={`input-credential-${provider.key}-${field.key}`}
-                                    />
+                                    {field.type === 'select' && field.key === 'country' ? (
+                                      <Select
+                                        value={addingAccount.credentials[field.key] || ''}
+                                        onValueChange={(value) => setAddingAccount({
+                                          ...addingAccount,
+                                          credentials: { ...addingAccount.credentials, [field.key]: value }
+                                        })}
+                                      >
+                                        <SelectTrigger data-testid={`select-credential-${provider.key}-${field.key}`}>
+                                          <SelectValue placeholder="Selecione o país" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="portugal">🇵🇹 Portugal</SelectItem>
+                                          <SelectItem value="spain">🇪🇸 Espanha</SelectItem>
+                                          <SelectItem value="italy">🇮🇹 Itália</SelectItem>
+                                          <SelectItem value="france">🇫🇷 França</SelectItem>
+                                          <SelectItem value="germany">🇩🇪 Alemanha</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <Input
+                                        id={`${provider.key}-${field.key}`}
+                                        type={field.type === 'password' ? 'password' : 'text'}
+                                        placeholder={`Digite ${field.label.toLowerCase()}`}
+                                        value={addingAccount.credentials[field.key] || ''}
+                                        onChange={(e) => setAddingAccount({
+                                          ...addingAccount,
+                                          credentials: { ...addingAccount.credentials, [field.key]: e.target.value }
+                                        })}
+                                        data-testid={`input-credential-${provider.key}-${field.key}`}
+                                      />
+                                    )}
                                   </div>
                                 ))}
 

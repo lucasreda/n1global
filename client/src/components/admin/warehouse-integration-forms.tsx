@@ -55,11 +55,21 @@ export function WarehouseIntegrationForm({
                 <SelectValue placeholder={`Selecione ${field.label.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {field.options.map((option) => (
-                  <SelectItem key={option} value={option} data-testid={`select-option-${field.key}-${option}`}>
-                    {option}
-                  </SelectItem>
-                ))}
+                {field.key === 'country' ? (
+                  <>
+                    <SelectItem value="portugal" data-testid="select-option-country-portugal">🇵🇹 Portugal</SelectItem>
+                    <SelectItem value="spain" data-testid="select-option-country-spain">🇪🇸 Espanha</SelectItem>
+                    <SelectItem value="italy" data-testid="select-option-country-italy">🇮🇹 Itália</SelectItem>
+                    <SelectItem value="france" data-testid="select-option-country-france">🇫🇷 França</SelectItem>
+                    <SelectItem value="germany" data-testid="select-option-country-germany">🇩🇪 Alemanha</SelectItem>
+                  </>
+                ) : (
+                  field.options.map((option) => (
+                    <SelectItem key={option} value={option} data-testid={`select-option-${field.key}-${option}`}>
+                      {option}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           ) : (
@@ -139,8 +149,7 @@ export function WarehouseIntegrationForm({
 export function FHBIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
   const fhbFields = [
     { key: 'email', label: 'Email FHB', type: 'email', required: true },
-    { key: 'password', label: 'Senha FHB', type: 'password', required: true },
-    { key: 'apiUrl', label: 'URL da API', type: 'text', required: false }
+    { key: 'password', label: 'Senha FHB', type: 'password', required: true }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={fhbFields} />;
@@ -156,8 +165,7 @@ export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProp
       type: 'select', 
       required: true,
       options: ['portugal', 'spain', 'italy', 'france', 'germany']
-    },
-    { key: 'apiUrl', label: 'URL da API', type: 'text', required: false }
+    }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={europeanFields} />;
@@ -168,8 +176,7 @@ export function ElogyIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFi
     { key: 'email', label: 'Email eLogy', type: 'email', required: true },
     { key: 'password', label: 'Senha eLogy', type: 'password', required: true },
     { key: 'authHeader', label: 'Auth Header', type: 'text', required: false },
-    { key: 'warehouseId', label: 'Warehouse ID', type: 'text', required: false },
-    { key: 'apiUrl', label: 'URL da API', type: 'text', required: false }
+    { key: 'warehouseId', label: 'Warehouse ID', type: 'text', required: false }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={elogyFields} />;
