@@ -931,19 +931,19 @@ export default function AdminUsers() {
                                 </div>
 
                                 {provider.requiredFields.map((field) => (
-                                  <div key={field.key}>
-                                    <Label htmlFor={`${provider.key}-${field.key}`}>
+                                  <div key={field.fieldName}>
+                                    <Label htmlFor={`${provider.key}-${field.fieldName}`}>
                                       {field.label} {field.required && <span className="text-destructive">*</span>}
                                     </Label>
-                                    {field.type === 'select' && field.key === 'country' ? (
+                                    {field.fieldType === 'select' && field.fieldName === 'country' ? (
                                       <Select
-                                        value={addingAccount.credentials[field.key] || ''}
+                                        value={addingAccount.credentials[field.fieldName] || ''}
                                         onValueChange={(value) => setAddingAccount({
                                           ...addingAccount,
-                                          credentials: { ...addingAccount.credentials, [field.key]: value }
+                                          credentials: { ...addingAccount.credentials, [field.fieldName]: value }
                                         })}
                                       >
-                                        <SelectTrigger data-testid={`select-credential-${provider.key}-${field.key}`}>
+                                        <SelectTrigger data-testid={`select-credential-${provider.key}-${field.fieldName}`}>
                                           <SelectValue placeholder="Selecione o país" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -968,15 +968,15 @@ export default function AdminUsers() {
                                       </Select>
                                     ) : (
                                       <Input
-                                        id={`${provider.key}-${field.key}`}
-                                        type={field.type === 'password' ? 'password' : 'text'}
+                                        id={`${provider.key}-${field.fieldName}`}
+                                        type={field.fieldType === 'password' ? 'password' : 'text'}
                                         placeholder={`Digite ${field.label.toLowerCase()}`}
-                                        value={addingAccount.credentials[field.key] || ''}
+                                        value={addingAccount.credentials[field.fieldName] || ''}
                                         onChange={(e) => setAddingAccount({
                                           ...addingAccount,
-                                          credentials: { ...addingAccount.credentials, [field.key]: e.target.value }
+                                          credentials: { ...addingAccount.credentials, [field.fieldName]: e.target.value }
                                         })}
-                                        data-testid={`input-credential-${provider.key}-${field.key}`}
+                                        data-testid={`input-credential-${provider.key}-${field.fieldName}`}
                                       />
                                     )}
                                   </div>
@@ -1004,7 +1004,7 @@ export default function AdminUsers() {
                                       }
 
                                       const missingFields = provider.requiredFields
-                                        .filter(f => f.required && !addingAccount.credentials[f.key]?.trim());
+                                        .filter(f => f.required && !addingAccount.credentials[f.fieldName]?.trim());
                                       
                                       if (missingFields.length > 0) {
                                         toast({

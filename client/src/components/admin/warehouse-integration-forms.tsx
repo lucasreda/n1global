@@ -13,7 +13,7 @@ export interface WarehouseFormProps {
   formData: WarehouseFormData;
   onChange: (data: WarehouseFormData) => void;
   availableOperations: Array<{ id: string; name: string }>;
-  requiredFields?: Array<{ key: string; label: string; type?: string; required?: boolean; options?: string[] }>;
+  requiredFields?: Array<{ fieldName: string; label: string; fieldType?: string; required?: boolean; options?: string[] }>;
 }
 
 export function WarehouseIntegrationForm({
@@ -38,24 +38,24 @@ export function WarehouseIntegrationForm({
 
       {/* Dynamic Credential Fields */}
       {requiredFields.map((field) => (
-        <div key={field.key}>
-          <Label htmlFor={`field-${field.key}`}>
+        <div key={field.fieldName}>
+          <Label htmlFor={`field-${field.fieldName}`}>
             {field.label} {field.required && <span className="text-destructive">*</span>}
           </Label>
           
           {field.options ? (
             <Select
-              value={formData.credentials[field.key] || ''}
+              value={formData.credentials[field.fieldName] || ''}
               onValueChange={(value) => onChange({
                 ...formData,
-                credentials: { ...formData.credentials, [field.key]: value }
+                credentials: { ...formData.credentials, [field.fieldName]: value }
               })}
             >
-              <SelectTrigger data-testid={`select-${field.key}`}>
+              <SelectTrigger data-testid={`select-${field.fieldName}`}>
                 <SelectValue placeholder={`Selecione ${field.label.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
-                {field.key === 'country' ? (
+                {field.fieldName === 'country' ? (
                   <>
                     <SelectItem value="spain" data-testid="select-option-country-spain">🇪🇸 Espanha</SelectItem>
                     <SelectItem value="portugal" data-testid="select-option-country-portugal">🇵🇹 Portugal</SelectItem>
@@ -77,7 +77,7 @@ export function WarehouseIntegrationForm({
                   </>
                 ) : (
                   field.options.map((option) => (
-                    <SelectItem key={option} value={option} data-testid={`select-option-${field.key}-${option}`}>
+                    <SelectItem key={option} value={option} data-testid={`select-option-${field.fieldName}-${option}`}>
                       {option}
                     </SelectItem>
                   ))
@@ -86,15 +86,15 @@ export function WarehouseIntegrationForm({
             </Select>
           ) : (
             <Input
-              id={`field-${field.key}`}
-              type={field.type ?? 'text'}
+              id={`field-${field.fieldName}`}
+              type={field.fieldType ?? 'text'}
               placeholder={`Digite ${field.label.toLowerCase()}`}
-              value={formData.credentials[field.key] || ''}
+              value={formData.credentials[field.fieldName] || ''}
               onChange={(e) => onChange({
                 ...formData,
-                credentials: { ...formData.credentials, [field.key]: e.target.value }
+                credentials: { ...formData.credentials, [field.fieldName]: e.target.value }
               })}
-              data-testid={`input-${field.key}`}
+              data-testid={`input-${field.fieldName}`}
             />
           )}
         </div>
@@ -160,8 +160,8 @@ export function WarehouseIntegrationForm({
 
 export function FHBIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
   const fhbFields = [
-    { key: 'email', label: 'Email FHB', type: 'email', required: true },
-    { key: 'password', label: 'Senha FHB', type: 'password', required: true }
+    { fieldName: 'email', label: 'Email FHB', fieldType: 'email', required: true },
+    { fieldName: 'password', label: 'Senha FHB', fieldType: 'password', required: true }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={fhbFields} />;
@@ -169,12 +169,12 @@ export function FHBIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFiel
 
 export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
   const europeanFields = [
-    { key: 'email', label: 'Email European Fulfillment', type: 'email', required: true },
-    { key: 'password', label: 'Senha European Fulfillment', type: 'password', required: true },
+    { fieldName: 'email', label: 'Email European Fulfillment', fieldType: 'email', required: true },
+    { fieldName: 'password', label: 'Senha European Fulfillment', fieldType: 'password', required: true },
     { 
-      key: 'country', 
+      fieldName: 'country', 
       label: 'País', 
-      type: 'select', 
+      fieldType: 'select', 
       required: true,
       options: ['spain', 'portugal', 'italy', 'poland', 'slovakia', 'czechrepublic', 'romania', 'bulgaria', 'greece', 'hungary', 'slovenia', 'croatia', 'austria', 'germany', 'france', 'belgium', 'netherlands']
     }
@@ -185,10 +185,10 @@ export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProp
 
 export function ElogyIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
   const elogyFields = [
-    { key: 'email', label: 'Email eLogy', type: 'email', required: true },
-    { key: 'password', label: 'Senha eLogy', type: 'password', required: true },
-    { key: 'authHeader', label: 'Auth Header', type: 'text', required: false },
-    { key: 'warehouseId', label: 'Warehouse ID', type: 'text', required: false }
+    { fieldName: 'email', label: 'Email eLogy', fieldType: 'email', required: true },
+    { fieldName: 'password', label: 'Senha eLogy', fieldType: 'password', required: true },
+    { fieldName: 'authHeader', label: 'Auth Header', fieldType: 'text', required: false },
+    { fieldName: 'warehouseId', label: 'Warehouse ID', fieldType: 'text', required: false }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={elogyFields} />;
