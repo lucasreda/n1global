@@ -71,6 +71,7 @@ export default function AdminUsers() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
   const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
+  const [createWizardStep, setCreateWizardStep] = useState<'basic' | 'integrations'>('basic');
   const [newUserData, setNewUserData] = useState({
     name: '',
     email: '',
@@ -95,6 +96,17 @@ export default function AdminUsers() {
 
   const { data: systemUsers, isLoading: usersLoading } = useQuery<SystemUser[]>({
     queryKey: ['/api/admin/users']
+  });
+
+  // Buscar warehouse providers catalog
+  const { data: warehouseProviders, isLoading: warehouseProvidersLoading, isError: warehouseProvidersError } = useQuery<Array<{
+    key: string;
+    name: string;
+    description: string | null;
+    requiredFields: Array<{ key: string; label: string; type: string; required: boolean }>;
+  }>>({
+    queryKey: ['/api/warehouse/providers'],
+    enabled: showCreateUserModal && createWizardStep === 'integrations'
   });
 
   // Buscar todas as operações disponíveis
@@ -204,6 +216,7 @@ export default function AdminUsers() {
       });
       setShowCreateUserModal(false);
       setNewUserData({ name: '', email: '', password: '', role: 'store', operationIds: [] });
+      setCreateWizardStep('basic');
     },
     onError: (error: Error) => {
       toast({
@@ -531,120 +544,262 @@ export default function AdminUsers() {
         </CardContent>
       </Card>
 
-      {/* Create User Modal */}
-      <Dialog open={showCreateUserModal} onOpenChange={setShowCreateUserModal}>
-        <DialogContent>
+      {/* Create User Modal - 2 Step Wizard */}
+      <Dialog open={showCreateUserModal} onOpenChange={(open) => {
+        setShowCreateUserModal(open);
+        if (!open) {
+          setCreateWizardStep('basic');
+          setNewUserData({ name: '', email: '', password: '', role: 'store', operationIds: [] });
+        }
+      }}>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Criar Novo Usuário</DialogTitle>
             <DialogDescription>
-              Adicione um novo usuário ao sistema
+              {createWizardStep === 'basic' 
+                ? 'Preencha as informações básicas do usuário' 
+                : 'Configure as integrações de warehouse (opcional)'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={newUserData.name}
-                onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
-                placeholder="Nome completo"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newUserData.email}
-                onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={newUserData.password}
-                onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
-                placeholder="Senha segura"
-              />
-            </div>
-            <div>
-              <Label htmlFor="role">Função</Label>
-              <Select value={newUserData.role} onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a função" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">Cliente</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
-                  <SelectItem value="supplier">Fornecedor</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          
+          <Tabs value={createWizardStep} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic" disabled>
+                1. Informações Básicas
+              </TabsTrigger>
+              <TabsTrigger 
+                value="integrations" 
+                disabled={newUserData.role !== 'user'}
+                className="disabled:opacity-50"
+              >
+                2. Integrações{newUserData.role !== 'user' && ' (somente clientes)'}
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Operations Selection */}
-            {(newUserData.role === 'user' || newUserData.role === 'store') && (
-              <div className="space-y-2">
-                <Label>Operações</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Selecione quais operações este usuário terá acesso
-                </p>
-                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
-                  {allOperations && allOperations.length > 0 ? (
-                    allOperations.map((op) => (
-                      <div key={op.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`new-op-${op.id}`}
-                          checked={newUserData.operationIds.includes(op.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setNewUserData({
-                                ...newUserData,
-                                operationIds: [...newUserData.operationIds, op.id]
-                              });
-                            } else {
-                              setNewUserData({
-                                ...newUserData,
-                                operationIds: newUserData.operationIds.filter(id => id !== op.id)
-                              });
-                            }
-                          }}
-                          data-testid={`checkbox-new-operation-${op.id}`}
-                        />
-                        <label
-                          htmlFor={`new-op-${op.id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {op.name}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Nenhuma operação disponível</p>
+            <TabsContent value="basic" className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={newUserData.name}
+                  onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                  placeholder="Nome completo"
+                  data-testid="input-new-user-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                  data-testid="input-new-user-email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  placeholder="Senha segura"
+                  data-testid="input-new-user-password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Função</Label>
+                <Select 
+                  value={newUserData.role} 
+                  onValueChange={(value) => {
+                    setNewUserData({ ...newUserData, role: value });
+                    // Reset to basic step when changing away from 'user' role
+                    if (value !== 'user' && createWizardStep === 'integrations') {
+                      setCreateWizardStep('basic');
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-new-user-role">
+                    <SelectValue placeholder="Selecione a função" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Cliente</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
+                    <SelectItem value="supplier">Fornecedor</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Operations Selection */}
+              {(newUserData.role === 'user' || newUserData.role === 'store') && (
+                <div className="space-y-2">
+                  <Label>Operações</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Selecione quais operações este usuário terá acesso
+                  </p>
+                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                    {allOperations && allOperations.length > 0 ? (
+                      allOperations.map((op) => (
+                        <div key={op.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`new-op-${op.id}`}
+                            checked={newUserData.operationIds.includes(op.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setNewUserData({
+                                  ...newUserData,
+                                  operationIds: [...newUserData.operationIds, op.id]
+                                });
+                              } else {
+                                setNewUserData({
+                                  ...newUserData,
+                                  operationIds: newUserData.operationIds.filter(id => id !== op.id)
+                                });
+                              }
+                            }}
+                            data-testid={`checkbox-new-operation-${op.id}`}
+                          />
+                          <label
+                            htmlFor={`new-op-${op.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {op.name}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Nenhuma operação disponível</p>
+                    )}
+                  </div>
+                  {newUserData.operationIds.length > 0 && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      {newUserData.operationIds.length} operação(ões) selecionada(s)
+                    </p>
                   )}
                 </div>
-                {newUserData.operationIds.length > 0 && (
-                  <p className="text-xs text-blue-600 mt-1">
-                    {newUserData.operationIds.length} operação(ões) selecionada(s)
-                  </p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="integrations" className="space-y-4 mt-4">
+              <div className="rounded-lg border p-6 text-center space-y-3">
+                <Truck className="h-12 w-12 text-muted-foreground mx-auto" />
+                <h3 className="text-lg font-semibold">Integrações de Warehouse</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Configure as contas de warehouse para este usuário (FHB, European Fulfillment, eLogy).
+                  Você também poderá configurar isso depois na página de edição do usuário.
+                </p>
+                {warehouseProvidersLoading ? (
+                  <Badge variant="outline" className="text-xs">
+                    Carregando providers...
+                  </Badge>
+                ) : warehouseProvidersError ? (
+                  <Badge variant="destructive" className="text-xs">
+                    Erro ao carregar providers - Você pode configurar depois
+                  </Badge>
+                ) : warehouseProviders ? (
+                  <Badge variant="outline" className="text-xs">
+                    {warehouseProviders.length} provider(s) disponível(is) - UI em desenvolvimento (Task 11)
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">
+                    Em desenvolvimento - Task 11
+                  </Badge>
                 )}
               </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateUserModal(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => createUserMutation.mutate(newUserData)}
-              disabled={createUserMutation.isPending}
-            >
-              {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
-            </Button>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="flex justify-between items-center">
+            <div>
+              {createWizardStep === 'integrations' && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setCreateWizardStep('basic')}
+                  data-testid="button-wizard-back"
+                >
+                  ← Voltar
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateUserModal(false)}
+                data-testid="button-cancel-create-user"
+              >
+                Cancelar
+              </Button>
+              {createWizardStep === 'basic' ? (
+                newUserData.role === 'user' ? (
+                  <Button 
+                    onClick={() => {
+                      // Basic validation
+                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
+                        toast({
+                          title: "Campos obrigatórios",
+                          description: "Preencha nome, email e senha antes de continuar.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      // Validate operations for user role
+                      if (newUserData.operationIds.length === 0) {
+                        toast({
+                          title: "Operações obrigatórias",
+                          description: "Selecione pelo menos uma operação para este usuário.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      setCreateWizardStep('integrations');
+                    }}
+                    data-testid="button-wizard-next"
+                  >
+                    Próximo →
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => {
+                      // Basic validation for all roles
+                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
+                        toast({
+                          title: "Campos obrigatórios",
+                          description: "Preencha nome, email e senha antes de criar o usuário.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      // Validate operations for store role
+                      if (newUserData.role === 'store' && newUserData.operationIds.length === 0) {
+                        toast({
+                          title: "Operações obrigatórias",
+                          description: "Selecione pelo menos uma operação para este usuário.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      createUserMutation.mutate(newUserData);
+                    }}
+                    disabled={createUserMutation.isPending}
+                    data-testid="button-create-user-submit"
+                  >
+                    {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
+                  </Button>
+                )
+              ) : (
+                <Button 
+                  onClick={() => createUserMutation.mutate(newUserData)}
+                  disabled={createUserMutation.isPending}
+                  data-testid="button-create-user-complete"
+                >
+                  {createUserMutation.isPending ? 'Criando...' : 'Concluir e Criar'}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
