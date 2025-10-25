@@ -57,11 +57,23 @@ export function WarehouseIntegrationForm({
               <SelectContent>
                 {field.key === 'country' ? (
                   <>
-                    <SelectItem value="portugal" data-testid="select-option-country-portugal">🇵🇹 Portugal</SelectItem>
                     <SelectItem value="spain" data-testid="select-option-country-spain">🇪🇸 Espanha</SelectItem>
+                    <SelectItem value="portugal" data-testid="select-option-country-portugal">🇵🇹 Portugal</SelectItem>
                     <SelectItem value="italy" data-testid="select-option-country-italy">🇮🇹 Itália</SelectItem>
-                    <SelectItem value="france" data-testid="select-option-country-france">🇫🇷 França</SelectItem>
+                    <SelectItem value="poland" data-testid="select-option-country-poland">🇵🇱 Polônia</SelectItem>
+                    <SelectItem value="slovakia" data-testid="select-option-country-slovakia">🇸🇰 Eslováquia</SelectItem>
+                    <SelectItem value="czechrepublic" data-testid="select-option-country-czechrepublic">🇨🇿 República Tcheca</SelectItem>
+                    <SelectItem value="romania" data-testid="select-option-country-romania">🇷🇴 Romênia</SelectItem>
+                    <SelectItem value="bulgaria" data-testid="select-option-country-bulgaria">🇧🇬 Bulgária</SelectItem>
+                    <SelectItem value="greece" data-testid="select-option-country-greece">🇬🇷 Grécia</SelectItem>
+                    <SelectItem value="hungary" data-testid="select-option-country-hungary">🇭🇺 Hungria</SelectItem>
+                    <SelectItem value="slovenia" data-testid="select-option-country-slovenia">🇸🇮 Eslovênia</SelectItem>
+                    <SelectItem value="croatia" data-testid="select-option-country-croatia">🇭🇷 Croácia</SelectItem>
+                    <SelectItem value="austria" data-testid="select-option-country-austria">🇦🇹 Áustria</SelectItem>
                     <SelectItem value="germany" data-testid="select-option-country-germany">🇩🇪 Alemanha</SelectItem>
+                    <SelectItem value="france" data-testid="select-option-country-france">🇫🇷 França</SelectItem>
+                    <SelectItem value="belgium" data-testid="select-option-country-belgium">🇧🇪 Bélgica</SelectItem>
+                    <SelectItem value="netherlands" data-testid="select-option-country-netherlands">🇳🇱 Holanda</SelectItem>
                   </>
                 ) : (
                   field.options.map((option) => (
@@ -164,7 +176,7 @@ export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProp
       label: 'País', 
       type: 'select', 
       required: true,
-      options: ['portugal', 'spain', 'italy', 'france', 'germany']
+      options: ['spain', 'portugal', 'italy', 'poland', 'slovakia', 'czechrepublic', 'romania', 'bulgaria', 'greece', 'hungary', 'slovenia', 'croatia', 'austria', 'germany', 'france', 'belgium', 'netherlands']
     }
   ];
 

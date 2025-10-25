@@ -23,11 +23,11 @@ const providers = [
   {
     key: 'european_fulfillment',
     name: 'European Fulfillment',
-    description: 'Multi-country European fulfillment network (Portugal, Spain, Italy, France, Germany)',
+    description: 'Multi-country European fulfillment network covering 17 European countries',
     requiredFields: [
       { fieldName: 'email', fieldType: 'email', label: 'Email European Fulfillment', required: true },
       { fieldName: 'password', fieldType: 'password', label: 'Senha European Fulfillment', required: true },
-      { fieldName: 'country', fieldType: 'select', label: 'País', placeholder: 'portugal,spain,italy,france,germany', required: true }
+      { fieldName: 'country', fieldType: 'select', label: 'País', placeholder: 'spain,portugal,italy,poland,slovakia,czechrepublic,romania,bulgaria,greece,hungary,slovenia,croatia,austria,germany,france,belgium,netherlands', required: true }
     ],
     isActive: true
   },

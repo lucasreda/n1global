@@ -947,11 +947,23 @@ export default function AdminUsers() {
                                           <SelectValue placeholder="Selecione o país" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="portugal">🇵🇹 Portugal</SelectItem>
                                           <SelectItem value="spain">🇪🇸 Espanha</SelectItem>
+                                          <SelectItem value="portugal">🇵🇹 Portugal</SelectItem>
                                           <SelectItem value="italy">🇮🇹 Itália</SelectItem>
-                                          <SelectItem value="france">🇫🇷 França</SelectItem>
+                                          <SelectItem value="poland">🇵🇱 Polônia</SelectItem>
+                                          <SelectItem value="slovakia">🇸🇰 Eslováquia</SelectItem>
+                                          <SelectItem value="czechrepublic">🇨🇿 República Tcheca</SelectItem>
+                                          <SelectItem value="romania">🇷🇴 Romênia</SelectItem>
+                                          <SelectItem value="bulgaria">🇧🇬 Bulgária</SelectItem>
+                                          <SelectItem value="greece">🇬🇷 Grécia</SelectItem>
+                                          <SelectItem value="hungary">🇭🇺 Hungria</SelectItem>
+                                          <SelectItem value="slovenia">🇸🇮 Eslovênia</SelectItem>
+                                          <SelectItem value="croatia">🇭🇷 Croácia</SelectItem>
+                                          <SelectItem value="austria">🇦🇹 Áustria</SelectItem>
                                           <SelectItem value="germany">🇩🇪 Alemanha</SelectItem>
+                                          <SelectItem value="france">🇫🇷 França</SelectItem>
+                                          <SelectItem value="belgium">🇧🇪 Bélgica</SelectItem>
+                                          <SelectItem value="netherlands">🇳🇱 Holanda</SelectItem>
                                         </SelectContent>
                                       </Select>
                                     ) : (
