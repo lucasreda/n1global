@@ -16,8 +16,7 @@ const providers = [
     description: 'European fulfillment provider with warehouses in Slovakia and neighboring countries',
     requiredFields: [
       { fieldName: 'email', fieldType: 'email', label: 'Email FHB', required: true },
-      { fieldName: 'password', fieldType: 'password', label: 'Senha FHB', required: true },
-      { fieldName: 'apiUrl', fieldType: 'text', label: 'URL da API', required: false }
+      { fieldName: 'password', fieldType: 'password', label: 'Senha FHB', required: true }
     ],
     isActive: true
   },
@@ -28,8 +27,7 @@ const providers = [
     requiredFields: [
       { fieldName: 'email', fieldType: 'email', label: 'Email European Fulfillment', required: true },
       { fieldName: 'password', fieldType: 'password', label: 'Senha European Fulfillment', required: true },
-      { fieldName: 'country', fieldType: 'select', label: 'País', placeholder: 'portugal,spain,italy,france,germany', required: true },
-      { fieldName: 'apiUrl', fieldType: 'text', label: 'URL da API', required: false }
+      { fieldName: 'country', fieldType: 'select', label: 'País', placeholder: 'portugal,spain,italy,france,germany', required: true }
     ],
     isActive: true
   },
@@ -41,8 +39,7 @@ const providers = [
       { fieldName: 'email', fieldType: 'email', label: 'Email eLogy', required: true },
       { fieldName: 'password', fieldType: 'password', label: 'Senha eLogy', required: true },
       { fieldName: 'authHeader', fieldType: 'text', label: 'Auth Header', required: false },
-      { fieldName: 'warehouseId', fieldType: 'text', label: 'Warehouse ID', required: false },
-      { fieldName: 'apiUrl', fieldType: 'text', label: 'URL da API', required: false }
+      { fieldName: 'warehouseId', fieldType: 'text', label: 'Warehouse ID', required: false }
     ],
     isActive: true
   }
