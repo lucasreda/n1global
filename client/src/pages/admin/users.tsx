@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
@@ -22,7 +23,10 @@ import {
   Settings,
   DollarSign,
   Store,
-  Truck
+  Truck,
+  Plus,
+  X,
+  Check
 } from "lucide-react";
 
 // Define available pages for different user types
@@ -79,6 +83,23 @@ export default function AdminUsers() {
     role: 'store',
     operationIds: [] as string[]
   });
+  
+  // State for warehouse accounts being configured
+  const [newWarehouseAccounts, setNewWarehouseAccounts] = useState<Array<{
+    tempId: string;
+    providerKey: string;
+    accountName: string;
+    credentials: Record<string, string>;
+    operationIds: string[];
+  }>>([]);
+  
+  // State for adding new warehouse account
+  const [addingAccount, setAddingAccount] = useState<{
+    providerKey: string;
+    accountName: string;
+    credentials: Record<string, string>;
+    operationIds: string[];
+  } | null>(null);
   const [editUserData, setEditUserData] = useState({
     name: '',
     email: '',
@@ -207,15 +228,77 @@ export default function AdminUsers() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (createdUser) => {
+      // Criar warehouse accounts se houver alguma configurada
+      let successCount = 0;
+      let failedAccounts: string[] = [];
+      
+      if (newWarehouseAccounts.length > 0) {
+        const token = localStorage.getItem("auth_token");
+        
+        for (const account of newWarehouseAccounts) {
+          try {
+            const accountResponse = await fetch('/api/user/warehouse-accounts', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token && { "Authorization": `Bearer ${token}` }),
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                userId: createdUser.user.id,
+                providerKey: account.providerKey,
+                accountName: account.accountName,
+                credentials: account.credentials,
+                isActive: true,
+                operationIds: account.operationIds
+              }),
+            });
+            
+            if (accountResponse.ok) {
+              successCount++;
+            } else {
+              failedAccounts.push(account.accountName);
+              console.error(`Erro ao criar conta ${account.accountName}:`, await accountResponse.text());
+            }
+          } catch (error) {
+            failedAccounts.push(account.accountName);
+            console.error(`Erro ao criar conta ${account.accountName}:`, error);
+          }
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      
+      // Mensagem de sucesso personalizada
+      let message = "O usuário foi criado com sucesso.";
+      if (successCount > 0 && failedAccounts.length === 0) {
+        message = `Usuário criado com ${successCount} conta(s) de warehouse.`;
+      } else if (successCount > 0 && failedAccounts.length > 0) {
+        message = `Usuário criado com ${successCount} conta(s). ${failedAccounts.length} falhou(aram).`;
+      }
+      
       toast({
         title: "Usuário criado",
-        description: "O usuário foi criado com sucesso.",
+        description: message,
       });
+      
+      // Alerta separado para contas que falharam
+      if (failedAccounts.length > 0) {
+        setTimeout(() => {
+          toast({
+            title: "Algumas contas não foram criadas",
+            description: `Configure manualmente: ${failedAccounts.join(', ')}`,
+            variant: "destructive"
+          });
+        }, 1000);
+      }
+      
       setShowCreateUserModal(false);
       setNewUserData({ name: '', email: '', password: '', role: 'store', operationIds: [] });
+      setNewWarehouseAccounts([]);
+      setAddingAccount(null);
       setCreateWizardStep('basic');
     },
     onError: (error: Error) => {
@@ -550,6 +633,8 @@ export default function AdminUsers() {
         if (!open) {
           setCreateWizardStep('basic');
           setNewUserData({ name: '', email: '', password: '', role: 'store', operationIds: [] });
+          setNewWarehouseAccounts([]);
+          setAddingAccount(null);
         }
       }}>
         <DialogContent className="max-w-3xl">
@@ -685,29 +770,259 @@ export default function AdminUsers() {
             </TabsContent>
 
             <TabsContent value="integrations" className="space-y-4 mt-4">
-              <div className="rounded-lg border p-6 text-center space-y-3">
-                <Truck className="h-12 w-12 text-muted-foreground mx-auto" />
-                <h3 className="text-lg font-semibold">Integrações de Warehouse</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Configure as contas de warehouse para este usuário (FHB, European Fulfillment, eLogy).
-                  Você também poderá configurar isso depois na página de edição do usuário.
-                </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                      Integrações de Warehouse (Opcional)
+                    </h4>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      Configure contas de warehouse (FHB, European Fulfillment, eLogy) para este usuário. 
+                      Você pode pular esta etapa e configurar depois.
+                    </p>
+                  </div>
+                </div>
+
                 {warehouseProvidersLoading ? (
-                  <Badge variant="outline" className="text-xs">
-                    Carregando providers...
-                  </Badge>
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                    <p className="text-sm text-muted-foreground mt-2">Carregando providers...</p>
+                  </div>
                 ) : warehouseProvidersError ? (
-                  <Badge variant="destructive" className="text-xs">
-                    Erro ao carregar providers - Você pode configurar depois
-                  </Badge>
-                ) : warehouseProviders ? (
-                  <Badge variant="outline" className="text-xs">
-                    {warehouseProviders.length} provider(s) disponível(is) - UI em desenvolvimento (Task 11)
-                  </Badge>
+                  <div className="text-center py-8">
+                    <Badge variant="destructive">Erro ao carregar providers</Badge>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Você pode configurar as integrações depois na edição do usuário
+                    </p>
+                  </div>
+                ) : warehouseProviders && warehouseProviders.length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full">
+                    {warehouseProviders.map((provider) => (
+                      <AccordionItem key={provider.key} value={provider.key} data-testid={`accordion-provider-${provider.key}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <div className="flex items-center gap-3">
+                              <Truck className="h-4 w-4 text-muted-foreground" />
+                              <div className="text-left">
+                                <p className="font-medium">{provider.name}</p>
+                                {provider.description && (
+                                  <p className="text-xs text-muted-foreground">{provider.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="ml-auto mr-2">
+                              {newWarehouseAccounts.filter(acc => acc.providerKey === provider.key).length} conta(s)
+                            </Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 pt-2">
+                            {/* Lista de contas já adicionadas */}
+                            {newWarehouseAccounts
+                              .filter(acc => acc.providerKey === provider.key)
+                              .map((account) => (
+                                <div 
+                                  key={account.tempId} 
+                                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                                  data-testid={`warehouse-account-${account.tempId}`}
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{account.accountName}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {account.operationIds.length} operação(ões) vinculada(s)
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setNewWarehouseAccounts(prev => prev.filter(a => a.tempId !== account.tempId));
+                                      toast({
+                                        title: "Conta removida",
+                                        description: "A conta foi removida da lista."
+                                      });
+                                    }}
+                                    data-testid={`button-remove-account-${account.tempId}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+
+                            {/* Formulário para adicionar nova conta */}
+                            {addingAccount?.providerKey === provider.key ? (
+                              <div className="p-4 border rounded-lg space-y-3" data-testid={`form-add-account-${provider.key}`}>
+                                <div>
+                                  <Label htmlFor={`account-name-${provider.key}`}>Nome da Conta</Label>
+                                  <Input
+                                    id={`account-name-${provider.key}`}
+                                    placeholder="Ex: FHB Principal"
+                                    value={addingAccount.accountName}
+                                    onChange={(e) => setAddingAccount({ ...addingAccount, accountName: e.target.value })}
+                                    data-testid={`input-account-name-${provider.key}`}
+                                  />
+                                </div>
+
+                                {provider.requiredFields.map((field) => (
+                                  <div key={field.key}>
+                                    <Label htmlFor={`${provider.key}-${field.key}`}>
+                                      {field.label} {field.required && <span className="text-destructive">*</span>}
+                                    </Label>
+                                    <Input
+                                      id={`${provider.key}-${field.key}`}
+                                      type={field.type === 'password' ? 'password' : 'text'}
+                                      placeholder={`Digite ${field.label.toLowerCase()}`}
+                                      value={addingAccount.credentials[field.key] || ''}
+                                      onChange={(e) => setAddingAccount({
+                                        ...addingAccount,
+                                        credentials: { ...addingAccount.credentials, [field.key]: e.target.value }
+                                      })}
+                                      data-testid={`input-credential-${provider.key}-${field.key}`}
+                                    />
+                                  </div>
+                                ))}
+
+                                <div>
+                                  <Label>Operações Vinculadas</Label>
+                                  <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border rounded-lg p-3">
+                                    {newUserData.operationIds.length > 0 ? (
+                                      allOperations?.filter(op => newUserData.operationIds.includes(op.id)).map(op => (
+                                        <div key={op.id} className="flex items-center gap-2">
+                                          <Checkbox
+                                            id={`account-op-${op.id}`}
+                                            checked={addingAccount.operationIds.includes(op.id)}
+                                            onCheckedChange={(checked) => {
+                                              if (checked) {
+                                                setAddingAccount({
+                                                  ...addingAccount,
+                                                  operationIds: [...addingAccount.operationIds, op.id]
+                                                });
+                                              } else {
+                                                setAddingAccount({
+                                                  ...addingAccount,
+                                                  operationIds: addingAccount.operationIds.filter(id => id !== op.id)
+                                                });
+                                              }
+                                            }}
+                                            data-testid={`checkbox-account-operation-${op.id}`}
+                                          />
+                                          <label htmlFor={`account-op-${op.id}`} className="text-sm cursor-pointer">
+                                            {op.name}
+                                          </label>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <p className="text-xs text-muted-foreground">
+                                        Selecione operações na etapa anterior primeiro
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setAddingAccount(null)}
+                                    data-testid={`button-cancel-add-${provider.key}`}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      // Validação
+                                      if (!addingAccount.accountName.trim()) {
+                                        toast({
+                                          title: "Nome obrigatório",
+                                          description: "Preencha o nome da conta.",
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+
+                                      const missingFields = provider.requiredFields
+                                        .filter(f => f.required && !addingAccount.credentials[f.key]?.trim());
+                                      
+                                      if (missingFields.length > 0) {
+                                        toast({
+                                          title: "Campos obrigatórios faltando",
+                                          description: `Preencha: ${missingFields.map(f => f.label).join(', ')}`,
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+
+                                      if (addingAccount.operationIds.length === 0) {
+                                        toast({
+                                          title: "Selecione operações",
+                                          description: "Vincule pelo menos uma operação a esta conta.",
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+
+                                      // Adicionar conta à lista
+                                      const newAccount = {
+                                        ...addingAccount,
+                                        tempId: `temp-${Date.now()}-${Math.random()}`
+                                      };
+                                      setNewWarehouseAccounts(prev => [...prev, newAccount]);
+                                      setAddingAccount(null);
+                                      toast({
+                                        title: "Conta adicionada",
+                                        description: `${addingAccount.accountName} foi adicionada.`
+                                      });
+                                    }}
+                                    data-testid={`button-save-add-${provider.key}`}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Adicionar Conta
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => setAddingAccount({
+                                  providerKey: provider.key,
+                                  accountName: '',
+                                  credentials: {},
+                                  operationIds: []
+                                })}
+                                disabled={newUserData.operationIds.length === 0}
+                                data-testid={`button-add-account-${provider.key}`}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Conta {provider.name}
+                                {newUserData.operationIds.length === 0 && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    (selecione operações primeiro)
+                                  </span>
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
                 ) : (
-                  <Badge variant="outline" className="text-xs">
-                    Em desenvolvimento - Task 11
-                  </Badge>
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Nenhum provider disponível</p>
+                  </div>
+                )}
+
+                {newWarehouseAccounts.length > 0 && (
+                  <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-900 dark:text-green-100">
+                      <Check className="h-4 w-4 inline mr-1" />
+                      {newWarehouseAccounts.length} conta(s) de warehouse configurada(s)
+                    </p>
+                  </div>
                 )}
               </div>
             </TabsContent>
