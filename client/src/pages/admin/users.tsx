@@ -765,90 +765,349 @@ export default function AdminUsers() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 mt-4">
-            <div>
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={newUserData.name}
-                onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
-                placeholder="Nome completo"
-                data-testid="input-new-user-name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newUserData.email}
-                onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                placeholder="email@exemplo.com"
-                data-testid="input-new-user-email"
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={newUserData.password}
-                onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
-                placeholder="Senha segura"
-                data-testid="input-new-user-password"
-              />
-            </div>
-            <div>
-              <Label htmlFor="role">Função</Label>
-              <Select 
-                value={newUserData.role} 
-                onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}
+          <Tabs value={createWizardStep} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic" disabled>
+                1. Informações Básicas
+              </TabsTrigger>
+              <TabsTrigger 
+                value="integrations" 
+                disabled={newUserData.role !== 'user'}
+                className="disabled:opacity-50"
               >
-                <SelectTrigger data-testid="select-new-user-role">
-                  <SelectValue placeholder="Selecione a função" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">Cliente</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
-                  <SelectItem value="supplier">Fornecedor</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                2. Integrações{newUserData.role !== 'user' && ' (somente clientes)'}
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                Após criar o usuário, você poderá configurar operações e integrações de warehouse através do painel de edição.
-              </p>
-            </div>
-          </div>
+            <TabsContent value="basic" className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={newUserData.name}
+                  onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                  placeholder="Nome completo"
+                  data-testid="input-new-user-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                  data-testid="input-new-user-email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  placeholder="Senha segura"
+                  data-testid="input-new-user-password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Função</Label>
+                <Select 
+                  value={newUserData.role} 
+                  onValueChange={(value) => {
+                    setNewUserData({ ...newUserData, role: value });
+                    if (value !== 'user' && createWizardStep === 'integrations') {
+                      setCreateWizardStep('basic');
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-new-user-role">
+                    <SelectValue placeholder="Selecione a função" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Cliente</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
+                    <SelectItem value="supplier">Fornecedor</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
 
-          <DialogFooter className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowCreateUserModal(false)}
-              data-testid="button-cancel-create-user"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => {
-                if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
-                  toast({
-                    title: "Campos obrigatórios",
-                    description: "Preencha nome, email e senha antes de criar o usuário.",
-                    variant: "destructive"
-                  });
-                  return;
-                }
-                createUserMutation.mutate(newUserData);
-              }}
-              disabled={createUserMutation.isPending}
-              data-testid="button-create-user-submit"
-            >
-              {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
-            </Button>
+            <TabsContent value="integrations" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                      Integrações de Warehouse (Opcional)
+                    </h4>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      Configure contas de warehouse (FHB, European Fulfillment, eLogy) para este usuário. 
+                      Você pode pular esta etapa e configurar depois.
+                    </p>
+                  </div>
+                </div>
+
+                {warehouseProvidersLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                    <p className="text-sm text-muted-foreground mt-2">Carregando providers...</p>
+                  </div>
+                ) : warehouseProvidersError ? (
+                  <div className="text-center py-8">
+                    <Badge variant="destructive">Erro ao carregar providers</Badge>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Você pode configurar as integrações depois na edição do usuário
+                    </p>
+                  </div>
+                ) : warehouseProviders && warehouseProviders.length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full">
+                    {warehouseProviders.map((provider) => (
+                      <AccordionItem key={provider.key} value={provider.key} data-testid={`accordion-provider-${provider.key}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <div className="flex items-center gap-3">
+                              <Truck className="h-4 w-4 text-muted-foreground" />
+                              <div className="text-left">
+                                <p className="font-medium">{provider.name}</p>
+                                {provider.description && (
+                                  <p className="text-xs text-muted-foreground">{provider.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="ml-auto mr-2">
+                              {newWarehouseAccounts.filter(acc => acc.providerKey === provider.key).length} conta(s)
+                            </Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 pt-2">
+                            {newWarehouseAccounts
+                              .filter(acc => acc.providerKey === provider.key)
+                              .map((account) => (
+                                <div 
+                                  key={account.tempId} 
+                                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                                  data-testid={`warehouse-account-${account.tempId}`}
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{account.accountName}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Configurar operações após criação
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setNewWarehouseAccounts(prev => prev.filter(a => a.tempId !== account.tempId));
+                                      toast({
+                                        title: "Conta removida",
+                                        description: "A conta foi removida da lista."
+                                      });
+                                    }}
+                                    data-testid={`button-remove-account-${account.tempId}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+
+                            {addingAccount?.providerKey === provider.key ? (
+                              <div className="p-4 border rounded-lg space-y-3" data-testid={`form-add-account-${provider.key}`}>
+                                <div>
+                                  <Label htmlFor={`account-name-${provider.key}`}>Nome da Conta</Label>
+                                  <Input
+                                    id={`account-name-${provider.key}`}
+                                    placeholder="Ex: FHB Principal"
+                                    value={addingAccount.accountName}
+                                    onChange={(e) => setAddingAccount({ ...addingAccount, accountName: e.target.value })}
+                                    data-testid={`input-account-name-${provider.key}`}
+                                  />
+                                </div>
+
+                                {provider.requiredFields.map((field) => (
+                                  <div key={field.key}>
+                                    <Label htmlFor={`${provider.key}-${field.key}`}>
+                                      {field.label} {field.required && <span className="text-destructive">*</span>}
+                                    </Label>
+                                    <Input
+                                      id={`${provider.key}-${field.key}`}
+                                      type={field.type === 'password' ? 'password' : 'text'}
+                                      placeholder={`Digite ${field.label.toLowerCase()}`}
+                                      value={addingAccount.credentials[field.key] || ''}
+                                      onChange={(e) => setAddingAccount({
+                                        ...addingAccount,
+                                        credentials: { ...addingAccount.credentials, [field.key]: e.target.value }
+                                      })}
+                                      data-testid={`input-credential-${provider.key}-${field.key}`}
+                                    />
+                                  </div>
+                                ))}
+
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setAddingAccount(null)}
+                                    data-testid={`button-cancel-add-${provider.key}`}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      if (!addingAccount.accountName.trim()) {
+                                        toast({
+                                          title: "Nome obrigatório",
+                                          description: "Preencha o nome da conta.",
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+
+                                      const missingFields = provider.requiredFields
+                                        .filter(f => f.required && !addingAccount.credentials[f.key]?.trim());
+                                      
+                                      if (missingFields.length > 0) {
+                                        toast({
+                                          title: "Campos obrigatórios faltando",
+                                          description: `Preencha: ${missingFields.map(f => f.label).join(', ')}`,
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+
+                                      const newAccount = {
+                                        ...addingAccount,
+                                        tempId: `temp-${Date.now()}-${Math.random()}`,
+                                        operationIds: []
+                                      };
+                                      setNewWarehouseAccounts(prev => [...prev, newAccount]);
+                                      setAddingAccount(null);
+                                      toast({
+                                        title: "Conta adicionada",
+                                        description: `${addingAccount.accountName} foi adicionada.`
+                                      });
+                                    }}
+                                    data-testid={`button-save-add-${provider.key}`}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Adicionar Conta
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => setAddingAccount({
+                                  providerKey: provider.key,
+                                  accountName: '',
+                                  credentials: {},
+                                  operationIds: []
+                                })}
+                                data-testid={`button-add-account-${provider.key}`}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Conta {provider.name}
+                              </Button>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Nenhum provider disponível</p>
+                  </div>
+                )}
+
+                {newWarehouseAccounts.length > 0 && (
+                  <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-900 dark:text-green-100">
+                      <Check className="h-4 w-4 inline mr-1" />
+                      {newWarehouseAccounts.length} conta(s) de warehouse configurada(s)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="flex justify-between items-center">
+            <div>
+              {createWizardStep === 'integrations' && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setCreateWizardStep('basic')}
+                  data-testid="button-wizard-back"
+                >
+                  ← Voltar
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateUserModal(false)}
+                data-testid="button-cancel-create-user"
+              >
+                Cancelar
+              </Button>
+              {createWizardStep === 'basic' ? (
+                newUserData.role === 'user' ? (
+                  <Button 
+                    onClick={() => {
+                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
+                        toast({
+                          title: "Campos obrigatórios",
+                          description: "Preencha nome, email e senha antes de continuar.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      setCreateWizardStep('integrations');
+                    }}
+                    data-testid="button-wizard-next"
+                  >
+                    Próximo →
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => {
+                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
+                        toast({
+                          title: "Campos obrigatórios",
+                          description: "Preencha nome, email e senha antes de criar o usuário.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      createUserMutation.mutate(newUserData);
+                    }}
+                    disabled={createUserMutation.isPending}
+                    data-testid="button-create-user-submit"
+                  >
+                    {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
+                  </Button>
+                )
+              ) : (
+                <Button 
+                  onClick={() => createUserMutation.mutate(newUserData)}
+                  disabled={createUserMutation.isPending}
+                  data-testid="button-create-user-complete"
+                >
+                  {createUserMutation.isPending ? 'Criando...' : 'Concluir e Criar'}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
