@@ -1526,6 +1526,291 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Warehouse accounts routes - User-level warehouse integration management
+  // Get all warehouse providers catalog
+  app.get("/api/warehouse/providers", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const providers = await storage.getWarehouseProviders();
+      res.json(providers);
+    } catch (error) {
+      console.error("Get warehouse providers error:", error);
+      res.status(500).json({ message: "Erro ao buscar providers de warehouse" });
+    }
+  });
+
+  // Get user's warehouse accounts
+  app.get("/api/user/warehouse-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { providerKey } = req.query;
+      
+      let accounts;
+      if (providerKey && typeof providerKey === 'string') {
+        accounts = await storage.getUserWarehouseAccountsByProvider(req.user.id, providerKey);
+      } else {
+        accounts = await storage.getUserWarehouseAccounts(req.user.id);
+      }
+      
+      res.json(accounts);
+    } catch (error) {
+      console.error("Get user warehouse accounts error:", error);
+      res.status(500).json({ message: "Erro ao buscar contas de warehouse" });
+    }
+  });
+
+  // Get specific warehouse account
+  app.get("/api/user/warehouse-accounts/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+      
+      // Verify ownership
+      if (account.userId !== req.user.id) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      res.json(account);
+    } catch (error) {
+      console.error("Get warehouse account error:", error);
+      res.status(500).json({ message: "Erro ao buscar conta de warehouse" });
+    }
+  });
+
+  // Create warehouse account
+  app.post("/api/user/warehouse-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { providerKey, displayName, credentials } = req.body;
+      
+      if (!providerKey?.trim()) {
+        return res.status(400).json({ message: "Provider key é obrigatório" });
+      }
+      
+      if (!displayName?.trim()) {
+        return res.status(400).json({ message: "Nome de exibição é obrigatório" });
+      }
+      
+      if (!credentials || typeof credentials !== 'object') {
+        return res.status(400).json({ message: "Credenciais são obrigatórias" });
+      }
+      
+      // Verify provider exists
+      const provider = await storage.getWarehouseProvider(providerKey);
+      if (!provider) {
+        return res.status(404).json({ message: "Provider de warehouse não encontrado" });
+      }
+      
+      const account = await storage.createUserWarehouseAccount({
+        userId: req.user.id,
+        providerKey,
+        displayName: displayName.trim(),
+        credentials,
+        status: 'pending'
+      });
+      
+      res.status(201).json(account);
+    } catch (error) {
+      console.error("Create warehouse account error:", error);
+      res.status(500).json({ message: "Erro ao criar conta de warehouse" });
+    }
+  });
+
+  // Update warehouse account
+  app.put("/api/user/warehouse-accounts/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+      
+      // Verify ownership
+      if (account.userId !== req.user.id) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      const { displayName, credentials, status } = req.body;
+      const updates: any = {};
+      
+      if (displayName !== undefined) {
+        if (!displayName?.trim()) {
+          return res.status(400).json({ message: "Nome de exibição não pode ser vazio" });
+        }
+        updates.displayName = displayName.trim();
+      }
+      
+      if (credentials !== undefined) {
+        if (typeof credentials !== 'object') {
+          return res.status(400).json({ message: "Credenciais inválidas" });
+        }
+        updates.credentials = credentials;
+      }
+      
+      if (status !== undefined) {
+        if (!['pending', 'active', 'error', 'suspended'].includes(status)) {
+          return res.status(400).json({ message: "Status inválido" });
+        }
+        updates.status = status;
+      }
+      
+      const updated = await storage.updateUserWarehouseAccount(req.params.id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update warehouse account error:", error);
+      res.status(500).json({ message: "Erro ao atualizar conta de warehouse" });
+    }
+  });
+
+  // Delete warehouse account
+  app.delete("/api/user/warehouse-accounts/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+      
+      // Verify ownership
+      if (account.userId !== req.user.id) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      const deleted = await storage.deleteUserWarehouseAccount(req.params.id);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: "Erro ao deletar conta de warehouse" });
+      }
+      
+      res.json({ success: true, message: "Conta de warehouse deletada com sucesso" });
+    } catch (error) {
+      console.error("Delete warehouse account error:", error);
+      res.status(500).json({ message: "Erro ao deletar conta de warehouse" });
+    }
+  });
+
+  // Test warehouse account connection
+  app.post("/api/user/warehouse-accounts/:id/test", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+      
+      // Verify ownership
+      if (account.userId !== req.user.id) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      const result = await storage.testUserWarehouseAccount(req.params.id);
+      res.json(result);
+    } catch (error) {
+      console.error("Test warehouse account error:", error);
+      res.status(500).json({ message: "Erro ao testar conta de warehouse" });
+    }
+  });
+
+  // Get operations linked to warehouse account
+  app.get("/api/user/warehouse-accounts/:id/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+      
+      // Verify ownership
+      if (account.userId !== req.user.id) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      const links = await storage.getAccountOperationLinks(req.params.id);
+      res.json(links);
+    } catch (error) {
+      console.error("Get account operations error:", error);
+      res.status(500).json({ message: "Erro ao buscar operações vinculadas" });
+    }
+  });
+
+  // Link warehouse account to operation
+  app.post("/api/user/warehouse-accounts/:id/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+      
+      // Verify account ownership
+      if (account.userId !== req.user.id) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      const { operationId } = req.body;
+      
+      if (!operationId?.trim()) {
+        return res.status(400).json({ message: "Operation ID é obrigatório" });
+      }
+      
+      // Verify operation ownership - critical security check
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const operationExists = userOperations.some(op => op.id === operationId.trim());
+      
+      if (!operationExists) {
+        return res.status(403).json({ message: "Operação não encontrada ou acesso negado" });
+      }
+      
+      const link = await storage.linkAccountToOperation({
+        accountId: req.params.id,
+        operationId: operationId.trim()
+      });
+      
+      res.status(201).json(link);
+    } catch (error) {
+      console.error("Link account to operation error:", error);
+      res.status(500).json({ message: "Erro ao vincular conta à operação" });
+    }
+  });
+
+  // Unlink warehouse account from operation
+  app.delete("/api/user/warehouse-accounts/:id/operations/:operationId", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+      
+      // Verify account ownership
+      if (account.userId !== req.user.id) {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+      
+      // Verify operation ownership - critical security check
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const operationExists = userOperations.some(op => op.id === req.params.operationId);
+      
+      if (!operationExists) {
+        return res.status(403).json({ message: "Operação não encontrada ou acesso negado" });
+      }
+      
+      const deleted = await storage.deleteAccountOperationLink(
+        req.params.id,
+        req.params.operationId
+      );
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Vínculo não encontrado" });
+      }
+      
+      res.json({ success: true, message: "Vínculo removido com sucesso" });
+    } catch (error) {
+      console.error("Unlink account from operation error:", error);
+      res.status(500).json({ message: "Erro ao desvincular conta da operação" });
+    }
+  });
+
   // Shipping providers routes
   app.get("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
