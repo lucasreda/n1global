@@ -139,7 +139,7 @@ export default function AdminUsers() {
     key: string;
     name: string;
     description: string | null;
-    requiredFields: Array<{ key: string; label: string; type: string; required: boolean }>;
+    requiredFields: Array<{ fieldName: string; label: string; fieldType: string; required: boolean }>;
   }>>({
     queryKey: ['/api/warehouse/providers'],
     enabled: (showCreateUserModal && createWizardStep === 'integrations') || (showEditModal && activeTab === 'warehouse')
