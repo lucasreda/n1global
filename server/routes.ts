@@ -5271,10 +5271,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Delete user and related data (order matters: foreign keys first)
-      // 1. First delete user_operation_access entries
+      // Import warehouse tables
+      const { userWarehouseAccounts, userWarehouseAccountOperations } = await import('@shared/schema');
+      
+      // 1. First delete warehouse account-operation links
+      const warehouseAccounts = await db.select().from(userWarehouseAccounts).where(eq(userWarehouseAccounts.userId, userId));
+      for (const account of warehouseAccounts) {
+        await db.delete(userWarehouseAccountOperations).where(eq(userWarehouseAccountOperations.accountId, account.id));
+      }
+      
+      // 2. Delete warehouse accounts (this will set accountId to null in staging tables)
+      await db.delete(userWarehouseAccounts).where(eq(userWarehouseAccounts.userId, userId));
+      
+      // 3. Delete user_operation_access entries
       await db.delete(userOperationAccess).where(eq(userOperationAccess.userId, userId));
       
-      // 2. Then delete the user
+      // 4. Finally delete the user
       await db.delete(users).where(eq(users.id, userId));
 
       res.json({ message: "Usuário excluído com sucesso" });
