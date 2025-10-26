@@ -92,16 +92,36 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
   
+  // 🏭 Start Warehouse Sync Workers
+  console.log('');
+  console.log('🏭 Starting Warehouse Sync Workers...');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
   // Start FHB sync worker
   const { startFHBWorker } = await import('./workers/fhb-sync-worker');
   startFHBWorker();
+  
+  // Start European Fulfillment sync worker
+  const { startEuropeanFulfillmentWorker } = await import('./workers/european-fulfillment-sync-worker');
+  startEuropeanFulfillmentWorker();
+  
+  // Start eLogy sync worker
+  const { startElogyWorker } = await import('./workers/elogy-sync-worker');
+  startElogyWorker();
+  
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
+  
+  // 🔗 Start Warehouse Linking Workers
+  console.log('🔗 Starting Warehouse Linking Workers...');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   // Start FHB linking worker
   const { startFHBLinkingWorker } = await import('./workers/fhb-linking-worker');
   startFHBLinkingWorker();
   
-  // Sistema de sincronização sob demanda configurado
-  console.log('🔄 Sistema de sincronização sob demanda configurado (30min de intervalo)');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

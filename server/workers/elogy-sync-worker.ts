@@ -1,9 +1,9 @@
-// 🤖 FHB Sync Worker - Automated synchronization with intelligent scheduling
+// 📦 eLogy Sync Worker - Automated synchronization with intelligent scheduling
 // Priority: Initial (90 days) > Deep (30 days, 2x daily) > Fast (10 days, every 30min)
 
-import { FHBSyncService } from '../services/fhb-sync-service';
+import { ElogySyncService } from '../services/elogy-sync-service';
 
-const syncService = new FHBSyncService();
+const syncService = new ElogySyncService();
 
 // Track last execution times
 let lastInitialSync: Date | null = null;
@@ -74,29 +74,28 @@ function shouldRunInitialSync(): boolean {
 async function syncLoop() {
   // Prevent concurrent executions
   if (isSyncLoopRunning) {
-    console.log('⏭️  Sync loop already running, skipping...');
+    console.log('⏭️  eLogy sync loop already running, skipping...');
     return;
   }
   
   isSyncLoopRunning = true;
   
   try {
-    console.log('🔍 FHB Worker: Checking sync schedule...');
+    console.log('🔍 eLogy Worker: Checking sync schedule...');
     
     // Block deep/fast while initial sync is running
     if (isInitialRunning) {
-      console.log('⏳ Initial sync in progress, skipping deep/fast syncs...');
+      console.log('⏳ eLogy initial sync in progress, skipping deep/fast syncs...');
       return;
     }
     
     // HIGHEST PRIORITY: Initial sync for accounts that haven't completed 90-day backfill
     if (shouldRunInitialSync()) {
-      console.log('🔍 Checking for accounts needing initial sync...');
+      console.log('🔍 Checking for eLogy accounts needing initial sync...');
       lastInitialSync = new Date();
       isInitialRunning = true;
       
       try {
-        // syncInitial() will check if any accounts need it and handle gracefully
         await syncService.syncInitial();
       } finally {
         isInitialRunning = false;
@@ -108,7 +107,7 @@ async function syncLoop() {
     
     // SECOND PRIORITY: Deep sync (priority over fast)
     if (shouldRunDeepSync()) {
-      console.log('🕐 Time for deep sync (6h or 18h UTC)');
+      console.log('🕐 Time for eLogy deep sync (6h or 18h UTC)');
       lastDeepSync = new Date();
       await syncService.syncDeep();
       lastFastSync = new Date(); // Reset fast sync timer since deep sync covers it
@@ -117,16 +116,16 @@ async function syncLoop() {
     
     // THIRD PRIORITY: Fast sync
     if (shouldRunFastSync()) {
-      console.log('⏰ Time for fast sync (30min interval)');
+      console.log('⏰ Time for eLogy fast sync (30min interval)');
       lastFastSync = new Date();
       await syncService.syncFast();
       return;
     }
     
-    console.log('⏭️  No sync needed at this time');
+    console.log('⏭️  No eLogy sync needed at this time');
     
   } catch (error: any) {
-    console.error('❌ FHB Worker: Sync error:', error);
+    console.error('❌ eLogy Worker: Sync error:', error);
   } finally {
     isSyncLoopRunning = false;
   }
@@ -135,22 +134,22 @@ async function syncLoop() {
 /**
  * Start the worker
  */
-export function startFHBWorker() {
-  console.log('🚀 FHB Sync Worker started');
+export function startElogyWorker() {
+  console.log('🚀 eLogy Sync Worker started');
   console.log('   🚀 Initial sync: 90-day backfill (PRIORITY - runs first)');
   console.log('   🔄 Deep sync: 30 days, 2x daily at 6h and 18h UTC');
   console.log('   ⚡ Fast sync: 10 days, every 30 minutes');
   
-  // Run initial check after 10 seconds (give server time to start)
+  // Run initial check after 20 seconds (give server time to start, stagger with other workers)
   setTimeout(() => {
-    console.log('🏁 Running initial sync check...');
+    console.log('🏁 Running initial eLogy sync check...');
     syncLoop();
-  }, 10000);
+  }, 20000);
   
   // Then run every minute to check schedule
   setInterval(syncLoop, 60 * 1000); // Check every minute
   
-  console.log('✅ FHB Worker scheduled successfully');
+  console.log('✅ eLogy Worker scheduled successfully');
 }
 
 /**
@@ -158,11 +157,11 @@ export function startFHBWorker() {
  */
 export async function triggerInitialSync() {
   if (isInitialRunning) {
-    console.log('⚠️ Initial sync already running, skipping manual trigger');
+    console.log('⚠️ eLogy initial sync already running, skipping manual trigger');
     return;
   }
   
-  console.log('🎯 Manual initial sync triggered');
+  console.log('🎯 Manual eLogy initial sync triggered');
   isInitialRunning = true;
   try {
     await syncService.syncInitial();
@@ -173,21 +172,21 @@ export async function triggerInitialSync() {
 
 export async function triggerFastSync() {
   if (isInitialRunning) {
-    console.log('⚠️ Initial sync is running, cannot run fast sync');
+    console.log('⚠️ eLogy initial sync is running, cannot run fast sync');
     return;
   }
   
-  console.log('🎯 Manual fast sync triggered');
+  console.log('🎯 Manual eLogy fast sync triggered');
   await syncService.syncFast();
 }
 
 export async function triggerDeepSync() {
   if (isInitialRunning) {
-    console.log('⚠️ Initial sync is running, cannot run deep sync');
+    console.log('⚠️ eLogy initial sync is running, cannot run deep sync');
     return;
   }
   
-  console.log('🎯 Manual deep sync triggered');
+  console.log('🎯 Manual eLogy deep sync triggered');
   await syncService.syncDeep();
 }
 

@@ -96,11 +96,11 @@ export class FHBSyncService {
   }
   
   /**
-   * Initial Sync: 2 years historical backfill in 30-day windows
+   * Initial Sync: 90 days historical backfill in 30-day windows
    * Runs once per account to ensure complete order history
    */
   async syncInitial(): Promise<void> {
-    console.log('🚀 FHB Initial Sync started (2 years backfill)');
+    console.log('🚀 FHB Initial Sync started (90 days backfill)');
     
     // Fetch FHB warehouse accounts needing initial sync
     const accountsNeedingInitialSync = await db.select()
@@ -320,7 +320,7 @@ export class FHBSyncService {
    */
   private async performInitialSyncWarehouse(warehouseAccount: typeof userWarehouseAccounts.$inferSelect): Promise<void> {
     const legacyAccount = this.convertToLegacyFormat(warehouseAccount);
-    console.log(`🚀 Starting initial sync for warehouse account: ${warehouseAccount.displayName} (2 years backfill)`);
+    console.log(`🚀 Starting initial sync for warehouse account: ${warehouseAccount.displayName} (90 days backfill)`);
     
     const startTime = Date.now();
     let totalStats: SyncStats = {
@@ -349,11 +349,11 @@ export class FHBSyncService {
         apiUrl: legacyAccount.apiUrl
       });
       
-      // Calculate 2 years back from today (730 days)
+      // Calculate 90 days back from today
       const today = new Date();
-      const twoYearsAgo = new Date(today.getTime() - 730 * 24 * 60 * 60 * 1000);
+      const twoYearsAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
       
-      // Build windows dynamically to cover exactly 730 days
+      // Build windows dynamically to cover exactly 90 days
       const windowSizeDays = 30;
       let windowStart = new Date(twoYearsAgo);
       let windowNumber = 1;
