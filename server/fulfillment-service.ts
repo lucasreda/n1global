@@ -16,6 +16,13 @@ function createHttpsAgent(): https.Agent {
   return new https.Agent({ rejectUnauthorized: true });
 }
 
+// European Fulfillment specific HTTPS agent - ALWAYS disables SSL verification
+// because the test environment (api-test.ecomfulfilment.eu) uses self-signed certificates
+function createEuropeanFulfillmentAgent(): https.Agent {
+  console.log('⚠️ Using insecure HTTPS agent for European Fulfillment test API (self-signed certificate)');
+  return new https.Agent({ rejectUnauthorized: false });
+}
+
 interface EuropeanFulfillmentCredentials {
   email: string;
   password: string;
@@ -122,7 +129,7 @@ class EuropeanFulfillmentService {
           email: this.credentials.email,
           password: this.credentials.password
         }),
-        agent: createHttpsAgent()
+        agent: createEuropeanFulfillmentAgent()
       });
 
       console.log("📡 Response status:", response.status);
@@ -171,7 +178,7 @@ class EuropeanFulfillmentService {
     const requestOptions: any = {
       method,
       headers,
-      agent: createHttpsAgent()
+      agent: createEuropeanFulfillmentAgent()
     };
 
     if (body && (method === "POST" || method === "PATCH" || method === "PUT")) {
