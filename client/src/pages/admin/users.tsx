@@ -364,7 +364,7 @@ export default function AdminUsers() {
               },
               credentials: "include",
               body: JSON.stringify({
-                userId: createdUser.user.id,
+                userId: createdUser.id,
                 providerKey: account.providerKey,
                 displayName: account.accountName,
                 credentials: account.credentials
