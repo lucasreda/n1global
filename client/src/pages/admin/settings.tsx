@@ -83,7 +83,7 @@ export default function AdminSettings() {
     mutationFn: async () => {
       return apiRequest('/api/currency/history/populate', 'POST', {});
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "Histórico preenchido com sucesso!",
         description: `${data.recordsAdded} registros adicionados para ${data.currencies?.join(', ')} desde ${data.startDate}`,
