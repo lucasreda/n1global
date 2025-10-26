@@ -104,7 +104,7 @@ class EuropeanFulfillmentService {
       return this.token.token;
     }
 
-    const loginUrl = `${this.credentials.apiUrl}api/login`;
+    const loginUrl = `${this.credentials.apiUrl}/api/login`;
     console.log("🔐 Attempting authentication with:", {
       url: loginUrl,
       email: this.credentials.email,
