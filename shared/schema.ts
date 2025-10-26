@@ -490,8 +490,10 @@ export const userWarehouseAccounts = pgTable("user_warehouse_accounts", {
   
   // Sync tracking
   lastSyncAt: timestamp("last_sync_at"),
+  initialSyncStatus: text("initial_sync_status").notNull().default("pending"), // 'pending', 'in_progress', 'completed', 'failed'
   initialSyncCompleted: boolean("initial_sync_completed").notNull().default(false),
   initialSyncCompletedAt: timestamp("initial_sync_completed_at"),
+  initialSyncError: text("initial_sync_error"), // Error message if sync failed
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
