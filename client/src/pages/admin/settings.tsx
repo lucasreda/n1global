@@ -23,12 +23,7 @@ import {
   Users,
   Building,
   TrendingUp,
-  Loader2,
-  Plug,
-  Plus,
-  Trash2,
-  Edit,
-  TestTube
+  Loader2
 } from "lucide-react";
 
 export default function AdminSettings() {
@@ -37,17 +32,6 @@ export default function AdminSettings() {
   const [backupEnabled, setBackupEnabled] = useState(true);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // FHB Integrations state
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentAccount, setCurrentAccount] = useState<any>(null);
-  const [fhbFormData, setFhbFormData] = useState({
-    name: "",
-    appId: "",
-    secret: "",
-    apiUrl: "https://api.fhb.sk/v3"
-  });
 
   // Query para verificar status do histórico de moedas
   const { data: currencyStatus, isLoading: statusLoading } = useQuery<{
@@ -95,14 +79,7 @@ export default function AdminSettings() {
   });
 
   // Mutation para preencher histórico
-  const populateHistoryMutation = useMutation<{
-    message: string;
-    recordsAdded: number;
-    startDate: string;
-    endDate: string;
-    currencies: string[];
-    records: Array<{ date: string; currency: string; rate: number }>;
-  }>({
+  const populateHistoryMutation = useMutation({
     mutationFn: async () => {
       return apiRequest('/api/currency/history/populate', 'POST', {});
     },
@@ -121,145 +98,6 @@ export default function AdminSettings() {
       });
     },
   });
-
-  // Fetch FHB accounts
-  const { data: fhbAccounts = [], isLoading: isLoadingFhb } = useQuery<any[]>({
-    queryKey: ["/api/admin/fhb-accounts"],
-  });
-
-  // Create FHB account mutation
-  const createFhbMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/admin/fhb-accounts", "POST", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/fhb-accounts"] });
-      setIsCreateDialogOpen(false);
-      resetFhbForm();
-      toast({
-        title: "Integração FHB criada",
-        description: "A integração foi criada com sucesso",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Erro",
-        description: "Falha ao criar integração FHB",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update FHB account mutation
-  const updateFhbMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      apiRequest(`/api/admin/fhb-accounts/${id}`, "PUT", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/fhb-accounts"] });
-      setIsEditDialogOpen(false);
-      setCurrentAccount(null);
-      resetFhbForm();
-      toast({
-        title: "Integração atualizada",
-        description: "A integração foi atualizada com sucesso",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar integração FHB",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete FHB account mutation
-  const deleteFhbMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/admin/fhb-accounts/${id}`, "DELETE"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/fhb-accounts"] });
-      toast({
-        title: "Integração deletada",
-        description: "A integração foi deletada com sucesso",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro",
-        description: error.message || "Falha ao deletar integração FHB",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Test FHB connection mutation
-  const testFhbMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/admin/fhb-accounts/${id}/test`, "POST"),
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/fhb-accounts"] });
-      toast({
-        title: data.connected ? "Conexão OK" : "Conexão Falhou",
-        description: data.message,
-        variant: data.connected ? "default" : "destructive",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Erro",
-        description: "Falha ao testar conexão",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const resetFhbForm = () => {
-    setFhbFormData({
-      name: "",
-      appId: "",
-      secret: "",
-      apiUrl: "https://api.fhb.sk/v3"
-    });
-  };
-
-  const handleCreateFhb = () => {
-    createFhbMutation.mutate(fhbFormData);
-  };
-
-  const handleUpdateFhb = () => {
-    if (currentAccount) {
-      const updateData: any = {
-        name: fhbFormData.name,
-        appId: fhbFormData.appId,
-        apiUrl: fhbFormData.apiUrl,
-      };
-      
-      // Only include secret if it's not empty (user wants to change it)
-      if (fhbFormData.secret && fhbFormData.secret.trim() !== '') {
-        updateData.secret = fhbFormData.secret;
-      }
-      
-      updateFhbMutation.mutate({ id: currentAccount.id, data: updateData });
-    }
-  };
-
-  const handleEditFhb = (account: any) => {
-    setCurrentAccount(account);
-    setFhbFormData({
-      name: account.name,
-      appId: account.appId,
-      secret: "",  // Don't pre-fill secret for security
-      apiUrl: account.apiUrl
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const handleDeleteFhb = (id: string) => {
-    if (confirm("Tem certeza que deseja deletar esta integração FHB?")) {
-      deleteFhbMutation.mutate(id);
-    }
-  };
-
-  const handleTestFhb = (id: string) => {
-    testFhbMutation.mutate(id);
-  };
 
   const handleCurrencyToggle = (currency: string, enabled: boolean) => {
     if (!currencySettings) return;
@@ -286,7 +124,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-black/40">
+        <TabsList className="grid w-full grid-cols-4 bg-black/40">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <SettingsIcon size={16} />
             Geral
@@ -298,10 +136,6 @@ export default function AdminSettings() {
           <TabsTrigger value="system" className="flex items-center gap-2">
             <Database size={16} />
             Sistema
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="flex items-center gap-2" data-testid="tab-integrations">
-            <Plug size={16} />
-            Integrações
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield size={16} />
@@ -614,122 +448,6 @@ export default function AdminSettings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="integrations" className="space-y-6">
-          <Card className="bg-black/20 backdrop-blur-sm border-white/10">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-white">Integrações FHB</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Gerencie múltiplas integrações globais com o FHB European Fulfillment
-                  </CardDescription>
-                </div>
-                <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-fhb">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova Integração
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingFhb ? (
-                <p className="text-gray-400">Carregando...</p>
-              ) : fhbAccounts.length === 0 ? (
-                <div className="text-center py-8">
-                  <Plug className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                  <p className="text-gray-400">Nenhuma integração FHB configurada</p>
-                  <p className="text-gray-500 text-sm mt-1">
-                    Clique em "Nova Integração" para começar
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/10">
-                      <TableHead className="text-gray-300">Nome</TableHead>
-                      <TableHead className="text-gray-300">App ID</TableHead>
-                      <TableHead className="text-gray-300">API URL</TableHead>
-                      <TableHead className="text-gray-300">Status</TableHead>
-                      <TableHead className="text-gray-300">Último Teste</TableHead>
-                      <TableHead className="text-right text-gray-300">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fhbAccounts.map((account: any) => (
-                      <TableRow key={account.id} className="border-white/10">
-                        <TableCell className="font-medium text-white">{account.name}</TableCell>
-                        <TableCell className="text-gray-300">{account.appId}</TableCell>
-                        <TableCell className="text-sm text-gray-400">{account.apiUrl}</TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                            account.status === 'active' 
-                              ? 'bg-green-500/20 text-green-400' 
-                              : 'bg-gray-500/20 text-gray-400'
-                          }`}>
-                            {account.status}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-400">
-                          {account.lastTestedAt ? new Date(account.lastTestedAt).toLocaleString() : 'Nunca'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleTestFhb(account.id)}
-                              disabled={testFhbMutation.isPending}
-                              className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                              data-testid={`button-test-fhb-${account.id}`}
-                            >
-                              <TestTube className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditFhb(account)}
-                              className="text-gray-400 hover:text-gray-300 hover:bg-gray-500/10"
-                              data-testid={`button-edit-fhb-${account.id}`}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteFhb(account.id)}
-                              disabled={deleteFhbMutation.isPending}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                              data-testid={`button-delete-fhb-${account.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-blue-500/10 border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-blue-400">Como funciona?</CardTitle>
-            </CardHeader>
-            <CardContent className="text-gray-300 text-sm space-y-2">
-              <p>
-                As integrações FHB são centralizadas e globais. Todos os pedidos são importados para a base N1.
-              </p>
-              <p>
-                O vínculo com cada operação é feito automaticamente através do <strong>Prefixo da Operação</strong> configurado nas configurações de cada operação.
-              </p>
-              <p className="text-blue-400">
-                💡 Configure o prefixo da operação (ex: ESP-, PT-) no editor de operações em Stores → Operações.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="security" className="space-y-6">
           <Card className="bg-black/40 border-gray-700">
             <CardHeader>
@@ -782,140 +500,6 @@ export default function AdminSettings() {
           Salvar Configurações
         </Button>
       </div>
-
-      {/* Create FHB Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="bg-gray-900 border-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-white">Nova Integração FHB</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Adicionar uma nova integração com o FHB European Fulfillment
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="fhb-name" className="text-gray-300">Nome</Label>
-              <Input
-                id="fhb-name"
-                value={fhbFormData.name}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, name: e.target.value })}
-                placeholder="Nome da integração"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-fhb-name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="fhb-appid" className="text-gray-300">App ID</Label>
-              <Input
-                id="fhb-appid"
-                value={fhbFormData.appId}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, appId: e.target.value })}
-                placeholder="ID da aplicação FHB"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-fhb-appid"
-              />
-            </div>
-            <div>
-              <Label htmlFor="fhb-secret" className="text-gray-300">Secret</Label>
-              <Input
-                id="fhb-secret"
-                type="password"
-                value={fhbFormData.secret}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, secret: e.target.value })}
-                placeholder="Chave secreta"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-fhb-secret"
-              />
-            </div>
-            <div>
-              <Label htmlFor="fhb-apiurl" className="text-gray-300">API URL</Label>
-              <Input
-                id="fhb-apiurl"
-                value={fhbFormData.apiUrl}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, apiUrl: e.target.value })}
-                placeholder="https://api.fhb.sk/v3"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-fhb-apiurl"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsCreateDialogOpen(false)} className="text-gray-400">
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateFhb} disabled={createFhbMutation.isPending} data-testid="button-create-fhb-submit">
-              {createFhbMutation.isPending ? 'Criando...' : 'Criar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit FHB Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="bg-gray-900 border-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-white">Editar Integração FHB</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Atualizar credenciais da integração FHB
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-fhb-name" className="text-gray-300">Nome</Label>
-              <Input
-                id="edit-fhb-name"
-                value={fhbFormData.name}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, name: e.target.value })}
-                placeholder="Nome da integração"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-edit-fhb-name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-fhb-appid" className="text-gray-300">App ID</Label>
-              <Input
-                id="edit-fhb-appid"
-                value={fhbFormData.appId}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, appId: e.target.value })}
-                placeholder="ID da aplicação FHB"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-edit-fhb-appid"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-fhb-secret" className="text-gray-300">Secret (deixe em branco para manter)</Label>
-              <Input
-                id="edit-fhb-secret"
-                type="password"
-                value={fhbFormData.secret}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, secret: e.target.value })}
-                placeholder="Nova chave secreta (opcional)"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-edit-fhb-secret"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-fhb-apiurl" className="text-gray-300">API URL</Label>
-              <Input
-                id="edit-fhb-apiurl"
-                value={fhbFormData.apiUrl}
-                onChange={(e) => setFhbFormData({ ...fhbFormData, apiUrl: e.target.value })}
-                placeholder="https://api.fhb.sk/v3"
-                className="bg-white/10 border-white/20 text-white"
-                data-testid="input-edit-fhb-apiurl"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)} className="text-gray-400">
-              Cancelar
-            </Button>
-            <Button onClick={handleUpdateFhb} disabled={updateFhbMutation.isPending} data-testid="button-update-fhb">
-              {updateFhbMutation.isPending ? 'Salvando...' : 'Atualizar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
