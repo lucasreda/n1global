@@ -1014,7 +1014,7 @@ export default function AdminUsers() {
                                       }
 
                                       const newAccount = {
-                                        ...addingAccount,
+                                        ...structuredClone(addingAccount),
                                         tempId: `temp-${Date.now()}-${Math.random()}`,
                                         operationIds: []
                                       };
