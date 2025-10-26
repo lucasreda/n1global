@@ -128,7 +128,7 @@ export async function seedDatabase() {
           operationId: defaultOperation.id,
           name: "N1 Warehouse 1",
           type: "european_fulfillment",
-          apiUrl: "https://api-test.ecomfulfilment.eu/",
+          apiUrl: "https://api.ecomfulfilment.eu/",
           isActive: true,
         })
         .returning();
@@ -147,7 +147,7 @@ export async function seedDatabase() {
           operationId: defaultOperation.id,
           name: "N1 Warehouse 2",
           type: "european_fulfillment",
-          apiUrl: "https://api-test.ecomfulfilment.eu/",
+          apiUrl: "https://api.ecomfulfilment.eu/",
           isActive: true,
         })
         .returning();
