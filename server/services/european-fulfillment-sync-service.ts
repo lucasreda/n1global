@@ -225,7 +225,7 @@ export class EuropeanFulfillmentSyncService {
       const europeanAdapter = new EuropeanFulfillmentAdapter({
         email: credentials.email,
         password: credentials.password,
-        apiUrl: credentials.apiUrl || 'https://api-test.ecomfulfilment.eu'
+        apiUrl: credentials.apiUrl || 'https://api.ecomfulfilment.eu'
       });
       
       // Authenticate
