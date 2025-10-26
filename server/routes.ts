@@ -1581,7 +1581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create warehouse account
   app.post("/api/user/warehouse-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { providerKey, displayName, credentials } = req.body;
+      const { providerKey, displayName, credentials, userId } = req.body;
       
       if (!providerKey?.trim()) {
         return res.status(400).json({ message: "Provider key é obrigatório" });
@@ -1595,6 +1595,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Credenciais são obrigatórias" });
       }
       
+      // Determine target user: if userId provided and requester is admin, use it; otherwise use authenticated user
+      let targetUserId = req.user.id;
+      if (userId && ['super_admin', 'admin', 'store'].includes(req.user.role)) {
+        targetUserId = userId;
+      }
+      
       // Verify provider exists
       const provider = await storage.getWarehouseProvider(providerKey);
       if (!provider) {
@@ -1602,7 +1608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const account = await storage.createUserWarehouseAccount({
-        userId: req.user.id,
+        userId: targetUserId,
         providerKey,
         displayName: displayName.trim(),
         credentials,

@@ -366,10 +366,8 @@ export default function AdminUsers() {
               body: JSON.stringify({
                 userId: createdUser.user.id,
                 providerKey: account.providerKey,
-                accountName: account.accountName,
-                credentials: account.credentials,
-                isActive: true,
-                operationIds: account.operationIds
+                displayName: account.accountName,
+                credentials: account.credentials
               }),
             });
             
