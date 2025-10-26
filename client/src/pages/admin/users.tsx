@@ -373,13 +373,33 @@ export default function AdminUsers() {
             
             if (accountResponse.ok) {
               successCount++;
+              console.log(`✅ Warehouse account created successfully: ${account.accountName}`);
             } else {
+              const errorText = await accountResponse.text();
               failedAccounts.push(account.accountName);
-              console.error(`Erro ao criar conta ${account.accountName}:`, await accountResponse.text());
+              console.error(`❌ Failed to create warehouse account ${account.accountName}:`, {
+                status: accountResponse.status,
+                statusText: accountResponse.statusText,
+                error: errorText,
+                requestData: {
+                  userId: createdUser.id,
+                  providerKey: account.providerKey,
+                  displayName: account.accountName,
+                  hasCredentials: !!account.credentials
+                }
+              });
             }
           } catch (error) {
             failedAccounts.push(account.accountName);
-            console.error(`Erro ao criar conta ${account.accountName}:`, error);
+            console.error(`❌ Exception creating warehouse account ${account.accountName}:`, {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+              account: {
+                providerKey: account.providerKey,
+                accountName: account.accountName,
+                hasCredentials: !!account.credentials
+              }
+            });
           }
         }
       }
