@@ -38,6 +38,8 @@ import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-servi
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
 import { EnterpriseAIPageOrchestrator } from "./ai/EnterpriseAIPageOrchestrator.js";
+import { FHBSyncService } from "./services/fhb-sync-service";
+import { EuropeanFulfillmentSyncService } from "./services/european-fulfillment-sync-service";
 import EventEmitter from "events";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
@@ -1614,6 +1616,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         credentials,
         status: 'pending'
       });
+      
+      // Trigger automatic initial sync (3 months) in background
+      // Don't await - let it run asynchronously
+      (async () => {
+        try {
+          console.log(`🚀 Triggering initial sync for new warehouse account: ${account.id} (provider: ${providerKey})`);
+          
+          if (providerKey === 'fhb') {
+            const fhbSyncService = new FHBSyncService();
+            await fhbSyncService.triggerInitialSyncForAccount(account.id, 90);
+          } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
+            const europeanSyncService = new EuropeanFulfillmentSyncService();
+            await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+          }
+          
+          console.log(`✅ Initial sync triggered successfully for account ${account.id}`);
+        } catch (syncError: any) {
+          console.error(`❌ Failed to trigger initial sync for account ${account.id}:`, syncError.message);
+          // Don't fail the request - sync will be retried by worker
+        }
+      })();
       
       res.status(201).json(account);
     } catch (error) {
