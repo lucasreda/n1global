@@ -241,11 +241,17 @@ export class EuropeanFulfillmentSyncService {
         ordersSkipped: 0
       };
       
-      console.log(`🌍 Fetching leads for country: ${country}`);
-      console.log(`⚠️ European Fulfillment API limitation: No date filtering - fetching all available leads`);
+      // Calculate date range based on sync type
+      const dateTo = new Date().toISOString().split('T')[0]; // Today (YYYY-MM-DD)
+      const dateFromObj = new Date();
+      dateFromObj.setDate(dateFromObj.getDate() - days);
+      const dateFrom = dateFromObj.toISOString().split('T')[0]; // X days ago (YYYY-MM-DD)
       
-      // Fetch all leads for the country
-      const leads = await service.getLeadsListWithDateFilter(country);
+      console.log(`🌍 Fetching leads for country: ${country}`);
+      console.log(`📅 Date range: ${dateFrom} to ${dateTo} (${days} days)`);
+      
+      // Fetch leads for the country with date filtering
+      const leads = await service.getLeadsListWithDateFilter(country, dateFrom, dateTo);
       
       console.log(`📦 Fetched ${leads?.length || 0} European Fulfillment leads`);
       

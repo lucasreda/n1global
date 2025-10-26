@@ -75,11 +75,17 @@ class EuropeanFulfillmentService {
   private simulationMode: boolean = false;
 
   constructor(email?: string, password?: string, apiUrl?: string) {
+    // Normalize apiUrl to always end with /
+    let normalizedUrl = apiUrl || "https://api.ecomfulfilment.eu/";
+    if (!normalizedUrl.endsWith('/')) {
+      normalizedUrl += '/';
+    }
+    
     // Initialize with user-specific credentials if provided
     this.credentials = {
       email: email || "",
       password: password || "",
-      apiUrl: apiUrl || "https://api.ecomfulfilment.eu/"
+      apiUrl: normalizedUrl
     };
     
     if (email && password) {
@@ -94,7 +100,8 @@ class EuropeanFulfillmentService {
     this.credentials.email = email;
     this.credentials.password = password;
     if (apiUrl) {
-      this.credentials.apiUrl = apiUrl;
+      // Normalize apiUrl to always end with /
+      this.credentials.apiUrl = apiUrl.endsWith('/') ? apiUrl : apiUrl + '/';
     }
     // Clear existing token to force re-authentication
     this.token = null;
