@@ -142,6 +142,61 @@ export class EuropeanFulfillmentSyncService {
   }
   
   /**
+   * Trigger initial sync for a specific account (3 months lookback)
+   * Called when a new warehouse account is created
+   */
+  async triggerInitialSyncForAccount(accountId: string, lookbackDays: number = 90): Promise<void> {
+    console.log(`🚀 Triggering initial sync for European Fulfillment account ${accountId} (${lookbackDays} days)`);
+    
+    // Fetch the account
+    const accounts = await db.select()
+      .from(userWarehouseAccounts)
+      .where(eq(userWarehouseAccounts.id, accountId))
+      .limit(1);
+    
+    if (accounts.length === 0) {
+      throw new Error(`European Fulfillment account ${accountId} not found`);
+    }
+    
+    const account = accounts[0];
+    
+    // Update status to in_progress
+    await db.update(userWarehouseAccounts)
+      .set({
+        initialSyncStatus: 'in_progress',
+        initialSyncError: null
+      })
+      .where(eq(userWarehouseAccounts.id, accountId));
+    
+    try {
+      // Perform the initial sync (European Fulfillment doesn't support date filtering, so fetches all)
+      await this.performInitialSyncWarehouse(account);
+      
+      // Update status to completed
+      await db.update(userWarehouseAccounts)
+        .set({
+          initialSyncStatus: 'completed',
+          initialSyncCompleted: true,
+          initialSyncCompletedAt: new Date()
+        })
+        .where(eq(userWarehouseAccounts.id, accountId));
+      
+      console.log(`✅ Initial sync completed successfully for account ${accountId}`);
+    } catch (error: any) {
+      // Update status to failed with error message
+      await db.update(userWarehouseAccounts)
+        .set({
+          initialSyncStatus: 'failed',
+          initialSyncError: error.message || 'Unknown error'
+        })
+        .where(eq(userWarehouseAccounts.id, accountId));
+      
+      console.error(`❌ Initial sync failed for account ${accountId}:`, error.message);
+      throw error;
+    }
+  }
+  
+  /**
    * Sync a single warehouse account
    * Fetches leads from European Fulfillment API and saves to staging table
    */

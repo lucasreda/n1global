@@ -128,6 +128,160 @@ export class FHBSyncService {
   }
   
   /**
+   * Trigger initial sync for a specific account (3 months lookback)
+   * Called when a new warehouse account is created
+   */
+  async triggerInitialSyncForAccount(accountId: string, lookbackDays: number = 90): Promise<void> {
+    console.log(`🚀 Triggering initial sync for FHB account ${accountId} (${lookbackDays} days)`);
+    
+    // Fetch the account
+    const accounts = await db.select()
+      .from(userWarehouseAccounts)
+      .where(eq(userWarehouseAccounts.id, accountId))
+      .limit(1);
+    
+    if (accounts.length === 0) {
+      throw new Error(`FHB account ${accountId} not found`);
+    }
+    
+    const account = accounts[0];
+    
+    // Update status to in_progress
+    await db.update(userWarehouseAccounts)
+      .set({
+        initialSyncStatus: 'in_progress',
+        initialSyncError: null
+      })
+      .where(eq(userWarehouseAccounts.id, accountId));
+    
+    try {
+      // Perform the initial sync with custom lookback period
+      await this.performInitialSyncWithCustomWindow(account, lookbackDays);
+      
+      // Update status to completed
+      await db.update(userWarehouseAccounts)
+        .set({
+          initialSyncStatus: 'completed',
+          initialSyncCompleted: true,
+          initialSyncCompletedAt: new Date()
+        })
+        .where(eq(userWarehouseAccounts.id, accountId));
+      
+      console.log(`✅ Initial sync completed successfully for account ${accountId}`);
+    } catch (error: any) {
+      // Update status to failed with error message
+      await db.update(userWarehouseAccounts)
+        .set({
+          initialSyncStatus: 'failed',
+          initialSyncError: error.message || 'Unknown error'
+        })
+        .where(eq(userWarehouseAccounts.id, accountId));
+      
+      console.error(`❌ Initial sync failed for account ${accountId}:`, error.message);
+      throw error;
+    }
+  }
+  
+  /**
+   * Perform initial sync with custom window (for new accounts - 3 months)
+   */
+  private async performInitialSyncWithCustomWindow(
+    warehouseAccount: typeof userWarehouseAccounts.$inferSelect,
+    lookbackDays: number
+  ): Promise<void> {
+    const legacyAccount = this.convertToLegacyFormat(warehouseAccount);
+    console.log(`🚀 Starting initial sync for warehouse account: ${warehouseAccount.displayName} (${lookbackDays} days backfill)`);
+    
+    const startTime = Date.now();
+    let totalStats: SyncStats = {
+      ordersProcessed: 0,
+      ordersCreated: 0,
+      ordersUpdated: 0,
+      ordersSkipped: 0
+    };
+    
+    // Create overall sync log entry
+    const [syncLog] = await db.insert(fhbSyncLogs).values({
+      fhbAccountId: legacyAccount.id,
+      syncType: 'initial',
+      status: 'started',
+      startedAt: new Date()
+    }).returning();
+    
+    try {
+      // Initialize FHB service
+      const fhbService = new FHBService({
+        appId: legacyAccount.appId,
+        secret: legacyAccount.secret,
+        apiUrl: legacyAccount.apiUrl
+      });
+      
+      // Calculate lookback period
+      const today = new Date();
+      const startDate = new Date(today.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
+      
+      // Build windows to cover the period
+      const windowSizeDays = 30;
+      let windowStart = new Date(startDate);
+      let windowNumber = 1;
+      
+      while (windowStart < today) {
+        const windowEnd = new Date(Math.min(
+          windowStart.getTime() + windowSizeDays * 24 * 60 * 60 * 1000,
+          today.getTime()
+        ));
+        
+        // Process window with automatic splitting
+        await this.processWindowWithAutoSplit(
+          fhbService,
+          legacyAccount,
+          windowStart,
+          windowEnd,
+          windowNumber,
+          totalStats
+        );
+        
+        // Move to next window
+        windowStart = new Date(windowEnd);
+        windowNumber++;
+      }
+      
+      const duration = Date.now() - startTime;
+      
+      // Mark sync log as completed
+      await db.update(fhbSyncLogs)
+        .set({
+          status: 'completed',
+          ordersProcessed: totalStats.ordersProcessed,
+          ordersCreated: totalStats.ordersCreated,
+          ordersUpdated: totalStats.ordersUpdated,
+          ordersSkipped: totalStats.ordersSkipped,
+          completedAt: new Date(),
+          durationMs: duration
+        })
+        .where(eq(fhbSyncLogs.id, syncLog.id));
+      
+      console.log(`✅ Initial sync completed for ${warehouseAccount.displayName}`);
+      console.log(`   📊 Stats: ${totalStats.ordersCreated} created, ${totalStats.ordersUpdated} updated, ${totalStats.ordersSkipped} skipped`);
+      
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      
+      // Mark sync log as failed
+      await db.update(fhbSyncLogs)
+        .set({
+          status: 'failed',
+          errorMessage: error.message,
+          completedAt: new Date(),
+          durationMs: duration
+        })
+        .where(eq(fhbSyncLogs.id, syncLog.id));
+      
+      throw error;
+    }
+  }
+  
+  /**
    * Helper: Convert userWarehouseAccount to legacy fhbAccount format
    * This allows reusing existing sync logic
    */
