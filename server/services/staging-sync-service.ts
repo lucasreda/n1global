@@ -68,8 +68,10 @@ function mapProviderStatus(status: string, provider: string): string {
     'returned': 'returned',
     // European Fulfillment specific (status_livrison)
     'in delivery': 'shipped',
-    'unpacked': 'processing',
+    'unpacked': 'delivered', // Cliente desembalou = entregue
     'redeployment': 'processing',
+    'in transit': 'shipped', // Em trânsito = enviado
+    'incident': 'pending', // Incidente mantém pendente
     // eLogy statuses
     'in_warehouse': 'confirmed',
     'in_transit': 'shipped',
@@ -387,49 +389,19 @@ async function processFHBOrders(
             .where(eq(orders.id, existingOrder.id));
           
           totalUpdated++;
-        } else {
-          // No Shopify order found - create carrier-only order
-          await db.insert(orders).values({
-            id: `fhb_${fhbOrder.fhbOrderId}`,
-            storeId: operation.storeId,
-            operationId: operation.id,
-            dataSource: 'carrier',
-            carrierImported: true,
-            carrierOrderId: fhbOrder.fhbOrderId,
-            shopifyOrderNumber: fhbOrder.variableSymbol,
-            customerName: recipient?.name || recipient?.address?.name || 'Unknown',
-            customerEmail: customerEmail || null,
-            customerPhone: customerPhone || null,
-            total: fhbOrder.value?.toString() || '0',
-            status: mapProviderStatus(fhbOrder.status, 'fhb'),
-            trackingNumber: fhbOrder.tracking,
-            provider: 'fhb',
-            syncedFromFhb: true,
-            lastSyncAt: new Date(),
-            needsSync: false,
-            providerData: {
-              fhb: {
-                orderId: fhbOrder.fhbOrderId,
-                status: fhbOrder.status,
-                variableSymbol: fhbOrder.variableSymbol,
-                value: fhbOrder.value,
-                recipient: fhbOrder.recipient,
-                items: fhbOrder.items,
-                createdAt: rawData?.created_at
-              }
-            },
-            orderDate: rawData?.created_at ? new Date(rawData.created_at) : new Date(),
-            createdAt: rawData?.created_at ? new Date(rawData.created_at) : new Date()
-          });
           
-          totalCreated++;
+          // Mark as processed ONLY when we found a match
+          await db.update(fhbOrders)
+            .set({ processedToOrders: true, processedAt: new Date() })
+            .where(eq(fhbOrders.id, fhbOrder.id));
+          
+          totalProcessed++;
+        } else {
+          // No Shopify order found - skip (DO NOT create orphan orders)
+          // DO NOT mark as processed so it can be retried later
+          console.warn(`⚠️ No Shopify match found for FHB order ${fhbOrder.variableSymbol}, skipping (will retry on next sync)`);
+          totalSkipped++;
         }
-        
-        await db.update(fhbOrders)
-          .set({ processedToOrders: true, processedAt: new Date() })
-          .where(eq(fhbOrders.id, fhbOrder.id));
-        
-        totalProcessed++;
         
         // Update progress (aggregate, don't overwrite)
         const progress = getUserSyncProgress(userId);
@@ -547,48 +519,19 @@ async function processEuropeanFulfillmentOrders(
             .where(eq(orders.id, existingOrder.id));
           
           totalUpdated++;
-        } else {
-          // No Shopify order found - create carrier-only order
-          await db.insert(orders).values({
-            id: `ef_${efOrder.europeanOrderId}`,
-            storeId: operation.storeId,
-            operationId: operation.id,
-            dataSource: 'carrier',
-            carrierImported: true,
-            carrierOrderId: efOrder.europeanOrderId,
-            shopifyOrderNumber: efOrder.orderNumber,
-            customerName: recipient?.name || recipient?.address?.name || 'Unknown',
-            customerEmail: customerEmail || null,
-            customerPhone: customerPhone || null,
-            total: efOrder.value?.toString() || '0',
-            status: mapProviderStatus(efOrder.status, 'european_fulfillment'),
-            trackingNumber: efOrder.tracking,
-            provider: 'european_fulfillment',
-            lastSyncAt: new Date(),
-            needsSync: false,
-            providerData: {
-              european_fulfillment: {
-                orderId: efOrder.europeanOrderId,
-                status: efOrder.status,
-                orderNumber: efOrder.orderNumber,
-                value: efOrder.value,
-                recipient: efOrder.recipient,
-                items: efOrder.items,
-                createdAt: rawData?.created_at
-              }
-            },
-            orderDate: rawData?.created_at ? new Date(rawData.created_at) : new Date(),
-            createdAt: rawData?.created_at ? new Date(rawData.created_at) : new Date()
-          });
           
-          totalCreated++;
+          // Mark as processed ONLY when we found a match
+          await db.update(europeanFulfillmentOrders)
+            .set({ processedToOrders: true, processedAt: new Date() })
+            .where(eq(europeanFulfillmentOrders.id, efOrder.id));
+          
+          totalProcessed++;
+        } else {
+          // No Shopify order found - skip (DO NOT create orphan orders)
+          // DO NOT mark as processed so it can be retried later
+          console.warn(`⚠️ No Shopify match found for European Fulfillment order ${efOrder.orderNumber}, skipping (will retry on next sync)`);
+          totalSkipped++;
         }
-        
-        await db.update(europeanFulfillmentOrders)
-          .set({ processedToOrders: true, processedAt: new Date() })
-          .where(eq(europeanFulfillmentOrders.id, efOrder.id));
-        
-        totalProcessed++;
         
         // Update progress (aggregate, don't overwrite)
         const progress = getUserSyncProgress(userId);
@@ -706,48 +649,19 @@ async function processElogyOrders(
             .where(eq(orders.id, existingOrder.id));
           
           totalUpdated++;
-        } else {
-          // No Shopify order found - create carrier-only order
-          await db.insert(orders).values({
-            id: `elogy_${elogyOrder.elogyOrderId}`,
-            storeId: operation.storeId,
-            operationId: operation.id,
-            dataSource: 'carrier',
-            carrierImported: true,
-            carrierOrderId: elogyOrder.elogyOrderId,
-            shopifyOrderNumber: elogyOrder.orderNumber,
-            customerName: recipient?.name || recipient?.address?.name || 'Unknown',
-            customerEmail: customerEmail || null,
-            customerPhone: customerPhone || null,
-            total: elogyOrder.value?.toString() || '0',
-            status: mapProviderStatus(elogyOrder.status, 'elogy'),
-            trackingNumber: elogyOrder.tracking,
-            provider: 'elogy',
-            lastSyncAt: new Date(),
-            needsSync: false,
-            providerData: {
-              elogy: {
-                orderId: elogyOrder.elogyOrderId,
-                status: elogyOrder.status,
-                orderNumber: elogyOrder.orderNumber,
-                value: elogyOrder.value,
-                recipient: elogyOrder.recipient,
-                items: elogyOrder.items,
-                createdAt: rawData?.created_at
-              }
-            },
-            orderDate: rawData?.created_at ? new Date(rawData.created_at) : new Date(),
-            createdAt: rawData?.created_at ? new Date(rawData.created_at) : new Date()
-          });
           
-          totalCreated++;
+          // Mark as processed ONLY when we found a match
+          await db.update(elogyOrders)
+            .set({ processedToOrders: true, processedAt: new Date() })
+            .where(eq(elogyOrders.id, elogyOrder.id));
+          
+          totalProcessed++;
+        } else {
+          // No Shopify order found - skip (DO NOT create orphan orders)
+          // DO NOT mark as processed so it can be retried later
+          console.warn(`⚠️ No Shopify match found for eLogy order ${elogyOrder.orderNumber}, skipping (will retry on next sync)`);
+          totalSkipped++;
         }
-        
-        await db.update(elogyOrders)
-          .set({ processedToOrders: true, processedAt: new Date() })
-          .where(eq(elogyOrders.id, elogyOrder.id));
-        
-        totalProcessed++;
         
         // Update progress (aggregate, don't overwrite)
         const progress = getUserSyncProgress(userId);
