@@ -294,6 +294,16 @@ export class FHBSyncService {
   private convertToLegacyFormat(warehouseAccount: typeof userWarehouseAccounts.$inferSelect): typeof fhbAccounts.$inferSelect {
     const credentials = warehouseAccount.credentials as Record<string, any>;
     
+    console.log('🔍 Converting warehouse account to legacy format:', {
+      accountId: warehouseAccount.id,
+      displayName: warehouseAccount.displayName,
+      credentialsKeys: Object.keys(credentials || {}),
+      hasAppId: !!(credentials.appId || credentials.app_id),
+      hasSecret: !!credentials.secret,
+      appIdLength: (credentials.appId || credentials.app_id || '').length,
+      secretLength: (credentials.secret || '').length
+    });
+    
     return {
       id: warehouseAccount.id,
       name: warehouseAccount.displayName,
