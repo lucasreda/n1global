@@ -413,25 +413,22 @@ export class ShopifySyncService {
       updatedAt: new Date(),
     };
     
-    if (existingOrder) {
-      // Atualiza pedido existente
-      await db
-        .update(orders)
-        .set(orderData)
-        .where(eq(orders.id, existingOrder.id));
-      
-      console.log(`🔄 Pedido Shopify atualizado: ${shopifyOrder.name}`);
-      return { created: false };
-    } else {
-      // Cria novo pedido
-      const orderId = `shopify_${shopifyOrder.id}`;
-      await db
-        .insert(orders)
-        .values({
-          id: orderId,
-          ...orderData,
-        });
-      
+    // UPSERT: Create or update using ON CONFLICT
+    const orderId = `shopify_${shopifyOrder.id}`;
+    const isNewOrder = !existingOrder;
+    
+    await db
+      .insert(orders)
+      .values({
+        id: orderId,
+        ...orderData,
+      })
+      .onConflictDoUpdate({
+        target: orders.id,
+        set: orderData
+      });
+    
+    if (isNewOrder) {
       console.log(`✅ Novo pedido Shopify importado: ${shopifyOrder.name}`);
       
       // Dispatch webhook for operational app integration
@@ -449,6 +446,9 @@ export class ShopifySyncService {
       }
       
       return { created: true };
+    } else {
+      console.log(`🔄 Pedido Shopify atualizado: ${shopifyOrder.name}`);
+      return { created: false };
     }
   }
   
