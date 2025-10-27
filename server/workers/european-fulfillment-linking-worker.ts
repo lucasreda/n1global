@@ -1,13 +1,144 @@
 // 🇪🇺 European Fulfillment Linking Worker
 // Links staging orders from european_fulfillment_orders to operations.orders
 // Uses shopifyOrderPrefix for matching orders to correct operations
+// Implements 3-tier matching: order number → email → phone
 
 import { db } from '../db';
 import { europeanFulfillmentOrders, orders, operations, userWarehouseAccountOperations, userWarehouseAccounts } from '@shared/schema';
-import { eq, and, inArray, isNull } from 'drizzle-orm';
+import { eq, and, inArray, isNull, or } from 'drizzle-orm';
 
 // Reentrancy guard
 let isLinkingRunning = false;
+
+/**
+ * Normaliza número de telefone para matching
+ * Remove espaços, hífens, parênteses e prefixos internacionais
+ */
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  
+  // Remove espaços, hífens, parênteses
+  let normalized = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Remove prefixos internacionais comuns
+  normalized = normalized.replace(/^\+/, '');
+  normalized = normalized.replace(/^00/, '');
+  normalized = normalized.replace(/^011/, '');
+  
+  // Remove extensões (ext, ramal, etc)
+  normalized = normalized.replace(/[x#].*$/, '');
+  normalized = normalized.replace(/ext.*$/i, '');
+  normalized = normalized.replace(/ramal.*$/i, '');
+  
+  // Retorna apenas números
+  return normalized.replace(/\D/g, '');
+}
+
+/**
+ * Compara dois números de telefone usando matching de sufixo bidirecional
+ * Suporta telefones de 7-8 dígitos e formatos internacionais
+ */
+function phonesMatch(phone1: string | null | undefined, phone2: string | null | undefined): boolean {
+  const p1 = normalizePhone(phone1);
+  const p2 = normalizePhone(phone2);
+  
+  if (!p1 || !p2) return false;
+  
+  // Match exato
+  if (p1 === p2) return true;
+  
+  // Match de sufixo bidirecional (últimos 8 dígitos)
+  const minLength = 7; // Suporta telefones de 7-8 dígitos
+  if (p1.length >= minLength && p2.length >= minLength) {
+    const suffix1 = p1.slice(-8);
+    const suffix2 = p2.slice(-8);
+    
+    // Match se sufixos são iguais OU se um termina com o outro
+    if (suffix1 === suffix2) return true;
+    if (suffix1.endsWith(suffix2) || suffix2.endsWith(suffix1)) return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Encontra pedido existente do Shopify usando matching 3-tier:
+ * 1. Order number exato
+ * 2. Email do cliente
+ * 3. Telefone do cliente (com normalização)
+ * 
+ * Retorna o ID do pedido encontrado ou null
+ */
+async function findExistingShopifyOrder(
+  orderNumber: string,
+  email: string | null,
+  phone: string | null,
+  operationId: string
+): Promise<string | null> {
+  try {
+    // Tier 1: Match por order number exato
+    const orderByNumber = await db.select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.operationId, operationId),
+          eq(orders.shopifyOrderNumber, orderNumber)
+        )
+      )
+      .limit(1);
+    
+    if (orderByNumber.length > 0) {
+      console.log(`✅ Match por order number: ${orderNumber}`);
+      return orderByNumber[0].id;
+    }
+    
+    // Tier 2: Match por email (se disponível)
+    if (email) {
+      const orderByEmail = await db.select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.operationId, operationId),
+            eq(orders.customerEmail, email)
+          )
+        )
+        .limit(1);
+      
+      if (orderByEmail.length > 0) {
+        console.log(`✅ Match por email: ${orderNumber} → ${orderByEmail[0].shopifyOrderNumber}`);
+        return orderByEmail[0].id;
+      }
+    }
+    
+    // Tier 3: Match por telefone (se disponível)
+    if (phone) {
+      const normalizedPhone = normalizePhone(phone);
+      
+      if (normalizedPhone) {
+        // Buscar todos os pedidos da operação (limitar aos últimos 1000)
+        const allOrders = await db.select()
+          .from(orders)
+          .where(eq(orders.operationId, operationId))
+          .limit(1000);
+        
+        // Fazer matching manual de telefone
+        for (const order of allOrders) {
+          if (phonesMatch(phone, order.customerPhone)) {
+            console.log(`✅ Match por telefone: ${orderNumber} (${phone}) → ${order.shopifyOrderNumber} (${order.customerPhone})`);
+            return order.id;
+          }
+        }
+      }
+    }
+    
+    console.log(`❌ Nenhum match encontrado para ${orderNumber}`);
+    return null;
+    
+  } catch (error: any) {
+    console.error(`❌ Erro ao buscar pedido existente para ${orderNumber}:`, error.message);
+    return null;
+  }
+}
 
 /**
  * Links European Fulfillment staging orders to operation orders
@@ -157,31 +288,48 @@ async function processUnprocessedOrders() {
           continue;
         }
         
-        // Check if order already exists
-        const existingOrder = await db.select()
-          .from(orders)
-          .where(eq(orders.id, stagingOrder.orderNumber))
-          .limit(1);
+        // Extract customer data from staging order
+        const recipient = stagingOrder.recipient as any;
+        const customerEmail = recipient?.email || null;
+        const customerPhone = recipient?.phone || null;
         
-        if (existingOrder.length > 0) {
-          // Update existing order
+        // Try to find existing Shopify order using 3-tier matching
+        const existingOrderId = await findExistingShopifyOrder(
+          stagingOrder.orderNumber,
+          customerEmail,
+          customerPhone,
+          matchedOperation.id
+        );
+        
+        let linkedOrderId: string;
+        
+        if (existingOrderId) {
+          // Update existing Shopify order with carrier data
           await db.update(orders)
             .set({
               status: stagingOrder.status || 'pending',
               trackingNumber: stagingOrder.tracking || null,
-              total: stagingOrder.value || '0',
+              carrierImported: true,
+              carrierMatchedAt: new Date(),
+              carrierOrderId: stagingOrder.europeanOrderId,
+              provider: 'european_fulfillment',
               providerData: stagingOrder.rawData,
               lastStatusUpdate: new Date()
             })
-            .where(eq(orders.id, stagingOrder.orderNumber));
+            .where(eq(orders.id, existingOrderId));
           
+          linkedOrderId = existingOrderId;
           updated++;
+          console.log(`✅ Updated existing order ${existingOrderId} with carrier data from ${stagingOrder.orderNumber}`);
         } else {
-          // Create new order
+          // No match found - create new order with carrier data
+          const newOrderId = `ef_${stagingOrder.orderNumber}`;
+          
           await db.insert(orders).values({
-            id: stagingOrder.orderNumber,
+            id: newOrderId,
             storeId: matchedOperation.storeId,
             operationId: matchedOperation.id,
+            shopifyOrderNumber: stagingOrder.orderNumber,
             dataSource: 'carrier',
             carrierImported: true,
             carrierMatchedAt: new Date(),
@@ -192,18 +340,24 @@ async function processUnprocessedOrders() {
             currency: matchedOperation.currency || 'EUR',
             provider: 'european_fulfillment',
             trackingNumber: stagingOrder.tracking || null,
+            customerEmail: customerEmail,
+            customerPhone: customerPhone,
+            customerName: recipient?.name || null,
             providerData: stagingOrder.rawData,
             orderDate: new Date(),
             lastStatusUpdate: new Date()
           });
           
+          linkedOrderId = newOrderId;
           created++;
+          console.log(`✅ Created new order ${newOrderId} from carrier data ${stagingOrder.orderNumber}`);
         }
         
-        // Mark staging order as processed
+        // Mark staging order as processed AND update linked_order_id
         await db.update(europeanFulfillmentOrders)
           .set({
             processedToOrders: true,
+            linkedOrderId: linkedOrderId,
             processedAt: new Date()
           })
           .where(eq(europeanFulfillmentOrders.id, stagingOrder.id));

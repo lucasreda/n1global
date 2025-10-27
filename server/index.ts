@@ -120,6 +120,14 @@ app.use((req, res, next) => {
   const { startFHBLinkingWorker } = await import('./workers/fhb-linking-worker');
   startFHBLinkingWorker();
   
+  // Start European Fulfillment linking worker
+  const { startEuropeanFulfillmentLinkingWorker } = await import('./workers/european-fulfillment-linking-worker');
+  startEuropeanFulfillmentLinkingWorker();
+  
+  // Start eLogy linking worker
+  const { startElogyLinkingWorker } = await import('./workers/elogy-linking-worker');
+  startElogyLinkingWorker();
+  
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 

@@ -365,6 +365,7 @@ export const fhbOrders = pgTable("fhb_orders", {
   
   // Processing tracking
   processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  linkedOrderId: text("linked_order_id"), // ID of the linked order in orders table (null if not linked)
   processedAt: timestamp("processed_at"),
   
   createdAt: timestamp("created_at").defaultNow(),
@@ -546,6 +547,7 @@ export const europeanFulfillmentOrders = pgTable("european_fulfillment_orders", 
   
   // Processing tracking
   processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  linkedOrderId: text("linked_order_id"), // ID of the linked order in orders table (null if not linked)
   processedAt: timestamp("processed_at"),
   
   createdAt: timestamp("created_at").defaultNow(),
@@ -580,6 +582,7 @@ export const elogyOrders = pgTable("elogy_orders", {
   
   // Processing tracking
   processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  linkedOrderId: text("linked_order_id"), // ID of the linked order in orders table (null if not linked)
   processedAt: timestamp("processed_at"),
   
   createdAt: timestamp("created_at").defaultNow(),
