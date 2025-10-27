@@ -778,6 +778,8 @@ async function countUnprocessedOrders(userId: string): Promise<number> {
       )
     );
   
+  console.log(`🔍 [countUnprocessedOrders] User ${userId}: ${userAccounts.length} accounts`, userAccounts.map(a => a.id));
+  
   if (userAccounts.length === 0) return 0;
   
   const accountIds = userAccounts.map(a => a.id);
@@ -812,8 +814,14 @@ async function countUnprocessedOrders(userId: string): Promise<number> {
       )
   ]);
   
-  const total = (fhbCount[0]?.count || 0) + (efCount[0]?.count || 0) + (elogyCount[0]?.count || 0);
-  return Number(total);
+  const fhb = fhbCount[0]?.count || 0;
+  const ef = efCount[0]?.count || 0;
+  const elogy = elogyCount[0]?.count || 0;
+  const total = Number(fhb) + Number(ef) + Number(elogy);
+  
+  console.log(`📊 [countUnprocessedOrders] User ${userId}: FHB=${fhb}, EF=${ef}, eLogy=${elogy}, TOTAL=${total}`);
+  
+  return total;
 }
 
 /**
