@@ -1543,13 +1543,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's warehouse accounts
   app.get("/api/user/warehouse-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { providerKey } = req.query;
+      const { providerKey, userId } = req.query;
+      
+      // Determine which user's accounts to fetch
+      let targetUserId = req.user.id;
+      
+      // If userId is provided in query and user is admin, allow fetching other user's accounts
+      if (userId && typeof userId === 'string') {
+        const isAdmin = req.user.role === 'super_admin' || req.user.role === 'store';
+        if (!isAdmin) {
+          return res.status(403).json({ message: "Apenas administradores podem buscar contas de outros usuários" });
+        }
+        targetUserId = userId;
+      }
       
       let accounts;
       if (providerKey && typeof providerKey === 'string') {
-        accounts = await storage.getUserWarehouseAccountsByProvider(req.user.id, providerKey);
+        accounts = await storage.getUserWarehouseAccountsByProvider(targetUserId, providerKey);
       } else {
-        accounts = await storage.getUserWarehouseAccounts(req.user.id);
+        accounts = await storage.getUserWarehouseAccounts(targetUserId);
       }
       
       res.json(accounts);
