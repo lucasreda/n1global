@@ -78,11 +78,6 @@ interface SystemUser {
 }
 
 export default function AdminUsers() {
-  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
-  const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
   const [createWizardStep, setCreateWizardStep] = useState<'basic' | 'integrations'>('basic');
   const [newUserData, setNewUserData] = useState({
     name: '',
