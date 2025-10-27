@@ -1721,8 +1721,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Conta de warehouse não encontrada" });
       }
       
-      // Verify ownership
-      if (account.userId !== req.user.id) {
+      // Verify ownership (allow admins to delete other users' accounts)
+      const isAdmin = req.user.role === 'super_admin' || req.user.role === 'store';
+      const isOwner = account.userId === req.user.id;
+      
+      if (!isOwner && !isAdmin) {
         return res.status(403).json({ message: "Acesso negado" });
       }
       
