@@ -346,7 +346,7 @@ export const fhbSyncLogs = pgTable("fhb_sync_logs", {
 // FHB Orders Staging Table - raw FHB orders before processing to operations
 export const fhbOrders = pgTable("fhb_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  fhbAccountId: varchar("fhb_account_id").references(() => fhbAccounts.id), // Nullable - permite desvincular ao deletar conta
+  fhbAccountId: varchar("fhb_account_id").references(() => fhbAccounts.id, { onDelete: "set null" }), // Nullable - permite desvincular ao deletar conta
   
   // FHB order identifiers
   fhbOrderId: text("fhb_order_id").notNull(), // FHB's internal order ID
@@ -525,7 +525,7 @@ export const userWarehouseAccountOperations = pgTable("user_warehouse_account_op
 // European Fulfillment Orders Staging Table - raw orders before processing to operations
 export const europeanFulfillmentOrders = pgTable("european_fulfillment_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  accountId: varchar("account_id").references(() => userWarehouseAccounts.id), // Nullable - permite desvincular ao deletar conta
+  accountId: varchar("account_id").references(() => userWarehouseAccounts.id, { onDelete: "set null" }), // Nullable - permite desvincular ao deletar conta
   
   // European Fulfillment order identifiers
   europeanOrderId: text("european_order_id").notNull(), // European's internal order ID
@@ -559,7 +559,7 @@ export const europeanFulfillmentOrders = pgTable("european_fulfillment_orders", 
 // eLogy Orders Staging Table - raw orders before processing to operations
 export const elogyOrders = pgTable("elogy_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  accountId: varchar("account_id").references(() => userWarehouseAccounts.id), // Nullable - permite desvincular ao deletar conta
+  accountId: varchar("account_id").references(() => userWarehouseAccounts.id, { onDelete: "set null" }), // Nullable - permite desvincular ao deletar conta
   
   // eLogy order identifiers
   elogyOrderId: text("elogy_order_id").notNull(), // eLogy's internal order ID
