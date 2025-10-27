@@ -65,6 +65,11 @@ function mapProviderStatus(status: string, provider: string): string {
     'canceled': 'cancelled',
     'cancelled': 'cancelled',
     'rejected': 'cancelled',
+    'returned': 'returned',
+    // European Fulfillment specific (status_livrison)
+    'in delivery': 'shipped',
+    'unpacked': 'processing',
+    'redeployment': 'processing',
     // eLogy statuses
     'in_warehouse': 'confirmed',
     'in_transit': 'shipped',

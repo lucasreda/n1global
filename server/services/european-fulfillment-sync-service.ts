@@ -288,15 +288,15 @@ export class EuropeanFulfillmentSyncService {
             accountId: warehouseAccount.id,
             europeanOrderId: leadNumber,
             orderNumber: orderNumber,
-            status: lead.status || 'pending',
+            status: lead.status_livrison || lead.status || 'pending',
             tracking: lead.tracking_number || lead.tracking || null,
-            value: lead.total || lead.amount || '0',
+            value: lead.lead_value || lead.total || lead.amount || '0',
             recipient: {
-              name: lead.customer_name || lead.name || '',
-              email: lead.customer_email || lead.email || '',
-              phone: lead.customer_phone || lead.phone || '',
-              city: lead.shipping_city || lead.city || '',
-              address: lead.shipping_address || lead.address || ''
+              name: lead.name || lead.customer_name || '',
+              email: lead.email || lead.customer_email || '',
+              phone: lead.phone || lead.customer_phone || '',
+              city: lead.city || lead.shipping_city || '',
+              address: lead.address || lead.shipping_address || ''
             },
             items: lead.items || [],
             rawData: lead
