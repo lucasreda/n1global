@@ -1610,6 +1610,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test warehouse credentials
+  app.post("/api/user/warehouse-accounts/test", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { providerKey, credentials } = req.body;
+      
+      if (!providerKey?.trim()) {
+        return res.status(400).json({ message: "Provider key é obrigatório" });
+      }
+      
+      if (!credentials || typeof credentials !== 'object') {
+        return res.status(400).json({ message: "Credenciais são obrigatórias" });
+      }
+      
+      // Test credentials based on provider
+      if (providerKey === 'fhb') {
+        try {
+          console.log(`🔐 Testing FHB credentials...`);
+          const fhbService = new FHBService(credentials);
+          await fhbService.authenticate();
+          return res.json({ 
+            success: true, 
+            message: "Credenciais FHB válidas!" 
+          });
+        } catch (error: any) {
+          console.error(`❌ FHB credentials test failed:`, error.message);
+          if (error.message.includes('Invalid AppId or secret')) {
+            return res.status(400).json({ 
+              success: false,
+              message: "As credenciais FHB fornecidas são inválidas.",
+              details: "Verifique o App ID e Secret. Eles devem ser copiados exatamente como aparecem no painel FHB.",
+              error_type: "invalid_credentials"
+            });
+          }
+          return res.status(400).json({ 
+            success: false,
+            message: "Erro ao testar credenciais FHB: " + error.message,
+            error_type: "validation_error"
+          });
+        }
+      } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
+        try {
+          console.log(`🔐 Testing ${providerKey} credentials...`);
+          const europeanService = new EuropeanFulfillmentService(
+            credentials.email,
+            credentials.password,
+            credentials.country || 'spain'
+          );
+          await europeanService.authenticate();
+          return res.json({ 
+            success: true, 
+            message: `Credenciais ${providerKey === 'elogy' ? 'eLogy' : 'European Fulfillment'} válidas!` 
+          });
+        } catch (error: any) {
+          console.error(`❌ ${providerKey} credentials test failed:`, error.message);
+          if (error.message.includes('Invalid credentials') || error.message.includes('401')) {
+            return res.status(400).json({ 
+              success: false,
+              message: `As credenciais ${providerKey === 'elogy' ? 'eLogy' : 'European Fulfillment'} fornecidas são inválidas.`,
+              details: "Verifique o email e senha. Use as mesmas credenciais do painel do warehouse.",
+              error_type: "invalid_credentials"
+            });
+          }
+          return res.status(400).json({ 
+            success: false,
+            message: `Erro ao testar credenciais: ` + error.message,
+            error_type: "validation_error"
+          });
+        }
+      } else {
+        return res.status(400).json({ 
+          success: false,
+          message: "Provider não suportado para teste de credenciais" 
+        });
+      }
+    } catch (error) {
+      console.error("Test warehouse credentials error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Erro ao testar credenciais" 
+      });
+    }
+  });
+
   // Create warehouse account
   app.post("/api/user/warehouse-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
