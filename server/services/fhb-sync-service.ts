@@ -200,13 +200,15 @@ export class FHBSyncService {
       ordersSkipped: 0
     };
     
-    // Create overall sync log entry
-    const [syncLog] = await db.insert(fhbSyncLogs).values({
-      fhbAccountId: legacyAccount.id,
-      syncType: 'initial',
-      status: 'started',
-      startedAt: new Date()
-    }).returning();
+    // TODO: Create generic sync logs for user_warehouse_accounts
+    // Temporarily disabled - fhbSyncLogs references legacy fhb_accounts table
+    // const [syncLog] = await db.insert(fhbSyncLogs).values({
+    //   fhbAccountId: legacyAccount.id,
+    //   syncType: 'initial',
+    //   status: 'started',
+    //   startedAt: new Date()
+    // }).returning();
+    const syncLog = { id: 'temp-log-id' }; // Placeholder for now
     
     try {
       // Initialize FHB service
@@ -248,18 +250,19 @@ export class FHBSyncService {
       
       const duration = Date.now() - startTime;
       
-      // Mark sync log as completed
-      await db.update(fhbSyncLogs)
-        .set({
-          status: 'completed',
-          ordersProcessed: totalStats.ordersProcessed,
-          ordersCreated: totalStats.ordersCreated,
-          ordersUpdated: totalStats.ordersUpdated,
-          ordersSkipped: totalStats.ordersSkipped,
-          completedAt: new Date(),
-          durationMs: duration
-        })
-        .where(eq(fhbSyncLogs.id, syncLog.id));
+      // TODO: Update generic sync logs
+      // Temporarily disabled - fhbSyncLogs references legacy fhb_accounts table
+      // await db.update(fhbSyncLogs)
+      //   .set({
+      //     status: 'completed',
+      //     ordersProcessed: totalStats.ordersProcessed,
+      //     ordersCreated: totalStats.ordersCreated,
+      //     ordersUpdated: totalStats.ordersUpdated,
+      //     ordersSkipped: totalStats.ordersSkipped,
+      //     completedAt: new Date(),
+      //     durationMs: duration
+      //   })
+      //   .where(eq(fhbSyncLogs.id, syncLog.id));
       
       console.log(`✅ Initial sync completed for ${warehouseAccount.displayName}`);
       console.log(`   📊 Stats: ${totalStats.ordersCreated} created, ${totalStats.ordersUpdated} updated, ${totalStats.ordersSkipped} skipped`);
@@ -267,15 +270,16 @@ export class FHBSyncService {
     } catch (error: any) {
       const duration = Date.now() - startTime;
       
-      // Mark sync log as failed
-      await db.update(fhbSyncLogs)
-        .set({
-          status: 'failed',
-          errorMessage: error.message,
-          completedAt: new Date(),
-          durationMs: duration
-        })
-        .where(eq(fhbSyncLogs.id, syncLog.id));
+      // TODO: Update generic sync logs with failure
+      // Temporarily disabled - fhbSyncLogs references legacy fhb_accounts table
+      // await db.update(fhbSyncLogs)
+      //   .set({
+      //     status: 'failed',
+      //     errorMessage: error.message,
+      //     completedAt: new Date(),
+      //     durationMs: duration
+      //   })
+      //   .where(eq(fhbSyncLogs.id, syncLog.id));
       
       throw error;
     }
@@ -333,13 +337,15 @@ export class FHBSyncService {
     let hadErrors = false;
     const errorWindows: string[] = [];
     
-    // Create overall sync log entry
-    const [syncLog] = await db.insert(fhbSyncLogs).values({
-      fhbAccountId: legacyAccount.id,
-      syncType: 'initial',
-      status: 'started',
-      startedAt: new Date()
-    }).returning();
+    // TODO: Create generic sync logs for user_warehouse_accounts
+    // Temporarily disabled - fhbSyncLogs references legacy fhb_accounts table
+    // const [syncLog] = await db.insert(fhbSyncLogs).values({
+    //   fhbAccountId: legacyAccount.id,
+    //   syncType: 'initial',
+    //   status: 'started',
+    //   startedAt: new Date()
+    // }).returning();
+    const syncLog = { id: 'temp-log-id' }; // Placeholder for now
     
     try {
       // Initialize FHB service
