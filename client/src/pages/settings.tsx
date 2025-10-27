@@ -276,7 +276,7 @@ export default function Settings() {
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Hash className="mr-2" size={16} />
-                Prefixo Shopify (FHB Sync)
+                Prefixo dos Pedidos
               </label>
               <Input
                 type="text"
