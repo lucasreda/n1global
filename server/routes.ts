@@ -1548,6 +1548,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine which user's accounts to fetch
       let targetUserId = req.user.id;
       
+      console.log('🔍 Warehouse accounts request:', { 
+        requestedUserId: userId, 
+        loggedInUser: req.user.id, 
+        userRole: req.user.role 
+      });
+      
       // If userId is provided in query and user is admin, allow fetching other user's accounts
       if (userId && typeof userId === 'string') {
         const isAdmin = req.user.role === 'super_admin' || req.user.role === 'store';
@@ -1555,6 +1561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Apenas administradores podem buscar contas de outros usuários" });
         }
         targetUserId = userId;
+        console.log('✅ Admin accessing another user\'s accounts, target:', targetUserId);
       }
       
       let accounts;
@@ -1563,6 +1570,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         accounts = await storage.getUserWarehouseAccounts(targetUserId);
       }
+      
+      console.log('📦 Found accounts:', accounts.length, 'for user:', targetUserId);
       
       res.json(accounts);
     } catch (error) {
