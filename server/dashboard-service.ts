@@ -160,11 +160,13 @@ export class DashboardService {
         SELECT 
           (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date AS order_day,
           total,
-          status
+          status,
+          shopify_data->>'financial_status' AS financial_status
         FROM orders
         WHERE operation_id = ${operationId}
           AND (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date >= ${dateRange.from.toISOString().split('T')[0]}::date
           AND (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date <= ${dateRange.to.toISOString().split('T')[0]}::date
+          AND (shopify_data->>'financial_status' IS NULL OR shopify_data->>'financial_status' != 'voided')
           ${providerFilter}
       )
       SELECT 
@@ -338,6 +340,7 @@ export class DashboardService {
         sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
         sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`,
         ne(orders.status, 'cancelled'), // All orders except cancelled (total Shopify revenue)
+        sql`(shopify_data->>'financial_status' IS NULL OR shopify_data->>'financial_status' != 'voided')`, // Exclude voided orders
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
