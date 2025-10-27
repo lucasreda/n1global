@@ -137,7 +137,8 @@ export default function AdminOperations() {
     country: '',
     ownerId: '',
     currency: 'EUR',
-    operationType: 'Cash on Delivery'
+    operationType: 'Cash on Delivery',
+    shopifyOrderPrefix: ''
   });
   
   const [editOperationData, setEditOperationData] = useState({
@@ -1055,6 +1056,19 @@ export default function AdminOperations() {
                 placeholder="EUR, USD, BRL..."
                 data-testid="input-operation-currency"
               />
+            </div>
+            <div>
+              <Label htmlFor="operation-prefix">Prefixo de Pedidos (para FHB/Warehouse)</Label>
+              <Input
+                id="operation-prefix"
+                value={newOperationData.shopifyOrderPrefix}
+                onChange={(e) => setNewOperationData({ ...newOperationData, shopifyOrderPrefix: e.target.value })}
+                placeholder="Ex: Ox, LOJA01-, ES-"
+                data-testid="input-operation-prefix"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Prefixo usado para identificar pedidos desta operação (ex: "Ox" para pedidos Ox173, Ox174...)
+              </p>
             </div>
           </div>
           <DialogFooter>
