@@ -1785,6 +1785,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Force sync from warehouse API to staging table
+  app.post("/api/user/warehouse-accounts/:id/force-sync", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const account = await storage.getUserWarehouseAccount(req.params.id);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta de warehouse não encontrada" });
+      }
+
+      // Verify ownership
+      if (account.userId !== req.user!.id && req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Acesso negado" });
+      }
+
+      console.log(`🚀 Force syncing warehouse account: ${account.id} (${account.providerKey})`);
+
+      // Trigger sync based on provider
+      if (account.providerKey === 'fhb') {
+        const fhbSyncService = new FHBSyncService();
+        await fhbSyncService.triggerInitialSyncForAccount(account.id, 90);
+      } else if (account.providerKey === 'european_fulfillment') {
+        const europeanSyncService = new EuropeanFulfillmentSyncService();
+        await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+      } else if (account.providerKey === 'elogy') {
+        const europeanSyncService = new EuropeanFulfillmentSyncService();
+        await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+      } else {
+        return res.status(400).json({ message: `Sync não suportado para provider: ${account.providerKey}` });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Sync iniciado para ${account.displayName}. Os pedidos serão importados para a staging table.` 
+      });
+    } catch (error: any) {
+      console.error("Force sync error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get operations linked to warehouse account
   app.get("/api/user/warehouse-accounts/:id/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
