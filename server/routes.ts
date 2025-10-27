@@ -2321,24 +2321,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota para sincronização completa progressiva
-  // MIGRATED TO STAGING TABLES: Agora usa staging-sync-service ao invés de chamadas HTTP externas
+  // MIGRATED TO STAGING TABLES: Sincroniza Shopify primeiro, depois staging tables
   app.post('/api/sync/complete-progressive', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      console.log(`🔄 [STAGING SYNC] Iniciando processamento de pedidos das staging tables para user ${req.user.id}`);
+      const { operationId } = req.query;
+      console.log(`🔄 [COMPLETE SYNC] Iniciando sincronização completa para user ${req.user.id}, operation ${operationId || 'all'}`);
 
-      // Iniciar sincronização completa progressiva de forma assíncrona usando staging tables
-      const { performStagingSync } = await import("./services/staging-sync-service");
-      
-      performStagingSync(req.user.id).catch(error => {
-        console.error('❌ [STAGING SYNC] Erro na sincronização de staging tables:', error);
-      });
+      // Executar sincronização completa de forma assíncrona
+      (async () => {
+        try {
+          // 1️⃣ PRIMEIRO: Sincronizar Shopify (importar pedidos)
+          if (operationId && typeof operationId === 'string') {
+            console.log(`📦 [SHOPIFY SYNC] Sincronizando Shopify para operação ${operationId}...`);
+            const { ShopifySyncService } = await import("./shopify-sync-service");
+            const shopifyService = new ShopifySyncService();
+            const shopifyResult = await shopifyService.importShopifyOrders(operationId);
+            console.log(`✅ [SHOPIFY SYNC] Shopify sincronizado:`, shopifyResult);
+          }
+
+          // 2️⃣ DEPOIS: Processar staging tables (fazer matching com transportadora)
+          console.log(`🔄 [STAGING SYNC] Processando staging tables para user ${req.user.id}...`);
+          const { performStagingSync } = await import("./services/staging-sync-service");
+          await performStagingSync(req.user.id);
+          console.log(`✅ [COMPLETE SYNC] Sincronização completa finalizada!`);
+        } catch (error) {
+          console.error('❌ [COMPLETE SYNC] Erro na sincronização completa:', error);
+        }
+      })();
       
       res.json({ 
         success: true, 
         message: 'Processamento de pedidos iniciado. Use /sync/complete-status para acompanhar o progresso.' 
       });
     } catch (error) {
-      console.error('❌ [STAGING SYNC] Erro ao iniciar processamento de staging tables:', error);
+      console.error('❌ [COMPLETE SYNC] Erro ao iniciar sincronização completa:', error);
       res.status(500).json({ 
         success: false, 
         message: error instanceof Error ? error.message : 'Erro interno do servidor' 
