@@ -31,17 +31,25 @@ interface ProcessBatchResult {
   skipped: number;
 }
 
-// Global sync state
-let currentSyncProgress: SyncProgress = {
-  isRunning: false,
-  phase: 'preparing',
-  message: 'Pronto para sincronizar',
-  processedLeads: 0,
-  totalLeads: 0,
-  newLeads: 0,
-  updatedLeads: 0,
-  errors: 0
-};
+// Per-user sync state to prevent cross-tenant data leakage
+const userSyncProgress = new Map<string, SyncProgress>();
+
+// Helper to get or create sync progress for a user
+function getUserSyncProgress(userId: string): SyncProgress {
+  if (!userSyncProgress.has(userId)) {
+    userSyncProgress.set(userId, {
+      isRunning: false,
+      phase: 'preparing',
+      message: 'Pronto para sincronizar',
+      processedLeads: 0,
+      totalLeads: 0,
+      newLeads: 0,
+      updatedLeads: 0,
+      errors: 0
+    });
+  }
+  return userSyncProgress.get(userId)!;
+}
 
 /**
  * Map provider statuses to orders table status
@@ -130,6 +138,7 @@ async function buildAccountOperationsCache(userId: string): Promise<Map<string, 
  * Process FHB staging orders
  */
 async function processFHBOrders(
+  userId: string,
   accountOpsCache: Map<string, typeof operations.$inferSelect[]>,
   batchSize: number = 100
 ): Promise<ProcessBatchResult> {
@@ -257,14 +266,14 @@ async function processFHBOrders(
         
         totalProcessed++;
         
-        // Update progress
-        currentSyncProgress.processedLeads++;
-        currentSyncProgress.newLeads = totalCreated;
-        currentSyncProgress.updatedLeads = totalUpdated;
+        // Update progress (aggregate, don't overwrite)
+        const progress = getUserSyncProgress(userId);
+        progress.processedLeads++;
         
       } catch (error) {
         console.error(`❌ Error processing FHB order:`, error);
-        currentSyncProgress.errors++;
+        const progress = getUserSyncProgress(userId);
+        progress.errors++;
         totalSkipped++;
       }
     }
@@ -277,6 +286,7 @@ async function processFHBOrders(
  * Process European Fulfillment staging orders
  */
 async function processEuropeanFulfillmentOrders(
+  userId: string,
   accountOpsCache: Map<string, typeof operations.$inferSelect[]>,
   batchSize: number = 100
 ): Promise<ProcessBatchResult> {
@@ -399,14 +409,14 @@ async function processEuropeanFulfillmentOrders(
         
         totalProcessed++;
         
-        // Update progress
-        currentSyncProgress.processedLeads++;
-        currentSyncProgress.newLeads = totalCreated;
-        currentSyncProgress.updatedLeads = totalUpdated;
+        // Update progress (aggregate, don't overwrite)
+        const progress = getUserSyncProgress(userId);
+        progress.processedLeads++;
         
       } catch (error) {
         console.error(`❌ Error processing European Fulfillment order:`, error);
-        currentSyncProgress.errors++;
+        const progress = getUserSyncProgress(userId);
+        progress.errors++;
         totalSkipped++;
       }
     }
@@ -419,6 +429,7 @@ async function processEuropeanFulfillmentOrders(
  * Process eLogy staging orders
  */
 async function processElogyOrders(
+  userId: string,
   accountOpsCache: Map<string, typeof operations.$inferSelect[]>,
   batchSize: number = 100
 ): Promise<ProcessBatchResult> {
@@ -541,14 +552,14 @@ async function processElogyOrders(
         
         totalProcessed++;
         
-        // Update progress
-        currentSyncProgress.processedLeads++;
-        currentSyncProgress.newLeads = totalCreated;
-        currentSyncProgress.updatedLeads = totalUpdated;
+        // Update progress (aggregate, don't overwrite)
+        const progress = getUserSyncProgress(userId);
+        progress.processedLeads++;
         
       } catch (error) {
         console.error(`❌ Error processing eLogy order:`, error);
-        currentSyncProgress.errors++;
+        const progress = getUserSyncProgress(userId);
+        progress.errors++;
         totalSkipped++;
       }
     }
@@ -612,81 +623,92 @@ async function countUnprocessedOrders(userId: string): Promise<number> {
  * Perform complete sync from staging tables
  */
 export async function performStagingSync(userId: string): Promise<void> {
-  if (currentSyncProgress.isRunning) {
-    throw new Error('Sincronização já em andamento');
+  // Per-user concurrency guard
+  const progress = getUserSyncProgress(userId);
+  
+  if (progress.isRunning) {
+    throw new Error('Sincronização já em andamento para este usuário');
   }
   
   try {
     console.log(`🔄 Starting staging sync for user ${userId}`);
     
-    currentSyncProgress = {
-      isRunning: true,
-      phase: 'preparing',
-      message: 'Preparando sincronização...',
-      processedLeads: 0,
-      totalLeads: 0,
-      newLeads: 0,
-      updatedLeads: 0,
-      errors: 0
-    };
+    // Reset progress for this user
+    progress.isRunning = true;
+    progress.phase = 'preparing';
+    progress.message = 'Preparando sincronização...';
+    progress.processedLeads = 0;
+    progress.totalLeads = 0;
+    progress.newLeads = 0;
+    progress.updatedLeads = 0;
+    progress.errors = 0;
     
     // Count total unprocessed orders
     const totalOrders = await countUnprocessedOrders(userId);
-    currentSyncProgress.totalLeads = totalOrders;
+    progress.totalLeads = totalOrders;
     
     if (totalOrders === 0) {
-      currentSyncProgress.phase = 'completed';
-      currentSyncProgress.message = 'Nenhum pedido pendente para processar';
-      currentSyncProgress.isRunning = false;
+      progress.phase = 'completed';
+      progress.message = 'Nenhum pedido pendente para processar';
+      progress.isRunning = false;
       return;
     }
     
     console.log(`📊 Found ${totalOrders} unprocessed orders`);
     
     // Build account operations cache
-    currentSyncProgress.phase = 'syncing';
-    currentSyncProgress.message = 'Processando pedidos...';
+    progress.phase = 'syncing';
+    progress.message = 'Processando pedidos...';
     
     const accountOpsCache = await buildAccountOperationsCache(userId);
     
     // Process all staging tables in parallel for speed
     const [fhbResult, efResult, elogyResult] = await Promise.all([
-      processFHBOrders(accountOpsCache),
-      processEuropeanFulfillmentOrders(accountOpsCache),
-      processElogyOrders(accountOpsCache)
+      processFHBOrders(userId, accountOpsCache),
+      processEuropeanFulfillmentOrders(userId, accountOpsCache),
+      processElogyOrders(userId, accountOpsCache)
     ]);
     
-    console.log(`✅ Sync completed:`, {
+    // Aggregate results from all providers
+    progress.newLeads = fhbResult.created + efResult.created + elogyResult.created;
+    progress.updatedLeads = fhbResult.updated + efResult.updated + elogyResult.updated;
+    
+    console.log(`✅ Sync completed for user ${userId}:`, {
       fhb: fhbResult,
       europeanFulfillment: efResult,
-      elogy: elogyResult
+      elogy: elogyResult,
+      totals: {
+        newLeads: progress.newLeads,
+        updatedLeads: progress.updatedLeads,
+        errors: progress.errors
+      }
     });
     
-    currentSyncProgress.phase = 'completed';
-    currentSyncProgress.message = 'Sincronização concluída!';
-    currentSyncProgress.isRunning = false;
+    progress.phase = 'completed';
+    progress.message = 'Sincronização concluída!';
+    progress.isRunning = false;
     
   } catch (error) {
-    console.error('❌ Staging sync error:', error);
-    currentSyncProgress.phase = 'error';
-    currentSyncProgress.message = error instanceof Error ? error.message : 'Erro desconhecido';
-    currentSyncProgress.isRunning = false;
+    console.error(`❌ Staging sync error for user ${userId}:`, error);
+    progress.phase = 'error';
+    progress.message = error instanceof Error ? error.message : 'Erro desconhecido';
+    progress.isRunning = false;
     throw error;
   }
 }
 
 /**
- * Get current sync progress
+ * Get current sync progress for a specific user
  */
-export function getSyncProgress(): SyncProgress {
-  return { ...currentSyncProgress };
+export function getSyncProgress(userId: string): SyncProgress {
+  return { ...getUserSyncProgress(userId) };
 }
 
 /**
- * Reset sync progress (for testing)
+ * Reset sync progress for a specific user (for testing)
  */
-export function resetSyncProgress(): void {
-  currentSyncProgress = {
+export function resetSyncProgress(userId: string): void {
+  userSyncProgress.set(userId, {
     isRunning: false,
     phase: 'preparing',
     message: 'Pronto para sincronizar',
@@ -695,5 +717,5 @@ export function resetSyncProgress(): void {
     newLeads: 0,
     updatedLeads: 0,
     errors: 0
-  };
+  });
 }

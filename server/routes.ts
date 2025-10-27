@@ -2307,11 +2307,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota para obter status da sincronização completa progressiva
-  // MIGRATED TO STAGING TABLES: Retorna status do staging-sync-service
+  // MIGRATED TO STAGING TABLES: Retorna status do staging-sync-service (per-user)
   app.get('/api/sync/complete-status', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { getSyncProgress } = await import("./services/staging-sync-service");
-      const status = getSyncProgress();
+      const status = getSyncProgress(req.user.id);
       res.json(status);
     } catch (error) {
       console.error('❌ [STAGING SYNC] Erro ao obter status:', error);
@@ -2323,7 +2323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota SSE para streaming de status da sincronização completa
-  // MIGRATED TO STAGING TABLES: Usa staging-sync-service para progresso em tempo real
+  // MIGRATED TO STAGING TABLES: Usa staging-sync-service para progresso em tempo real (per-user)
   app.get('/api/sync/complete-status-stream', authenticateToken, async (req: AuthRequest, res: Response) => {
     // Configurar headers para SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -2332,9 +2332,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const { getSyncProgress } = await import("./services/staging-sync-service");
+      const userId = req.user.id;
       
       // Enviar status inicial imediatamente
-      const initialStatus = getSyncProgress();
+      const initialStatus = getSyncProgress(userId);
       res.write(`data: ${JSON.stringify(initialStatus)}\n\n`);
       
       // Se não está rodando, fechar conexão
@@ -2346,7 +2347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enviar atualizações a cada 500ms enquanto está rodando
       const intervalId = setInterval(() => {
         try {
-          const status = getSyncProgress();
+          const status = getSyncProgress(userId);
           res.write(`data: ${JSON.stringify(status)}\n\n`);
           
           // Se não está mais rodando, fechar
