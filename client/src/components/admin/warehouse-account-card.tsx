@@ -55,6 +55,26 @@ export function WarehouseAccountCard({
     }
   };
 
+  const getProviderBadge = () => {
+    const badgeClasses = {
+      fhb: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      european_fulfillment: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      elogy: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    };
+
+    const className = badgeClasses[account.providerKey as keyof typeof badgeClasses] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+
+    return (
+      <Badge 
+        variant="secondary" 
+        className={`text-xs font-medium ${className}`}
+        data-testid={`badge-provider-${account.id}`}
+      >
+        {account.providerName}
+      </Badge>
+    );
+  };
+
   const getStatusBadge = () => {
     if (!account.isActive) {
       return (
@@ -120,14 +140,11 @@ export function WarehouseAccountCard({
                 >
                   {account.displayName}
                 </h3>
-                <p 
-                  className="text-xs text-muted-foreground" 
-                  data-testid={`text-provider-${account.id}`}
-                >
-                  {account.providerName}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  {getProviderBadge()}
+                  {getStatusBadge()}
+                </div>
               </div>
-              {getStatusBadge()}
             </div>
 
             {/* Info Grid */}
