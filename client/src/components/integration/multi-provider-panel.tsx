@@ -137,7 +137,7 @@ export function MultiProviderPanel() {
               setLocation('/orders');
               setTimeout(() => {
                 startSyncTour();
-              }, 1000);
+              }, 2500);
             }, 1500);
           }
         } catch (error) {
