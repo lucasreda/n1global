@@ -76,19 +76,17 @@ function mapProviderStatus(status: string, provider: string): string {
 
 /**
  * Normalize phone number for matching
- * Removes spaces, dashes, parentheses, and country codes
+ * Removes extensions and non-numeric characters, preserves all significant digits
  */
 function normalizePhone(phone: string | null | undefined): string {
   if (!phone) return '';
   
-  // Remove all non-digit characters except +
-  let normalized = phone.replace(/[\s\-\(\)\.]/g, '');
+  // Remove common extension patterns (ext, extension, ramal, x) before normalization
+  let cleaned = phone.toLowerCase();
+  cleaned = cleaned.replace(/\b(ext|extension|ramal|x)\s*\.?\s*\d+/gi, '');
   
-  // Remove leading + and country codes (1-3 digits)
-  normalized = normalized.replace(/^\+?\d{1,3}/, '');
-  
-  // Return last 9 digits (most significant for matching)
-  return normalized.slice(-9);
+  // Remove all non-numeric characters, preserve all digits
+  return cleaned.replace(/[^\d]/g, '');
 }
 
 /**
@@ -172,23 +170,65 @@ async function findShopifyOrderIntelligent(
     }
   }
   
-  // Strategy 3: Match by phone (if available)
+  // Strategy 3: Match by phone (if available and >=7 digits)
   const normalizedPhone = normalizePhone(warehousePhone);
-  if (normalizedPhone && normalizedPhone.length >= 9) {
-    // Use LIKE to match last 9 digits of phone
-    const orderByPhone = await db.select()
+  if (normalizedPhone && normalizedPhone.length >= 7) {
+    // SQL helper to normalize phone: remove extensions, then non-digits
+    const normalizePhoneSQL = sql`REGEXP_REPLACE(REGEXP_REPLACE(${orders.customerPhone}, '\\b(ext|extension|ramal|x)\\s*\\.?\\s*\\d+', '', 'gi'), '[^0-9]', '', 'g')`;
+    
+    // Try exact match first (preserves full precision)
+    const exactPhoneMatch = await db.select()
       .from(orders)
       .where(
         and(
           eq(orders.operationId, operationId),
-          sql`REGEXP_REPLACE(${orders.customerPhone}, '[^0-9]', '', 'g') LIKE ${'%' + normalizedPhone}`
+          sql`${normalizePhoneSQL} = ${normalizedPhone}`
         )
       )
       .limit(1);
     
-    if (orderByPhone.length > 0) {
-      console.log(`✅ Matched by phone: ${warehouseOrderNumber} -> ${normalizedPhone}`);
-      return orderByPhone[0];
+    if (exactPhoneMatch.length > 0) {
+      console.log(`✅ Matched by phone (exact): ${warehouseOrderNumber} -> ${normalizedPhone}`);
+      return exactPhoneMatch[0];
+    }
+    
+    // If no exact match, try bidirectional suffix matching
+    // Use last 9 digits for phones >=9 digits, otherwise use full number
+    const suffixDigits = normalizedPhone.length >= 9 ? normalizedPhone.slice(-9) : normalizedPhone;
+    
+    // Direction 1: Warehouse suffix → Shopify phone (handles long warehouse, short Shopify)
+    const suffixMatch1 = await db.select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.operationId, operationId),
+          sql`${normalizePhoneSQL} LIKE ${'%' + suffixDigits}`
+        )
+      )
+      .limit(1);
+    
+    if (suffixMatch1.length > 0) {
+      console.log(`✅ Matched by phone (suffix): ${warehouseOrderNumber} -> ${suffixDigits}`);
+      return suffixMatch1[0];
+    }
+    
+    // Direction 2: Shopify suffix → Warehouse phone (handles short warehouse, long Shopify)
+    // Only needed for short warehouse numbers (<9 digits)
+    if (normalizedPhone.length < 9) {
+      const suffixMatch2 = await db.select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.operationId, operationId),
+            sql`RIGHT(${normalizePhoneSQL}, ${normalizedPhone.length}) = ${normalizedPhone}`
+          )
+        )
+        .limit(1);
+      
+      if (suffixMatch2.length > 0) {
+        console.log(`✅ Matched by phone (reverse suffix): ${warehouseOrderNumber} -> ${normalizedPhone}`);
+        return suffixMatch2[0];
+      }
     }
   }
   
