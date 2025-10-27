@@ -170,43 +170,32 @@ async function processUnprocessedOrders() {
               status: stagingOrder.status || 'pending',
               trackingNumber: stagingOrder.tracking || null,
               total: stagingOrder.value || '0',
+              carrierImported: true,
+              carrierMatchedAt: new Date(),
+              carrierOrderId: stagingOrder.elogyOrderId,
+              provider: 'elogy',
               providerData: stagingOrder.rawData,
               lastStatusUpdate: new Date()
             })
             .where(eq(orders.id, stagingOrder.orderNumber));
           
           updated++;
-        } else {
-          // Create new order
-          await db.insert(orders).values({
-            id: stagingOrder.orderNumber,
-            storeId: matchedOperation.storeId,
-            operationId: matchedOperation.id,
-            dataSource: 'carrier',
-            carrierImported: true,
-            carrierMatchedAt: new Date(),
-            carrierOrderId: stagingOrder.elogyOrderId,
-            status: stagingOrder.status || 'pending',
-            paymentMethod: 'cod',
-            total: stagingOrder.value || '0',
-            currency: matchedOperation.currency || 'EUR',
-            provider: 'elogy',
-            trackingNumber: stagingOrder.tracking || null,
-            providerData: stagingOrder.rawData,
-            orderDate: new Date(),
-            lastStatusUpdate: new Date()
-          });
           
-          created++;
+          // Mark staging order as processed
+          await db.update(elogyOrders)
+            .set({
+              processedToOrders: true,
+              processedAt: new Date()
+            })
+            .where(eq(elogyOrders.id, stagingOrder.id));
+        } else {
+          // No match found - skip (do not create new orders)
+          console.warn(`⚠️ No Shopify match found for eLogy order ${stagingOrder.orderNumber}, skipping (waiting for Shopify sync)`);
+          skipped++;
+          
+          // DO NOT mark as processed - leave it for future matching attempts
+          continue;
         }
-        
-        // Mark staging order as processed
-        await db.update(elogyOrders)
-          .set({
-            processedToOrders: true,
-            processedAt: new Date()
-          })
-          .where(eq(elogyOrders.id, stagingOrder.id));
         
         processed++;
         

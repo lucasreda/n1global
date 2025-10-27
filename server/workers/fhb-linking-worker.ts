@@ -212,49 +212,22 @@ async function processUnprocessedOrders() {
               .where(eq(orders.id, existingOrder[0].id));
             
             batchUpdated++;
-          } else {
-            // Create new order from FHB data
-            await db.insert(orders).values({
-              id: `fhb_${fhbOrder.fhbOrderId}`,
-              storeId: operation.storeId,
-              operationId: operation.id,
-              dataSource: 'carrier',
-              carrierImported: true,
-              carrierOrderId: fhbOrder.fhbOrderId,
-              shopifyOrderNumber: fhbOrder.variableSymbol,
-              customerName: (fhbOrder.recipient as any)?.address?.name || 'Unknown',
-              total: fhbOrder.value?.toString() || '0',
-              status: mapFHBStatus(fhbOrder.status),
-              trackingNumber: fhbOrder.tracking,
-              provider: 'fhb',
-              syncedFromFhb: true,
-              lastSyncAt: new Date(),
-              needsSync: false,
-              providerData: {
-                fhb: {
-                  orderId: fhbOrder.fhbOrderId,
-                  status: fhbOrder.status,
-                  variableSymbol: fhbOrder.variableSymbol,
-                  value: fhbOrder.value,
-                  recipient: fhbOrder.recipient,
-                  items: fhbOrder.items,
-                  createdAt: rawData?.created_at
-                }
-              },
-              orderDate: rawData?.created_at ? new Date(rawData.created_at) : new Date(),
-              createdAt: rawData?.created_at ? new Date(rawData.created_at) : new Date()
-            });
             
-            batchCreated++;
+            // Mark as processed
+            await db.update(fhbOrders)
+              .set({
+                processedToOrders: true,
+                processedAt: new Date()
+              })
+              .where(eq(fhbOrders.id, fhbOrder.id));
+          } else {
+            // No match found - skip (do not create new orders)
+            console.warn(`⚠️ No Shopify match found for FHB order ${fhbOrder.variableSymbol}, skipping (waiting for Shopify sync)`);
+            batchSkipped++;
+            
+            // DO NOT mark as processed - leave it for future matching attempts
+            continue;
           }
-          
-          // Mark as processed
-          await db.update(fhbOrders)
-            .set({
-              processedToOrders: true,
-              processedAt: new Date()
-            })
-            .where(eq(fhbOrders.id, fhbOrder.id));
           
           batchProcessed++;
           
