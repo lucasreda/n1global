@@ -2281,92 +2281,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota para sincronização completa progressiva
+  // MIGRATED TO STAGING TABLES: Agora usa staging-sync-service ao invés de chamadas HTTP externas
   app.post('/api/sync/complete-progressive', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { forceComplete, maxRetries } = req.body;
-      
-      // Get user's current operation for proper data isolation
-      const userOperations = await storage.getUserOperations(req.user.id);
-      const requestedOperationId = req.query.operationId as string || req.body.operationId;
-      
-      let currentOperation;
-      if (requestedOperationId) {
-        currentOperation = userOperations.find(op => op.id === requestedOperationId);
-      } else {
-        currentOperation = userOperations[0];
-      }
-      
-      if (!currentOperation) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Nenhuma operação encontrada. Complete o onboarding primeiro." 
-        });
-      }
+      console.log(`🔄 [STAGING SYNC] Iniciando processamento de pedidos das staging tables para user ${req.user.id}`);
 
-      console.log(`🔄 Iniciando sync completo para operação: ${currentOperation.name} (${currentOperation.id})`);
-
-      // Verificar se tem Shopify configurado (obrigatório)
-      const shopifyIntegration = await storage.getShopifyIntegrationsByOperation(currentOperation.id);
-      console.log(`🔍 Shopify integrations found: ${shopifyIntegration.length}`);
-      if (shopifyIntegration.length === 0) {
-        const errorMsg = "Configure uma loja Shopify primeiro antes de sincronizar.";
-        console.error(`❌ Sync rejected: ${errorMsg}`);
-        return res.status(400).json({ 
-          success: false,
-          message: errorMsg
-        });
-      }
-      console.log(`✅ Shopify configured: ${shopifyIntegration[0].shopName}`);
-
-      // Buscar credenciais do fulfillment integration desta operação (somente ativas) - OPCIONAL
-      const fulfillmentIntegrationsList = await db
-        .select()
-        .from(fulfillmentIntegrations)
-        .where(
-          and(
-            eq(fulfillmentIntegrations.operationId, currentOperation.id),
-            eq(fulfillmentIntegrations.status, 'active')
-          )
-        );
+      // Iniciar sincronização completa progressiva de forma assíncrona usando staging tables
+      const { performStagingSync } = await import("./services/staging-sync-service");
       
-      // Usar o singleton compartilhado do smart sync service
-      const { smartSyncService } = await import("./smart-sync-service");
-      
-      // Se tem warehouse configurado, criar fulfillment service
-      if (fulfillmentIntegrationsList.length > 0) {
-        const integration = fulfillmentIntegrationsList[0];
-        const credentials = integration.credentials as any;
-        console.log(`📦 Warehouse selecionado: ${integration.provider} | OperationId: ${currentOperation.id} | IntegrationId: ${integration.id}`);
-
-        // Criar fulfillment service com credenciais da integração usando a Factory
-        const { FulfillmentProviderFactory } = await import("./fulfillment-providers/fulfillment-factory");
-        const fulfillmentService = await FulfillmentProviderFactory.createProvider(integration.provider as any, credentials);
-        
-        // Configurar o fulfillment service autenticado no singleton
-        smartSyncService.setFulfillmentService(fulfillmentService);
-      } else {
-        console.log(`📦 Nenhum warehouse configurado - sync apenas Shopify | OperationId: ${currentOperation.id}`);
-        // Limpar fulfillment service para fazer apenas sync Shopify
-        smartSyncService.setFulfillmentService(null);
-      }
-      
-      // Iniciar sincronização completa progressiva de forma assíncrona
-      smartSyncService.performCompleteSyncProgressive({ 
-        forceFullSync: forceComplete,
-        maxRetries,
-        countryCode: currentOperation.country || 'IT',
-        operationId: currentOperation.id,
-        storeId: currentOperation.storeId
-      }).catch(error => {
-        console.error('Erro na sincronização completa progressiva:', error);
+      performStagingSync(req.user.id).catch(error => {
+        console.error('❌ [STAGING SYNC] Erro na sincronização de staging tables:', error);
       });
       
       res.json({ 
         success: true, 
-        message: 'Sincronização completa iniciada. Use /sync/complete-status para acompanhar o progresso.' 
+        message: 'Processamento de pedidos iniciado. Use /sync/complete-status para acompanhar o progresso.' 
       });
     } catch (error) {
-      console.error('Erro ao iniciar sincronização completa progressiva:', error);
+      console.error('❌ [STAGING SYNC] Erro ao iniciar processamento de staging tables:', error);
       res.status(500).json({ 
         success: false, 
         message: error instanceof Error ? error.message : 'Erro interno do servidor' 
@@ -2375,13 +2307,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota para obter status da sincronização completa progressiva
+  // MIGRATED TO STAGING TABLES: Retorna status do staging-sync-service
   app.get('/api/sync/complete-status', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { smartSyncService } = await import("./smart-sync-service");
-      const status = smartSyncService.getCompleteSyncStatus();
+      const { getSyncProgress } = await import("./services/staging-sync-service");
+      const status = getSyncProgress();
       res.json(status);
     } catch (error) {
-      console.error('Erro ao obter status da sincronização completa:', error);
+      console.error('❌ [STAGING SYNC] Erro ao obter status:', error);
       res.status(500).json({ 
         success: false, 
         message: error instanceof Error ? error.message : 'Erro interno do servidor' 
@@ -2390,6 +2323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota SSE para streaming de status da sincronização completa
+  // MIGRATED TO STAGING TABLES: Usa staging-sync-service para progresso em tempo real
   app.get('/api/sync/complete-status-stream', authenticateToken, async (req: AuthRequest, res: Response) => {
     // Configurar headers para SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -2397,10 +2331,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('Connection', 'keep-alive');
     
     try {
-      const { smartSyncService } = await import("./smart-sync-service");
+      const { getSyncProgress } = await import("./services/staging-sync-service");
       
       // Enviar status inicial imediatamente
-      const initialStatus = smartSyncService.getCompleteSyncStatus();
+      const initialStatus = getSyncProgress();
       res.write(`data: ${JSON.stringify(initialStatus)}\n\n`);
       
       // Se não está rodando, fechar conexão
@@ -2412,7 +2346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enviar atualizações a cada 500ms enquanto está rodando
       const intervalId = setInterval(() => {
         try {
-          const status = smartSyncService.getCompleteSyncStatus();
+          const status = getSyncProgress();
           res.write(`data: ${JSON.stringify(status)}\n\n`);
           
           // Se não está mais rodando, fechar
@@ -2421,7 +2355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             res.end();
           }
         } catch (error) {
-          console.error('Erro ao enviar status SSE:', error);
+          console.error('❌ [STAGING SYNC] Erro ao enviar status SSE:', error);
           clearInterval(intervalId);
           res.end();
         }
@@ -2433,7 +2367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
     } catch (error) {
-      console.error('Erro ao iniciar stream SSE:', error);
+      console.error('❌ [STAGING SYNC] Erro ao iniciar stream SSE:', error);
       res.end();
     }
   });
