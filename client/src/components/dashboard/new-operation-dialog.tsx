@@ -53,6 +53,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('');
   const [operationType, setOperationType] = useState('Cash on Delivery');
+  const [shopifyOrderPrefix, setShopifyOrderPrefix] = useState('');
   const { toast } = useToast();
 
   // Reset state when dialog opens/closes
@@ -62,6 +63,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       setSelectedCountry('');
       setSelectedCurrency('');
       setOperationType('Cash on Delivery');
+      setShopifyOrderPrefix('');
     }
   }, [open]);
 
@@ -77,7 +79,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
 
   // Create operation mutation
   const createOperationMutation = useMutation({
-    mutationFn: async (data: { name: string; country: string; currency: string; operationType: string }) => {
+    mutationFn: async (data: { name: string; country: string; currency: string; operationType: string; shopifyOrderPrefix?: string }) => {
       const response = await fetch('/api/operations', {
         method: 'POST',
         headers: { 
@@ -135,6 +137,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       country: selectedCountry,
       currency: selectedCurrency,
       operationType: operationType,
+      shopifyOrderPrefix: shopifyOrderPrefix.trim() || undefined,
     });
   };
 
@@ -216,6 +219,21 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-white">Prefixo de Pedidos (Shopify)</Label>
+            <Input
+              type="text"
+              placeholder="Ex: Ox, LOJA01-, ES-"
+              value={shopifyOrderPrefix}
+              onChange={(e) => setShopifyOrderPrefix(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white"
+              data-testid="input-operation-prefix"
+            />
+            <p className="text-xs text-slate-400">
+              Prefixo usado para identificar pedidos desta operação (ex: "Ox" para pedidos Ox173, Ox174...)
+            </p>
           </div>
           
           <Button
