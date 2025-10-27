@@ -397,18 +397,21 @@ function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNo
     currentPage,
     completeTour,
     skipTour,
+    closeSyncTour,
     navigateToPage,
   } = useTourContext();
 
   console.log('🏗️ DashboardLayoutWithExchangeRate:', { isTourRunning, currentPage });
 
   // Handle tour navigation between pages
-  const handleTourNavigate = (page: 'dashboard' | 'integrations' | 'ads') => {
+  const handleTourNavigate = (page: 'dashboard' | 'integrations' | 'ads' | 'sync-orders') => {
     navigateToPage(page);
     if (page === 'integrations') {
       navigate('/integrations');
     } else if (page === 'ads') {
       navigate('/ads');
+    } else if (page === 'sync-orders') {
+      navigate('/orders');
     } else if (page === 'dashboard') {
       navigate('/');
     }
@@ -422,6 +425,7 @@ function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNo
         run={isTourRunning}
         onComplete={completeTour}
         onSkip={skipTour}
+        onCloseSyncTour={closeSyncTour}
         currentPage={currentPage}
         onNavigate={handleTourNavigate}
       />

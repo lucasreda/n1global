@@ -92,19 +92,25 @@ export function useTour() {
     setIsTourRunning(false);
   }, []);
 
-  // Completar o tour
+  // Completar o tour (redireciona para dashboard)
   const completeTour = useCallback(() => {
     setIsTourRunning(false);
     setTourWasCompletedOrSkipped(true);
     completeTourMutation.mutate();
   }, [completeTourMutation]);
 
-  // Pular o tour (salva como completo também)
+  // Pular o tour (salva como completo também e redireciona)
   const skipTour = useCallback(() => {
     setIsTourRunning(false);
     setTourWasCompletedOrSkipped(true);
     completeTourMutation.mutate();
   }, [completeTourMutation]);
+
+  // Fechar tour de sync sem redirecionar (não salva como completo)
+  const closeSyncTour = useCallback(() => {
+    console.log('🚪 Closing sync tour without redirect');
+    setIsTourRunning(false);
+  }, []);
 
   // Resetar o tour
   const resetTour = useCallback(() => {
@@ -124,6 +130,7 @@ export function useTour() {
     stopTour,
     completeTour,
     skipTour,
+    closeSyncTour,
     resetTour,
     navigateToPage,
     isCompletingTour: completeTourMutation.isPending,

@@ -9,6 +9,7 @@ interface TourContextType {
   stopTour: () => void;
   completeTour: () => void;
   skipTour: () => void;
+  closeSyncTour: () => void;
   resetTour: () => void;
   navigateToPage: (page: 'dashboard' | 'integrations' | 'ads' | 'sync-orders') => void;
   isCompletingTour: boolean;

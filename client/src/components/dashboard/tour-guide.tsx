@@ -5,11 +5,12 @@ interface TourGuideProps {
   run: boolean;
   onComplete: () => void;
   onSkip: () => void;
+  onCloseSyncTour: () => void;
   currentPage: 'dashboard' | 'integrations' | 'ads' | 'sync-orders';
   onNavigate: (page: 'dashboard' | 'integrations' | 'ads' | 'sync-orders') => void;
 }
 
-export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: TourGuideProps) {
+export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPage, onNavigate }: TourGuideProps) {
   console.log('🎭 TourGuide render:', { run, currentPage });
   
   // Local state to handle delayed tour start
@@ -336,9 +337,9 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
 
         // Se é tour de sync-orders (apenas 1 step), apenas para o tour sem redirecionar
         if (currentPage === 'sync-orders' && index === syncOrdersSteps.length - 1) {
-          console.log('✅ Sync tour completed! Stopping tour without redirect.');
+          console.log('✅ Sync tour completed! Closing without redirect.');
           setTimeout(() => {
-            onSkip(); // Usa onSkip ao invés de onComplete para não redirecionar
+            onCloseSyncTour(); // Usa closeSyncTour para fechar sem redirecionar
           }, 300);
           return;
         }
