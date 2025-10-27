@@ -334,11 +334,11 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
           syncOrdersLength: syncOrdersSteps.length
         });
 
-        // Se é tour de sync-orders (apenas 1 step), apenas completa e para o tour
+        // Se é tour de sync-orders (apenas 1 step), apenas para o tour sem redirecionar
         if (currentPage === 'sync-orders' && index === syncOrdersSteps.length - 1) {
-          console.log('✅ Sync tour completed! Stopping tour.');
+          console.log('✅ Sync tour completed! Stopping tour without redirect.');
           setTimeout(() => {
-            onComplete();
+            onSkip(); // Usa onSkip ao invés de onComplete para não redirecionar
           }, 300);
           return;
         }
@@ -397,6 +397,11 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
   const getButtonLabel = () => {
     const currentSteps = getAllSteps();
     const isLastStep = stepIndex === currentSteps.length - 1;
+    
+    // Se for sync-orders, mostrar "Fechar"
+    if (currentPage === 'sync-orders' && isLastStep) {
+      return 'Fechar';
+    }
     
     // Se for o último step da página de Ads, mostrar "Finalizar"
     if (currentPage === 'ads' && isLastStep) {
