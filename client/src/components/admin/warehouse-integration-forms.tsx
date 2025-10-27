@@ -156,15 +156,63 @@ export function WarehouseIntegrationForm({
   );
 }
 
-// Specific forms for each provider (with pre-configured fields)
+// FHB-specific form without Operations field (uses appId + secret)
+export function FHBIntegrationForm({
+  formData,
+  onChange,
+  availableOperations
+}: Omit<WarehouseFormProps, 'requiredFields'>) {
+  return (
+    <div className="space-y-3">
+      {/* Account Name */}
+      <div>
+        <Label htmlFor="account-name">Nome da Conta</Label>
+        <Input
+          id="account-name"
+          placeholder="Ex: FHB Principal"
+          value={formData.accountName}
+          onChange={(e) => onChange({ ...formData, accountName: e.target.value })}
+          data-testid="input-warehouse-account-name"
+        />
+      </div>
 
-export function FHBIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
-  const fhbFields = [
-    { fieldName: 'email', label: 'Email FHB', fieldType: 'email', required: true },
-    { fieldName: 'password', label: 'Senha FHB', fieldType: 'password', required: true }
-  ];
+      {/* App ID */}
+      <div>
+        <Label htmlFor="field-appId">
+          App ID <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="field-appId"
+          type="text"
+          placeholder="Digite o App ID"
+          value={formData.credentials['appId'] || ''}
+          onChange={(e) => onChange({
+            ...formData,
+            credentials: { ...formData.credentials, appId: e.target.value }
+          })}
+          data-testid="input-appId"
+        />
+      </div>
 
-  return <WarehouseIntegrationForm {...props} requiredFields={fhbFields} />;
+      {/* Secret */}
+      <div>
+        <Label htmlFor="field-secret">
+          Secret <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="field-secret"
+          type="password"
+          placeholder="Digite o Secret"
+          value={formData.credentials['secret'] || ''}
+          onChange={(e) => onChange({
+            ...formData,
+            credentials: { ...formData.credentials, secret: e.target.value }
+          })}
+          data-testid="input-secret"
+        />
+      </div>
+    </div>
+  );
 }
 
 export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
