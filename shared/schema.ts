@@ -468,7 +468,7 @@ export const warehouseProviders = pgTable("warehouse_providers", {
 // User Warehouse Accounts - User-level warehouse integrations (multi-account support)
 export const userWarehouseAccounts = pgTable("user_warehouse_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   providerKey: text("provider_key").notNull().references(() => warehouseProviders.key), // 'fhb', 'european_fulfillment', 'elogy'
   
   displayName: text("display_name").notNull(), // User-friendly name: "FHB Account PT", "Main European"
@@ -507,7 +507,7 @@ export const userWarehouseAccounts = pgTable("user_warehouse_accounts", {
 // User Warehouse Account Operations - Links user warehouse accounts to specific operations (optional)
 export const userWarehouseAccountOperations = pgTable("user_warehouse_account_operations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  accountId: varchar("account_id").notNull().references(() => userWarehouseAccounts.id),
+  accountId: varchar("account_id").notNull().references(() => userWarehouseAccounts.id, { onDelete: "cascade" }),
   operationId: varchar("operation_id").notNull().references(() => operations.id),
   
   isDefault: boolean("is_default").notNull().default(false), // Default account for this operation
