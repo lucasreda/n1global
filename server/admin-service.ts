@@ -4,8 +4,7 @@ import {
   stores, operations, orders, users, products, 
   shopifyIntegrations, cartpandaIntegrations, fulfillmentIntegrations, 
   facebookAdsIntegrations, googleAdsIntegrations, dashboardMetrics,
-  userWarehouseAccountOperations, europeanFulfillmentOrders,
-  elogyOrders, fhbOrders, adAccounts, campaigns
+  userWarehouseAccountOperations, adAccounts, campaigns
 } from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
@@ -780,25 +779,6 @@ export class AdminService {
         .delete(userWarehouseAccountOperations)
         .where(eq(userWarehouseAccountOperations.operationId, operationId));
       console.log(`✅ Deleted warehouse account operations for operation ${operationId}`);
-      
-      
-      // Delete europeanFulfillmentOrders
-      await db
-        .delete(europeanFulfillmentOrders)
-        .where(eq(europeanFulfillmentOrders.operationId, operationId));
-      console.log(`✅ Deleted European Fulfillment orders for operation ${operationId}`);
-      
-      // Delete elogyOrders
-      await db
-        .delete(elogyOrders)
-        .where(eq(elogyOrders.operationId, operationId));
-      console.log(`✅ Deleted eLogy orders for operation ${operationId}`);
-      
-      // Delete fhbOrders
-      await db
-        .delete(fhbOrders)
-        .where(eq(fhbOrders.operationId, operationId));
-      console.log(`✅ Deleted FHB orders for operation ${operationId}`);
       
       // Delete ad_accounts
       await db
