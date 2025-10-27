@@ -214,7 +214,7 @@ export class ShopifySyncService {
         limit: 250, // Máximo permitido pela Shopify API
         status: 'any',
         order: 'created_at desc', // Ordenação para paginação consistente
-        fields: 'id,name,email,phone,created_at,updated_at,total_price,subtotal_price,currency,financial_status,fulfillment_status,customer,shipping_address,billing_address,line_items'
+        fields: 'id,name,email,phone,created_at,updated_at,total_price,current_total_price,subtotal_price,currency,financial_status,fulfillment_status,customer,shipping_address,billing_address,line_items'
       };
       
       if (lastCreatedAt) {
@@ -392,8 +392,8 @@ export class ShopifySyncService {
       customerCountry: shippingAddress?.country,
       customerZip: shippingAddress?.zip,
       
-      // Informações financeiras
-      total: shopifyOrder.total_price,
+      // Informações financeiras (usar current_total_price que considera descontos)
+      total: shopifyOrder.current_total_price || shopifyOrder.total_price,
       currency: shopifyOrder.currency,
       paymentStatus: this.mapShopifyPaymentStatus(shopifyOrder.financial_status),
       paymentMethod: 'cod', // Assumindo COD como padrão

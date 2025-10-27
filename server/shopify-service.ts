@@ -21,6 +21,7 @@ export interface ShopifyOrder {
   created_at: string;
   updated_at: string;
   total_price: string;
+  current_total_price: string;
   subtotal_price: string;
   currency: string;
   financial_status: string;
