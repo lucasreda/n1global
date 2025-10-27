@@ -238,7 +238,13 @@ export default function AdminUsers() {
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
         credentials: "include",
-        body: JSON.stringify(accountData)
+        body: JSON.stringify({
+          userId: accountData.userId,
+          providerKey: accountData.providerKey,
+          displayName: accountData.accountName, // Backend expects displayName
+          credentials: accountData.credentials,
+          operationIds: accountData.operationIds
+        })
       });
       if (!response.ok) {
         const error = await response.json();
