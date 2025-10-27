@@ -1351,17 +1351,59 @@ export class DatabaseStorage implements IStorage {
 
   // User Warehouse Accounts methods
   async getUserWarehouseAccounts(userId: string): Promise<UserWarehouseAccount[]> {
-    return await db
-      .select()
+    const results = await db
+      .select({
+        id: userWarehouseAccounts.id,
+        userId: userWarehouseAccounts.userId,
+        providerKey: userWarehouseAccounts.providerKey,
+        providerName: warehouseProviders.name,
+        displayName: userWarehouseAccounts.displayName,
+        credentials: userWarehouseAccounts.credentials,
+        status: userWarehouseAccounts.status,
+        lastTestedAt: userWarehouseAccounts.lastTestedAt,
+        testResult: userWarehouseAccounts.testResult,
+        lastSyncAt: userWarehouseAccounts.lastSyncAt,
+        initialSyncStatus: userWarehouseAccounts.initialSyncStatus,
+        initialSyncCompleted: userWarehouseAccounts.initialSyncCompleted,
+        initialSyncCompletedAt: userWarehouseAccounts.initialSyncCompletedAt,
+        initialSyncError: userWarehouseAccounts.initialSyncError,
+        createdAt: userWarehouseAccounts.createdAt,
+        updatedAt: userWarehouseAccounts.updatedAt,
+      })
       .from(userWarehouseAccounts)
+      .leftJoin(warehouseProviders, eq(userWarehouseAccounts.providerKey, warehouseProviders.key))
       .where(eq(userWarehouseAccounts.userId, userId))
       .orderBy(desc(userWarehouseAccounts.createdAt));
+    
+    return results.map(r => ({
+      ...r,
+      providerName: r.providerName || r.providerKey,
+      isActive: r.status === 'active'
+    })) as UserWarehouseAccount[];
   }
 
   async getUserWarehouseAccountsByProvider(userId: string, providerKey: string): Promise<UserWarehouseAccount[]> {
-    return await db
-      .select()
+    const results = await db
+      .select({
+        id: userWarehouseAccounts.id,
+        userId: userWarehouseAccounts.userId,
+        providerKey: userWarehouseAccounts.providerKey,
+        providerName: warehouseProviders.name,
+        displayName: userWarehouseAccounts.displayName,
+        credentials: userWarehouseAccounts.credentials,
+        status: userWarehouseAccounts.status,
+        lastTestedAt: userWarehouseAccounts.lastTestedAt,
+        testResult: userWarehouseAccounts.testResult,
+        lastSyncAt: userWarehouseAccounts.lastSyncAt,
+        initialSyncStatus: userWarehouseAccounts.initialSyncStatus,
+        initialSyncCompleted: userWarehouseAccounts.initialSyncCompleted,
+        initialSyncCompletedAt: userWarehouseAccounts.initialSyncCompletedAt,
+        initialSyncError: userWarehouseAccounts.initialSyncError,
+        createdAt: userWarehouseAccounts.createdAt,
+        updatedAt: userWarehouseAccounts.updatedAt,
+      })
       .from(userWarehouseAccounts)
+      .leftJoin(warehouseProviders, eq(userWarehouseAccounts.providerKey, warehouseProviders.key))
       .where(
         and(
           eq(userWarehouseAccounts.userId, userId),
@@ -1369,6 +1411,12 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(userWarehouseAccounts.createdAt));
+    
+    return results.map(r => ({
+      ...r,
+      providerName: r.providerName || r.providerKey,
+      isActive: r.status === 'active'
+    })) as UserWarehouseAccount[];
   }
 
   async getUserWarehouseAccount(id: string): Promise<UserWarehouseAccount | undefined> {
