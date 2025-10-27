@@ -50,12 +50,13 @@ function findOperationByPrefix(
  */
 async function buildAccountOperationsCache(): Promise<Map<string, typeof operations.$inferSelect[]>> {
   // Step 1: Get active FHB warehouse account IDs
+  // Include both 'active' and 'pending' (during initial sync)
   const activeAccounts = await db.select({ id: userWarehouseAccounts.id })
     .from(userWarehouseAccounts)
     .where(
       and(
         eq(userWarehouseAccounts.providerKey, 'fhb'),
-        eq(userWarehouseAccounts.status, 'active')
+        inArray(userWarehouseAccounts.status, ['active', 'pending'])
       )
     );
   
