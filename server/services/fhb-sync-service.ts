@@ -979,10 +979,15 @@ export class FHBSyncService {
         
       } catch (error: any) {
         console.error(`❌ Error fetching page ${page}:`, error);
+        // Provide clearer error message for authentication failures
+        let errorMessage = `Failed to fetch page ${page}: ${error.message}`;
+        if (error.message.includes('Invalid AppId or secret')) {
+          errorMessage = `Falha de autenticação FHB: Credenciais inválidas (App ID ou Secret incorreto). Por favor, atualize as credenciais da conta no sistema.`;
+        }
         return {
           orders: allOrders,
           complete: false,
-          error: `Failed to fetch page ${page}: ${error.message}`,
+          error: errorMessage,
           hitPageLimit: false
         };
       }
