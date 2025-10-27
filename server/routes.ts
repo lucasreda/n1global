@@ -1572,6 +1572,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('📦 Found accounts:', accounts.length, 'for user:', targetUserId);
+      if (accounts.length > 0) {
+        console.log('🔍 First account sample:', JSON.stringify({
+          id: accounts[0].id,
+          displayName: accounts[0].displayName,
+          providerKey: accounts[0].providerKey,
+          providerName: accounts[0].providerName,
+          isActive: accounts[0].isActive
+        }, null, 2));
+      }
       
       res.json(accounts);
     } catch (error) {
