@@ -1725,7 +1725,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isAdmin = req.user.role === 'super_admin' || req.user.role === 'store';
       const isOwner = account.userId === req.user.id;
       
+      console.log('🗑️ Delete warehouse account request:', {
+        accountId: req.params.id,
+        accountOwner: account.userId,
+        requesterUser: req.user.id,
+        requesterRole: req.user.role,
+        isAdmin,
+        isOwner,
+        canDelete: isOwner || isAdmin
+      });
+      
       if (!isOwner && !isAdmin) {
+        console.log('❌ Delete denied: not owner and not admin');
         return res.status(403).json({ message: "Acesso negado" });
       }
       
@@ -1735,6 +1746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Erro ao deletar conta de warehouse" });
       }
       
+      console.log('✅ Warehouse account deleted successfully');
       res.json({ success: true, message: "Conta de warehouse deletada com sucesso" });
     } catch (error) {
       console.error("Delete warehouse account error:", error);
