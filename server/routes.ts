@@ -1639,6 +1639,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Provider de warehouse não encontrado" });
       }
       
+      // Test warehouse credentials before saving
+      if (providerKey === 'fhb') {
+        try {
+          console.log(`🔐 Testing FHB credentials before saving account...`);
+          const fhbService = new FHBService(credentials);
+          await fhbService.authenticate(); // Will throw if invalid
+          console.log(`✅ FHB credentials validated successfully`);
+        } catch (error: any) {
+          console.error(`❌ FHB credentials validation failed:`, error.message);
+          if (error.message.includes('Invalid AppId or secret')) {
+            return res.status(400).json({ 
+              message: "As credenciais FHB fornecidas são inválidas. Por favor, verifique o App ID e Secret e tente novamente.",
+              details: "O App ID e Secret devem ser obtidos do painel FHB. Certifique-se de copiar exatamente como aparecem.",
+              error_type: "invalid_credentials"
+            });
+          }
+          return res.status(400).json({ 
+            message: "Erro ao validar credenciais FHB: " + error.message,
+            error_type: "validation_error"
+          });
+        }
+      } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
+        try {
+          console.log(`🔐 Testing ${providerKey} credentials before saving account...`);
+          const europeanService = new EuropeanFulfillmentService(
+            credentials.email,
+            credentials.password,
+            credentials.country || 'spain'
+          );
+          await europeanService.authenticate(); // Will throw if invalid
+          console.log(`✅ ${providerKey} credentials validated successfully`);
+        } catch (error: any) {
+          console.error(`❌ ${providerKey} credentials validation failed:`, error.message);
+          if (error.message.includes('Invalid credentials') || error.message.includes('401')) {
+            return res.status(400).json({ 
+              message: `As credenciais ${providerKey === 'elogy' ? 'eLogy' : 'European Fulfillment'} fornecidas são inválidas. Por favor, verifique o email e senha.`,
+              details: "Certifique-se de usar as mesmas credenciais que você usa para fazer login no painel do warehouse.",
+              error_type: "invalid_credentials"
+            });
+          }
+          return res.status(400).json({ 
+            message: `Erro ao validar credenciais ${providerKey}: ` + error.message,
+            error_type: "validation_error"
+          });
+        }
+      }
+      
       const account = await storage.createUserWarehouseAccount({
         userId: targetUserId,
         providerKey,
