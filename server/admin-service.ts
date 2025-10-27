@@ -1,6 +1,12 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { stores, operations, orders, users, products, shopifyIntegrations, cartpandaIntegrations, fulfillmentIntegrations, facebookAdsIntegrations, googleAdsIntegrations } from "@shared/schema";
+import { 
+  stores, operations, orders, users, products, 
+  shopifyIntegrations, cartpandaIntegrations, fulfillmentIntegrations, 
+  facebookAdsIntegrations, googleAdsIntegrations, dashboardMetrics,
+  userWarehouseAccountOperations, europeanFulfillmentOrders,
+  elogyOrders, fhbOrders, adAccounts, campaigns
+} from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
 export class AdminService {
@@ -748,7 +754,66 @@ export class AdminService {
 
   async deleteOperation(operationId: string) {
     try {
-      // Delete the operation
+      // First, delete all related data that references this operation
+      console.log(`🗑️ Deleting related data for operation ${operationId}...`);
+      
+      // Delete dashboard_metrics
+      await db
+        .delete(dashboardMetrics)
+        .where(eq(dashboardMetrics.operationId, operationId));
+      console.log(`✅ Deleted dashboard metrics for operation ${operationId}`);
+      
+      // Delete orders
+      await db
+        .delete(orders)
+        .where(eq(orders.operationId, operationId));
+      console.log(`✅ Deleted orders for operation ${operationId}`);
+      
+      // Delete products
+      await db
+        .delete(products)
+        .where(eq(products.operationId, operationId));
+      console.log(`✅ Deleted products for operation ${operationId}`);
+      
+      // Delete user_warehouse_account_operations
+      await db
+        .delete(userWarehouseAccountOperations)
+        .where(eq(userWarehouseAccountOperations.operationId, operationId));
+      console.log(`✅ Deleted warehouse account operations for operation ${operationId}`);
+      
+      
+      // Delete europeanFulfillmentOrders
+      await db
+        .delete(europeanFulfillmentOrders)
+        .where(eq(europeanFulfillmentOrders.operationId, operationId));
+      console.log(`✅ Deleted European Fulfillment orders for operation ${operationId}`);
+      
+      // Delete elogyOrders
+      await db
+        .delete(elogyOrders)
+        .where(eq(elogyOrders.operationId, operationId));
+      console.log(`✅ Deleted eLogy orders for operation ${operationId}`);
+      
+      // Delete fhbOrders
+      await db
+        .delete(fhbOrders)
+        .where(eq(fhbOrders.operationId, operationId));
+      console.log(`✅ Deleted FHB orders for operation ${operationId}`);
+      
+      // Delete ad_accounts
+      await db
+        .delete(adAccounts)
+        .where(eq(adAccounts.operationId, operationId));
+      console.log(`✅ Deleted ad accounts for operation ${operationId}`);
+      
+      // Delete campaigns
+      await db
+        .delete(campaigns)
+        .where(eq(campaigns.operationId, operationId));
+      console.log(`✅ Deleted campaigns for operation ${operationId}`);
+      
+      
+      // Finally, delete the operation itself
       const [deletedOperation] = await db
         .delete(operations)
         .where(eq(operations.id, operationId))
@@ -757,7 +822,8 @@ export class AdminService {
       if (!deletedOperation) {
         throw new Error('Operation not found');
       }
-
+      
+      console.log(`✅ Successfully deleted operation ${operationId}`);
       return deletedOperation;
     } catch (error) {
       console.error('❌ Error deleting operation:', error);
