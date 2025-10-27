@@ -78,6 +78,18 @@ interface SystemUser {
 }
 
 export default function AdminUsers() {
+  // Modal states
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteWarehouseModal, setShowDeleteWarehouseModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
+  const [warehouseAccountToDelete, setWarehouseAccountToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
+  
   const [createWizardStep, setCreateWizardStep] = useState<'basic' | 'integrations'>('basic');
   const [newUserData, setNewUserData] = useState({
     name: '',
@@ -274,6 +286,8 @@ export default function AdminUsers() {
         title: "Conta excluída",
         description: "A conta de warehouse foi removida com sucesso."
       });
+      setShowDeleteWarehouseModal(false);
+      setWarehouseAccountToDelete(null);
     },
     onError: (error: Error) => {
       toast({
@@ -281,6 +295,8 @@ export default function AdminUsers() {
         description: error.message,
         variant: "destructive"
       });
+      setShowDeleteWarehouseModal(false);
+      setWarehouseAccountToDelete(null);
     }
   });
 
@@ -1575,9 +1591,11 @@ export default function AdminUsers() {
                             account={account}
                             operations={allOperations}
                             onDelete={(accountId) => {
-                              if (confirm(`Tem certeza que deseja excluir a conta "${account.displayName}"?`)) {
-                                deleteWarehouseAccountMutation.mutate(accountId);
-                              }
+                              setWarehouseAccountToDelete({
+                                id: accountId,
+                                name: account.displayName
+                              });
+                              setShowDeleteWarehouseModal(true);
                             }}
                             showActions={true}
                           />
@@ -1751,7 +1769,7 @@ export default function AdminUsers() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete User Confirmation Modal */}
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
         <DialogContent>
           <DialogHeader>
@@ -1774,6 +1792,42 @@ export default function AdminUsers() {
               disabled={deleteUserMutation.isPending}
             >
               {deleteUserMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Warehouse Account Confirmation Modal */}
+      <Dialog open={showDeleteWarehouseModal} onOpenChange={setShowDeleteWarehouseModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão de Conta</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir a conta de warehouse <strong>{warehouseAccountToDelete?.name}</strong>?
+              <br /><br />
+              <span className="text-red-600 font-medium">
+                Esta ação não pode ser desfeita. Todos os pedidos staging desta conta ficarão órfãos (preservados para histórico).
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteWarehouseModal(false);
+                setWarehouseAccountToDelete(null);
+              }}
+              data-testid="button-cancel-delete-warehouse"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => warehouseAccountToDelete && deleteWarehouseAccountMutation.mutate(warehouseAccountToDelete.id)}
+              disabled={deleteWarehouseAccountMutation.isPending}
+              data-testid="button-confirm-delete-warehouse"
+            >
+              {deleteWarehouseAccountMutation.isPending ? 'Excluindo...' : 'Excluir Conta'}
             </Button>
           </DialogFooter>
         </DialogContent>
