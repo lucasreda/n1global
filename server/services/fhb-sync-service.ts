@@ -240,7 +240,9 @@ export class FHBSyncService {
           windowStart,
           windowEnd,
           windowNumber,
-          totalStats
+          totalStats,
+          0, // depth
+          warehouseAccount.id // Pass warehouse account ID for new system
         );
         
         // Move to next window
@@ -474,7 +476,8 @@ export class FHBSyncService {
     windowEnd: Date,
     windowNumber: number,
     totalStats: SyncStats,
-    depth: number = 0
+    depth: number = 0,
+    warehouseAccountId?: string // Optional for new warehouse accounts
   ): Promise<{ success: boolean, error?: string }> {
     const fromStr = windowStart.toISOString().split('T')[0];
     const toStr = windowEnd.toISOString().split('T')[0];
@@ -523,7 +526,8 @@ export class FHBSyncService {
             midPoint,
             windowNumber,
             totalStats,
-            depth + 1
+            depth + 1,
+            warehouseAccountId
           );
           
           // Process second half
@@ -535,7 +539,8 @@ export class FHBSyncService {
             windowEnd,
             windowNumber,
             totalStats,
-            depth + 1
+            depth + 1,
+            warehouseAccountId
           );
           
           // Both halves must succeed
@@ -564,11 +569,15 @@ export class FHBSyncService {
         
         try {
           // Upsert to fhb_orders staging table
+          // Use warehouseAccountId if provided (new system), otherwise fhbAccountId (legacy)
+          const accountIdField = warehouseAccountId ? fhbOrders.warehouseAccountId : fhbOrders.fhbAccountId;
+          const accountIdValue = warehouseAccountId || account.id;
+          
           const existingFhbOrder = await db.select()
             .from(fhbOrders)
             .where(
               and(
-                eq(fhbOrders.fhbAccountId, account.id),
+                eq(accountIdField, accountIdValue),
                 eq(fhbOrders.fhbOrderId, fhbOrder.id)
               )
             )
@@ -594,8 +603,7 @@ export class FHBSyncService {
             totalStats.ordersUpdated++;
           } else {
             // Create new staging order
-            await db.insert(fhbOrders).values({
-              fhbAccountId: account.id,
+            const orderData: any = {
               fhbOrderId: fhbOrder.id,
               variableSymbol: fhbOrder.variable_symbol,
               status: fhbOrder.status,
@@ -606,7 +614,16 @@ export class FHBSyncService {
               rawData: fhbOrder,
               processedToOrders: false, // Will be processed by linking worker
               processedAt: null
-            });
+            };
+            
+            // Set appropriate account ID field
+            if (warehouseAccountId) {
+              orderData.warehouseAccountId = warehouseAccountId;
+            } else {
+              orderData.fhbAccountId = account.id;
+            }
+            
+            await db.insert(fhbOrders).values(orderData);
             
             totalStats.ordersCreated++;
           }

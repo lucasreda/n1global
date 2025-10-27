@@ -322,10 +322,10 @@ export const fhbAccounts = pgTable("fhb_accounts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// FHB Sync Logs - tracking of synchronization executions
+// FHB Sync Logs - tracking of synchronization executions (DEPRECATED - use user_warehouse_accounts)
 export const fhbSyncLogs = pgTable("fhb_sync_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  fhbAccountId: varchar("fhb_account_id").notNull().references(() => fhbAccounts.id),
+  fhbAccountId: varchar("fhb_account_id"), // Nullable now - legacy reference
   
   syncType: text("sync_type").notNull(), // 'initial' (1 year), 'deep' (30 days), or 'fast' (10 days)
   status: text("status").notNull(), // 'started', 'completed', 'failed'
@@ -346,7 +346,8 @@ export const fhbSyncLogs = pgTable("fhb_sync_logs", {
 // FHB Orders Staging Table - raw FHB orders before processing to operations
 export const fhbOrders = pgTable("fhb_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  fhbAccountId: varchar("fhb_account_id").references(() => fhbAccounts.id, { onDelete: "set null" }), // Nullable - permite desvincular ao deletar conta
+  warehouseAccountId: varchar("warehouse_account_id").references(() => userWarehouseAccounts.id, { onDelete: "set null" }), // New: references user warehouse accounts
+  fhbAccountId: varchar("fhb_account_id"), // DEPRECATED: old reference for backwards compatibility
   
   // FHB order identifiers
   fhbOrderId: text("fhb_order_id").notNull(), // FHB's internal order ID
@@ -369,12 +370,14 @@ export const fhbOrders = pgTable("fhb_orders", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
-  // Unique constraint to prevent duplicates
-  uniqueFhbOrder: unique().on(table.fhbAccountId, table.fhbOrderId),
+  // Unique constraint to prevent duplicates (using new warehouse_account_id)
+  uniqueFhbOrder: unique().on(table.warehouseAccountId, table.fhbOrderId),
   // Index for unprocessed orders
   unprocessedIdx: index("fhb_orders_unprocessed_idx").on(table.processedToOrders),
   // Index for variable symbol lookup
   variableSymbolIdx: index("fhb_orders_variable_symbol_idx").on(table.variableSymbol),
+  // Index for warehouse account lookup
+  warehouseAccountIdx: index("fhb_orders_warehouse_account_idx").on(table.warehouseAccountId),
 }));
 
 // European Fulfillment integration - per operation 

@@ -141,7 +141,13 @@ async function processUnprocessedOrders() {
       for (const fhbOrder of unprocessedOrders) {
         try {
           // Get operations for this FHB account from cache
-          const accountOperations = accountOpsCache.get(fhbOrder.fhbAccountId) || [];
+          // Support both new (warehouseAccountId) and legacy (fhbAccountId) fields
+          const accountId = fhbOrder.warehouseAccountId || fhbOrder.fhbAccountId;
+          if (!accountId) {
+            batchSkipped++;
+            continue;
+          }
+          const accountOperations = accountOpsCache.get(accountId) || [];
           
           // Find operation by prefix
           const operation = findOperationByPrefix(
