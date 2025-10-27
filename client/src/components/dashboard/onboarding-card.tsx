@@ -159,7 +159,7 @@ export function OnboardingCard() {
     {
       id: "warehouse",
       label: "Armazém Conectado",
-      description: "Configure pelo menos um armazém para envio",
+      description: "Nossa equipe já deixou sua integração com os armazéns pronta",
       completed: status.hasWarehouse,
       link: "/integrations",
     },
