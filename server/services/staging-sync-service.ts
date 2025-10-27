@@ -75,6 +75,31 @@ function mapProviderStatus(status: string, provider: string): string {
 }
 
 /**
+ * Normalize phone number for matching
+ * Removes spaces, dashes, parentheses, and country codes
+ */
+function normalizePhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  
+  // Remove all non-digit characters except +
+  let normalized = phone.replace(/[\s\-\(\)\.]/g, '');
+  
+  // Remove leading + and country codes (1-3 digits)
+  normalized = normalized.replace(/^\+?\d{1,3}/, '');
+  
+  // Return last 9 digits (most significant for matching)
+  return normalized.slice(-9);
+}
+
+/**
+ * Normalize email for matching
+ */
+function normalizeEmail(email: string | null | undefined): string {
+  if (!email) return '';
+  return email.toLowerCase().trim();
+}
+
+/**
  * Find operation by order prefix
  */
 function findOperationByPrefix(
@@ -89,6 +114,85 @@ function findOperationByPrefix(
     }
   }
   
+  return null;
+}
+
+/**
+ * Intelligent order matching - tries prefix first, then falls back to email/phone
+ * Returns Shopify order if found, null otherwise
+ */
+async function findShopifyOrderIntelligent(
+  warehouseOrderNumber: string,
+  warehouseEmail: string | null | undefined,
+  warehousePhone: string | null | undefined,
+  operationId: string
+): Promise<typeof orders.$inferSelect | null> {
+  // Strategy 1: Try to match by order number with prefix
+  // Extract potential prefix from warehouse order number (e.g., "LI-479851" -> try matching "#LI-479851" or "#479851")
+  const potentialMatches = [
+    warehouseOrderNumber,
+    `#${warehouseOrderNumber}`,
+    warehouseOrderNumber.replace(/^[A-Z]+-/, ''), // Remove prefix like "LI-"
+    `#${warehouseOrderNumber.replace(/^[A-Z]+-/, '')}`
+  ];
+  
+  for (const orderNum of potentialMatches) {
+    const orderByNumber = await db.select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.operationId, operationId),
+          eq(orders.shopifyOrderNumber, orderNum)
+        )
+      )
+      .limit(1);
+    
+    if (orderByNumber.length > 0) {
+      console.log(`✅ Matched by order number: ${warehouseOrderNumber} -> ${orderNum}`);
+      return orderByNumber[0];
+    }
+  }
+  
+  // Strategy 2: Match by email (if available)
+  const normalizedEmail = normalizeEmail(warehouseEmail);
+  if (normalizedEmail) {
+    const orderByEmail = await db.select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.operationId, operationId),
+          sql`LOWER(TRIM(${orders.customerEmail})) = ${normalizedEmail}`
+        )
+      )
+      .limit(1);
+    
+    if (orderByEmail.length > 0) {
+      console.log(`✅ Matched by email: ${warehouseOrderNumber} -> ${normalizedEmail}`);
+      return orderByEmail[0];
+    }
+  }
+  
+  // Strategy 3: Match by phone (if available)
+  const normalizedPhone = normalizePhone(warehousePhone);
+  if (normalizedPhone && normalizedPhone.length >= 9) {
+    // Use LIKE to match last 9 digits of phone
+    const orderByPhone = await db.select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.operationId, operationId),
+          sql`REGEXP_REPLACE(${orders.customerPhone}, '[^0-9]', '', 'g') LIKE ${'%' + normalizedPhone}`
+        )
+      )
+      .limit(1);
+    
+    if (orderByPhone.length > 0) {
+      console.log(`✅ Matched by phone: ${warehouseOrderNumber} -> ${normalizedPhone}`);
+      return orderByPhone[0];
+    }
+  }
+  
+  console.log(`❌ No match found for order: ${warehouseOrderNumber}`);
   return null;
 }
 
@@ -320,8 +424,16 @@ async function processEuropeanFulfillmentOrders(
         }
         
         const accountOperations = accountOpsCache.get(accountId) || [];
-        const operation = findOperationByPrefix(efOrder.orderNumber, accountOperations);
         
+        // Try to find operation by prefix first (if configured)
+        let operation = findOperationByPrefix(efOrder.orderNumber, accountOperations);
+        
+        // If no prefix match and we have only one operation, use it
+        if (!operation && accountOperations.length === 1) {
+          operation = accountOperations[0];
+        }
+        
+        // If still no operation, skip
         if (!operation) {
           await db.update(europeanFulfillmentOrders)
             .set({ processedToOrders: true, processedAt: new Date() })
@@ -330,20 +442,24 @@ async function processEuropeanFulfillmentOrders(
           continue;
         }
         
-        const existingOrder = await db.select()
-          .from(orders)
-          .where(
-            and(
-              eq(orders.shopifyOrderNumber, efOrder.orderNumber),
-              eq(orders.operationId, operation.id)
-            )
-          )
-          .limit(1);
+        // Extract customer data from recipient
+        const recipient = efOrder.recipient as any;
+        const customerEmail = recipient?.email || recipient?.address?.email;
+        const customerPhone = recipient?.phone || recipient?.address?.phone;
+        
+        // Use intelligent matching (order number → email → phone)
+        const existingOrder = await findShopifyOrderIntelligent(
+          efOrder.orderNumber,
+          customerEmail,
+          customerPhone,
+          operation.id
+        );
         
         const rawData = efOrder.rawData as any;
         
-        if (existingOrder.length > 0) {
-          const currentProviderData = existingOrder[0].providerData as any || {};
+        if (existingOrder) {
+          // Update existing Shopify order with carrier data
+          const currentProviderData = existingOrder.providerData as any || {};
           
           await db.update(orders)
             .set({
@@ -351,6 +467,7 @@ async function processEuropeanFulfillmentOrders(
               trackingNumber: efOrder.tracking,
               carrierImported: true,
               carrierOrderId: efOrder.europeanOrderId,
+              carrierMatchedAt: new Date(),
               provider: 'european_fulfillment',
               lastSyncAt: new Date(),
               needsSync: false,
@@ -366,10 +483,11 @@ async function processEuropeanFulfillmentOrders(
                 }
               }
             })
-            .where(eq(orders.id, existingOrder[0].id));
+            .where(eq(orders.id, existingOrder.id));
           
           totalUpdated++;
         } else {
+          // No Shopify order found - create carrier-only order
           await db.insert(orders).values({
             id: `ef_${efOrder.europeanOrderId}`,
             storeId: operation.storeId,
