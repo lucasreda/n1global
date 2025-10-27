@@ -10,6 +10,29 @@ import { eq, and, inArray, isNull } from 'drizzle-orm';
 let isLinkingRunning = false;
 
 /**
+ * Map provider statuses to orders table status
+ * Maps eLogy specific statuses to standard order statuses
+ */
+function mapProviderStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    // Standard statuses
+    'pending': 'pending',
+    'processing': 'processing',
+    'shipped': 'shipped',
+    'delivered': 'delivered',
+    'canceled': 'cancelled',
+    'cancelled': 'cancelled',
+    'returned': 'returned',
+    // eLogy specific
+    'in_warehouse': 'confirmed',
+    'in_transit': 'shipped',
+    'out_for_delivery': 'shipped'
+  };
+  
+  return statusMap[status?.toLowerCase()] || 'pending';
+}
+
+/**
  * Links eLogy staging orders to operation orders
  * Runs every 2 minutes to process unprocessed orders
  */
@@ -167,7 +190,7 @@ async function processUnprocessedOrders() {
           // Update existing order
           await db.update(orders)
             .set({
-              status: stagingOrder.status || 'pending',
+              status: mapProviderStatus(stagingOrder.status), // Use mapping function
               trackingNumber: stagingOrder.tracking || null,
               total: stagingOrder.value || '0',
               carrierImported: true,

@@ -11,6 +11,33 @@ import { eq, and, inArray, isNull, or } from 'drizzle-orm';
 let isLinkingRunning = false;
 
 /**
+ * Map provider statuses to orders table status
+ * Maps European Fulfillment specific statuses to standard order statuses
+ */
+function mapProviderStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    // Standard statuses
+    'pending': 'pending',
+    'processing': 'processing',
+    'shipped': 'shipped',
+    'sent': 'shipped',
+    'delivered': 'delivered',
+    'canceled': 'cancelled',
+    'cancelled': 'cancelled',
+    'rejected': 'cancelled',
+    'returned': 'returned',
+    // European Fulfillment specific
+    'in delivery': 'shipped',
+    'unpacked': 'delivered', // Cliente desembalou = entregue
+    'redeployment': 'processing',
+    'in transit': 'shipped', // Em trânsito = enviado
+    'incident': 'pending' // Incidente mantém pendente
+  };
+  
+  return statusMap[status?.toLowerCase()] || 'pending';
+}
+
+/**
  * Normaliza número de telefone para matching
  * Remove espaços, hífens, parênteses e prefixos internacionais
  */
@@ -307,7 +334,7 @@ async function processUnprocessedOrders() {
           // Update existing Shopify order with carrier data
           await db.update(orders)
             .set({
-              status: stagingOrder.status || 'pending',
+              status: mapProviderStatus(stagingOrder.status), // Use mapping function
               trackingNumber: stagingOrder.tracking || null,
               carrierImported: true,
               carrierMatchedAt: new Date(),
