@@ -279,8 +279,16 @@ async function processFHBOrders(
         }
         
         const accountOperations = accountOpsCache.get(accountId) || [];
-        const operation = findOperationByPrefix(fhbOrder.variableSymbol, accountOperations);
         
+        // Try to find operation by prefix first (if configured)
+        let operation = findOperationByPrefix(fhbOrder.variableSymbol, accountOperations);
+        
+        // If no prefix match and we have only one operation, use it
+        if (!operation && accountOperations.length === 1) {
+          operation = accountOperations[0];
+        }
+        
+        // If still no operation, skip
         if (!operation) {
           await db.update(fhbOrders)
             .set({ processedToOrders: true, processedAt: new Date() })
@@ -289,20 +297,24 @@ async function processFHBOrders(
           continue;
         }
         
-        const existingOrder = await db.select()
-          .from(orders)
-          .where(
-            and(
-              eq(orders.shopifyOrderNumber, fhbOrder.variableSymbol),
-              eq(orders.operationId, operation.id)
-            )
-          )
-          .limit(1);
+        // Extract customer data from recipient
+        const recipient = fhbOrder.recipient as any;
+        const customerEmail = recipient?.email || recipient?.address?.email;
+        const customerPhone = recipient?.phone || recipient?.address?.phone;
+        
+        // Use intelligent matching (order number → email → phone)
+        const existingOrder = await findShopifyOrderIntelligent(
+          fhbOrder.variableSymbol,
+          customerEmail,
+          customerPhone,
+          operation.id
+        );
         
         const rawData = fhbOrder.rawData as any;
         
-        if (existingOrder.length > 0) {
-          const currentProviderData = existingOrder[0].providerData as any || {};
+        if (existingOrder) {
+          // Update existing Shopify order with carrier data
+          const currentProviderData = existingOrder.providerData as any || {};
           
           await db.update(orders)
             .set({
@@ -310,6 +322,7 @@ async function processFHBOrders(
               trackingNumber: fhbOrder.tracking,
               carrierImported: true,
               carrierOrderId: fhbOrder.fhbOrderId,
+              carrierMatchedAt: new Date(),
               provider: 'fhb',
               syncedFromFhb: true,
               lastSyncAt: new Date(),
@@ -326,10 +339,11 @@ async function processFHBOrders(
                 }
               }
             })
-            .where(eq(orders.id, existingOrder[0].id));
+            .where(eq(orders.id, existingOrder.id));
           
           totalUpdated++;
         } else {
+          // No Shopify order found - create carrier-only order
           await db.insert(orders).values({
             id: `fhb_${fhbOrder.fhbOrderId}`,
             storeId: operation.storeId,
@@ -581,8 +595,16 @@ async function processElogyOrders(
         }
         
         const accountOperations = accountOpsCache.get(accountId) || [];
-        const operation = findOperationByPrefix(elogyOrder.orderNumber, accountOperations);
         
+        // Try to find operation by prefix first (if configured)
+        let operation = findOperationByPrefix(elogyOrder.orderNumber, accountOperations);
+        
+        // If no prefix match and we have only one operation, use it
+        if (!operation && accountOperations.length === 1) {
+          operation = accountOperations[0];
+        }
+        
+        // If still no operation, skip
         if (!operation) {
           await db.update(elogyOrders)
             .set({ processedToOrders: true, processedAt: new Date() })
@@ -591,20 +613,24 @@ async function processElogyOrders(
           continue;
         }
         
-        const existingOrder = await db.select()
-          .from(orders)
-          .where(
-            and(
-              eq(orders.shopifyOrderNumber, elogyOrder.orderNumber),
-              eq(orders.operationId, operation.id)
-            )
-          )
-          .limit(1);
+        // Extract customer data from recipient
+        const recipient = elogyOrder.recipient as any;
+        const customerEmail = recipient?.email || recipient?.address?.email;
+        const customerPhone = recipient?.phone || recipient?.address?.phone;
+        
+        // Use intelligent matching (order number → email → phone)
+        const existingOrder = await findShopifyOrderIntelligent(
+          elogyOrder.orderNumber,
+          customerEmail,
+          customerPhone,
+          operation.id
+        );
         
         const rawData = elogyOrder.rawData as any;
         
-        if (existingOrder.length > 0) {
-          const currentProviderData = existingOrder[0].providerData as any || {};
+        if (existingOrder) {
+          // Update existing Shopify order with carrier data
+          const currentProviderData = existingOrder.providerData as any || {};
           
           await db.update(orders)
             .set({
@@ -612,6 +638,7 @@ async function processElogyOrders(
               trackingNumber: elogyOrder.tracking,
               carrierImported: true,
               carrierOrderId: elogyOrder.elogyOrderId,
+              carrierMatchedAt: new Date(),
               provider: 'elogy',
               lastSyncAt: new Date(),
               needsSync: false,
@@ -627,10 +654,11 @@ async function processElogyOrders(
                 }
               }
             })
-            .where(eq(orders.id, existingOrder[0].id));
+            .where(eq(orders.id, existingOrder.id));
           
           totalUpdated++;
         } else {
+          // No Shopify order found - create carrier-only order
           await db.insert(orders).values({
             id: `elogy_${elogyOrder.elogyOrderId}`,
             storeId: operation.storeId,
