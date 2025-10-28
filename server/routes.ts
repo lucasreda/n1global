@@ -1594,6 +1594,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
 
+      // Debug log
+      console.log("User with password:", { id: user.id, hasPasswordHash: !!user.passwordHash });
+
       // Verify current password
       const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
       if (!isPasswordValid) {

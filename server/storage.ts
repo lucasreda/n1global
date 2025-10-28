@@ -192,6 +192,8 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(eq(users.id, id));
     
+    console.log("getUserWithPassword result:", user);
+    
     return user || undefined;
   }
 
