@@ -1655,9 +1655,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const europeanService = new EuropeanFulfillmentService(
             credentials.email,
             credentials.password,
-            credentials.country || 'spain'
+            credentials.apiUrl // Pass the API URL, not country
           );
-          await europeanService.authenticate();
+          const testResult = await europeanService.testConnection();
+          if (!testResult.connected) {
+            throw new Error(testResult.message || 'Invalid credentials');
+          }
           return res.json({ 
             success: true, 
             message: `Credenciais ${providerKey === 'elogy' ? 'eLogy' : 'European Fulfillment'} válidas!` 
@@ -1751,7 +1754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const europeanService = new EuropeanFulfillmentService(
             credentials.email,
             credentials.password,
-            credentials.country || 'spain'
+            credentials.apiUrl // Pass the API URL, not country
           );
           const testResult = await europeanService.testConnection();
           if (!testResult.connected) {
