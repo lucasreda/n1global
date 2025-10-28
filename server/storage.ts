@@ -192,9 +192,18 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(eq(users.id, id));
     
-    console.log("getUserWithPassword result:", user);
+    if (!user) {
+      console.log("getUserWithPassword: User not found for id:", id);
+      return undefined;
+    }
     
-    return user || undefined;
+    console.log("getUserWithPassword result:", { 
+      id: user.id, 
+      hasPassword: !!user.passwordHash,
+      passwordLength: user.passwordHash?.length 
+    });
+    
+    return user;
   }
 
   async updateUserPassword(userId: string, passwordHash: string): Promise<boolean> {
