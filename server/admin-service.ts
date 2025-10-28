@@ -4,7 +4,7 @@ import {
   stores, operations, orders, users, products, 
   shopifyIntegrations, cartpandaIntegrations, fulfillmentIntegrations, 
   facebookAdsIntegrations, googleAdsIntegrations, dashboardMetrics,
-  userWarehouseAccountOperations, adAccounts, campaigns
+  userWarehouseAccountOperations, userOperationAccess, adAccounts, campaigns
 } from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
@@ -779,6 +779,12 @@ export class AdminService {
         .delete(userWarehouseAccountOperations)
         .where(eq(userWarehouseAccountOperations.operationId, operationId));
       console.log(`✅ Deleted warehouse account operations for operation ${operationId}`);
+      
+      // Delete user_operation_access
+      await db
+        .delete(userOperationAccess)
+        .where(eq(userOperationAccess.operationId, operationId));
+      console.log(`✅ Deleted user operation access for operation ${operationId}`);
       
       // Delete campaigns first (they reference ad_accounts)
       const operationAdAccounts = await db
