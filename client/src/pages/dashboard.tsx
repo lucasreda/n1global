@@ -4,6 +4,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { SyncStatus } from "@/components/dashboard/sync-status";
 import { OnboardingCard } from "@/components/dashboard/onboarding-card";
+import { WelcomeMessage } from "@/components/dashboard/welcome-message";
 import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -514,6 +515,8 @@ export default function Dashboard() {
           </Tooltip>
         </TooltipProvider>
       </div>
+      
+      <WelcomeMessage />
       
       <OnboardingCard />
       
