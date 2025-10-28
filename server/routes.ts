@@ -1625,9 +1625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all warehouse providers catalog
   app.get("/api/warehouse/providers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      console.log('🔍 API /api/warehouse/providers called');
       const providers = await storage.getWarehouseProviders();
-      console.log('🔍 Storage returned:', { count: providers.length, providers });
       res.json(providers);
     } catch (error) {
       console.error("Get warehouse providers error:", error);

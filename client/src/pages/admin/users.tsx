@@ -141,7 +141,7 @@ export default function AdminUsers() {
     queryKey: ['/api/admin/users']
   });
 
-  // Buscar warehouse providers catalog
+  // Buscar warehouse providers catalog - always fetch for better UX
   const { data: warehouseProviders, isLoading: warehouseProvidersLoading, isError: warehouseProvidersError } = useQuery<Array<{
     key: string;
     name: string;
@@ -149,23 +149,8 @@ export default function AdminUsers() {
     requiredFields: Array<{ fieldName: string; label: string; fieldType: string; required: boolean }>;
   }>>({
     queryKey: ['/api/warehouse/providers'],
-    enabled: (showCreateUserModal && createWizardStep === 'integrations') || (showEditModal && activeTab === 'warehouse')
+    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
   });
-
-  // Debug logging para warehouse providers
-  useEffect(() => {
-    console.log('🔍 Warehouse Providers Debug:', {
-      showCreateUserModal,
-      createWizardStep,
-      showEditModal,
-      activeTab,
-      queryEnabled: (showCreateUserModal && createWizardStep === 'integrations') || (showEditModal && activeTab === 'warehouse'),
-      isLoading: warehouseProvidersLoading,
-      isError: warehouseProvidersError,
-      hasProviders: !!warehouseProviders,
-      providersCount: warehouseProviders?.length || 0
-    });
-  }, [showCreateUserModal, createWizardStep, showEditModal, activeTab, warehouseProvidersLoading, warehouseProvidersError, warehouseProviders]);
 
   // Buscar todas as operações disponíveis
   const { data: allOperations, isLoading: operationsLoading } = useQuery<{ id: string; name: string; country: string }[]>({
