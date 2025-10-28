@@ -1746,6 +1746,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
         try {
           console.log(`🔐 Testing ${providerKey} credentials before saving account...`);
+          // Dynamic import to prevent global TLS disable
+          const { EuropeanFulfillmentService } = await import('./fulfillment-service');
           const europeanService = new EuropeanFulfillmentService(
             credentials.email,
             credentials.password,
