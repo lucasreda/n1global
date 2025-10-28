@@ -1211,7 +1211,7 @@ export default function AdminUsers() {
                 Operações
               </TabsTrigger>
               <TabsTrigger value="warehouse" className="data-[state=active]:bg-blue-600" data-testid="tab-warehouse">
-                Warehouse
+                Armazéns
               </TabsTrigger>
             </TabsList>
             
