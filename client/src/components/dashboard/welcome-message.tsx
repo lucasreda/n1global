@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Sparkles, Sun, Moon, Sunrise } from "lucide-react";
@@ -12,15 +12,22 @@ export function WelcomeMessage() {
   useEffect(() => {
     if (!user) return;
 
-    // TEMPORARY: Always show for demonstration
-    setShowWelcome(true);
+    // Check if we've already shown the welcome message today
+    const today = new Date().toDateString();
+    const lastWelcomeDate = localStorage.getItem('lastWelcomeDate');
     
-    // Auto-hide after 10 seconds
-    const timer = setTimeout(() => {
-      setShowWelcome(false);
-    }, 10000);
-    
-    return () => clearTimeout(timer);
+    if (lastWelcomeDate !== today) {
+      // First login of the day
+      setShowWelcome(true);
+      localStorage.setItem('lastWelcomeDate', today);
+      
+      // Auto-hide after 10 seconds
+      const timer = setTimeout(() => {
+        setShowWelcome(false);
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -52,7 +59,7 @@ export function WelcomeMessage() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-xl opacity-50 animate-pulse" />
               <div className="relative bg-gradient-to-r from-blue-500 to-purple-500 p-3 rounded-full">
-                {icon && <icon.type className="h-6 w-6 text-white" />}
+                {icon && React.createElement(icon, { className: "h-6 w-6 text-white" })}
               </div>
             </div>
           </div>
