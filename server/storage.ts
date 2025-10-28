@@ -188,7 +188,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUserWithPassword(id: string): Promise<{ id: string; passwordHash: string } | undefined> {
     const [user] = await db
-      .select({ id: users.id, passwordHash: users.password })
+      .select()
       .from(users)
       .where(eq(users.id, id));
     
@@ -197,10 +197,12 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
     
-    console.log("getUserWithPassword RAW result from DB:", user);
-    console.log("getUserWithPassword passwordHash field:", user.passwordHash);
+    console.log("getUserWithPassword: Found user, password field exists:", !!user.password);
     
-    return user;
+    return {
+      id: user.id,
+      passwordHash: user.password
+    };
   }
 
   async updateUserPassword(userId: string, passwordHash: string): Promise<boolean> {
