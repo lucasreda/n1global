@@ -1590,8 +1590,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get user with password hash
       const user = await storage.getUserWithPassword(req.user.id);
+      console.log("🔐 Change password - user from DB:", { id: user?.id, hasPasswordHash: !!user?.passwordHash, passwordHash: user?.passwordHash?.substring(0, 20) + '...' });
+      
       if (!user) {
         return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      if (!user.passwordHash) {
+        console.error("❌ passwordHash is missing from user object!");
+        return res.status(500).json({ message: "Erro de configuração do sistema" });
       }
 
       // Verify current password
