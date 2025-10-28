@@ -12,22 +12,15 @@ export function WelcomeMessage() {
   useEffect(() => {
     if (!user) return;
 
-    // Check if we've already shown the welcome message today
-    const today = new Date().toDateString();
-    const lastWelcomeDate = localStorage.getItem('lastWelcomeDate');
+    // TEMPORARY: Always show for demonstration
+    setShowWelcome(true);
     
-    if (lastWelcomeDate !== today) {
-      // First login of the day
-      setShowWelcome(true);
-      localStorage.setItem('lastWelcomeDate', today);
-      
-      // Auto-hide after 10 seconds
-      const timer = setTimeout(() => {
-        setShowWelcome(false);
-      }, 10000);
-      
-      return () => clearTimeout(timer);
-    }
+    // Auto-hide after 10 seconds
+    const timer = setTimeout(() => {
+      setShowWelcome(false);
+    }, 10000);
+    
+    return () => clearTimeout(timer);
   }, [user]);
 
   useEffect(() => {
