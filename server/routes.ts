@@ -1753,7 +1753,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             credentials.password,
             credentials.country || 'spain'
           );
-          await europeanService.authenticate(); // Will throw if invalid
+          const testResult = await europeanService.testConnection();
+          if (!testResult.connected) {
+            throw new Error(testResult.message || 'Invalid credentials');
+          }
           console.log(`✅ ${providerKey} credentials validated successfully`);
         } catch (error: any) {
           console.error(`❌ ${providerKey} credentials validation failed:`, error.message);
