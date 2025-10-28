@@ -187,22 +187,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserWithPassword(id: string): Promise<{ id: string; passwordHash: string } | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, id));
-    
-    if (!user) {
-      console.log("getUserWithPassword: User not found for id:", id);
+    try {
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+      
+      if (!result || result.length === 0) {
+        console.log("🔍 getUserWithPassword: No user found for id:", id);
+        return undefined;
+      }
+      
+      const dbUser = result[0];
+      console.log("🔍 getUserWithPassword: User found, password exists:", !!dbUser.password, "password length:", dbUser.password?.length);
+      
+      if (!dbUser.password) {
+        console.error("⚠️ getUserWithPassword: User has no password!");
+        return undefined;
+      }
+      
+      return {
+        id: dbUser.id,
+        passwordHash: dbUser.password
+      };
+    } catch (error) {
+      console.error("❌ getUserWithPassword error:", error);
       return undefined;
     }
-    
-    console.log("getUserWithPassword: Found user, password field exists:", !!user.password);
-    
-    return {
-      id: user.id,
-      passwordHash: user.password
-    };
   }
 
   async updateUserPassword(userId: string, passwordHash: string): Promise<boolean> {
