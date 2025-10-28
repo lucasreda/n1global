@@ -17,7 +17,9 @@ import {
   ChevronRight,
   Sparkles,
   Store,
-  Zap
+  Zap,
+  User,
+  Key
 } from "lucide-react";
 import logoImage from "@assets/Dashboard_1756440445659.png";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +47,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { NewOperationDialog } from "./new-operation-dialog";
+import { ChangePasswordDialog } from "./change-password-dialog";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 
 const getNavigationForRole = (userRole: string, userPermissions: string[] = []) => {
@@ -98,6 +107,7 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
   
@@ -320,15 +330,36 @@ export function Sidebar() {
                 {user?.role === "admin" ? "Administrador" : user?.role === "product_seller" ? "Vendedor" : "Usuário"}
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={logout}
-              className="text-gray-400 hover:text-red-400 transition-colors p-2 h-auto"
-              data-testid="button-logout"
-            >
-              <LogOut size={16} />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white transition-colors p-1.5 h-auto"
+                  data-testid="button-profile"
+                >
+                  <User size={18} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem 
+                  className="cursor-pointer"
+                  onClick={() => setShowChangePasswordDialog(true)}
+                  data-testid="menu-change-password"
+                >
+                  <Key className="mr-2 h-4 w-4" />
+                  Alterar Senha
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="cursor-pointer text-red-600 hover:text-red-700 focus:text-red-700"
+                  onClick={logout}
+                  data-testid="menu-logout"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -338,6 +369,12 @@ export function Sidebar() {
         open={showNewOperationDialog}
         onOpenChange={setShowNewOperationDialog}
         onOperationCreated={handleOperationCreated}
+      />
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={showChangePasswordDialog}
+        onOpenChange={setShowChangePasswordDialog}
       />
     </nav>
   );

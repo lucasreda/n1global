@@ -302,6 +302,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change password endpoint
+  app.post("/api/user/change-password", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Senha atual e nova senha são obrigatórias" });
+      }
+
+      // Verify minimum password requirements
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "A nova senha deve ter pelo menos 8 caracteres" });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify current password
+      const bcrypt = await import("bcryptjs");
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash the new password
+      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+      // Update the password in the database
+      const success = await storage.updateUserPassword(req.user.id, newPasswordHash);
+      if (!success) {
+        return res.status(500).json({ message: "Erro ao atualizar a senha" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Senha alterada com sucesso" 
+      });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Erro ao alterar a senha" });
+    }
+  });
+
   // Development endpoint to reset onboarding for testing
   app.post("/api/auth/reset-onboarding", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

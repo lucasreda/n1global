@@ -184,6 +184,23 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async updateUserPassword(userId: string, passwordHash: string): Promise<boolean> {
+    try {
+      const result = await db
+        .update(users)
+        .set({ 
+          password: passwordHash,
+          updatedAt: new Date() 
+        })
+        .where(eq(users.id, userId));
+      
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.error("Error updating user password:", error);
+      return false;
+    }
+  }
+
   async getOrders(limit: number = 50, offset: number = 0): Promise<Order[]> {
     return await db
       .select()
