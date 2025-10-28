@@ -831,7 +831,8 @@ export class DatabaseStorage implements IStorage {
       throw new Error('Usuário não tem acesso a esta operação');
     }
 
-    // Get products for this operation's store AND specific operation
+    // Get products for this operation's store
+    // Note: Products are linked to stores, not operations directly
     const result = await db
       .select({
         id: userProducts.id,
@@ -852,7 +853,6 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(userProducts.userId, userId),
         eq(userProducts.storeId, operationInfo.storeId),
-        eq(products.operationId, operationId), // Filter by specific operation
         eq(userProducts.isActive, true)
       ))
       .orderBy(desc(userProducts.linkedAt));
