@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, products, shippingProviders, stores, operations, userOperationAccess } from "@shared/schema";
+import { users, products, shippingProviders, stores, operations, userOperationAccess, warehouseProviders } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { eq, inArray, and } from "drizzle-orm";
 
@@ -159,6 +159,59 @@ export async function seedDatabase() {
 
     // Sample products removed - no longer creating automatic demo products
     console.log("ℹ️  Skipped sample products creation (disabled)");
+
+    // Create Warehouse Providers Catalog (for user-level warehouse configuration)
+    console.log("📦 Setting up warehouse providers catalog...");
+    
+    const warehouseProvidersCatalog = [
+      {
+        key: 'fhb',
+        name: 'FHB Fulfillment Hub',
+        description: 'FHB Fulfillment Hub - European warehouse and shipping service',
+        requiredFields: [
+          { fieldName: 'username', fieldType: 'text', label: 'Usuário', placeholder: 'seu_usuario', required: true },
+          { fieldName: 'password', fieldType: 'password', label: 'Senha', placeholder: '********', required: true }
+        ],
+        isActive: true
+      },
+      {
+        key: 'european_fulfillment',
+        name: 'European Fulfillment',
+        description: 'European Fulfillment Center - Complete logistics solution',
+        requiredFields: [
+          { fieldName: 'username', fieldType: 'text', label: 'Usuário', placeholder: 'seu_usuario', required: true },
+          { fieldName: 'password', fieldType: 'password', label: 'Senha', placeholder: '********', required: true }
+        ],
+        isActive: true
+      },
+      {
+        key: 'elogy',
+        name: 'eLogy Logistics',
+        description: 'eLogy - Smart logistics and fulfillment platform',
+        requiredFields: [
+          { fieldName: 'username', fieldType: 'text', label: 'Usuário', placeholder: 'seu_usuario', required: true },
+          { fieldName: 'password', fieldType: 'password', label: 'Senha', placeholder: '********', required: true }
+        ],
+        isActive: true
+      }
+    ];
+
+    for (const providerData of warehouseProvidersCatalog) {
+      const [existingProvider] = await db
+        .select()
+        .from(warehouseProviders)
+        .where(eq(warehouseProviders.key, providerData.key))
+        .limit(1);
+
+      if (!existingProvider) {
+        await db.insert(warehouseProviders).values(providerData);
+        console.log(`✅ Warehouse provider created: ${providerData.name}`);
+      } else {
+        console.log(`ℹ️  Warehouse provider ${providerData.name} already exists`);
+      }
+    }
+
+    console.log("📦 Warehouse providers catalog setup completed!");
 
     // Check if fresh user already exists
     const [existingFreshUser] = await db
