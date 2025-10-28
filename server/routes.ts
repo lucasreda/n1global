@@ -1573,6 +1573,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change password endpoint
+  app.post("/api/user/change-password", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      // Validate input
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Senha atual e nova senha são obrigatórias" });
+      }
+
+      // Validate new password strength
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "A nova senha deve ter pelo menos 8 caracteres" });
+      }
+
+      // Get user with password hash
+      const user = await storage.getUserWithPassword(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Senha atual incorreta" });
+      }
+
+      // Hash new password
+      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+      // Update password in database
+      await storage.updateUserPassword(req.user.id, newPasswordHash);
+
+      res.json({ message: "Senha alterada com sucesso" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
+
   // Warehouse accounts routes - User-level warehouse integration management
   // Get all warehouse providers catalog
   app.get("/api/warehouse/providers", authenticateToken, async (req: AuthRequest, res: Response) => {
