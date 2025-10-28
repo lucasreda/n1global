@@ -344,6 +344,9 @@ export function Sidebar() {
               sideOffset={8}
               className="w-[calc(100%-2rem)] min-w-[200px] mx-4"
             >
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                {user?.email}
+              </div>
               <DropdownMenuItem 
                 className="cursor-pointer"
                 onClick={() => setShowChangePasswordDialog(true)}
