@@ -61,13 +61,15 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
 
   const changePasswordMutation = useMutation({
     mutationFn: async (data: ChangePasswordFormData) => {
-      return apiRequest("/api/user/change-password", {
-        method: "POST",
-        body: JSON.stringify({
+      const response = await apiRequest(
+        "/api/user/change-password",
+        "POST",
+        {
           currentPassword: data.currentPassword,
           newPassword: data.newPassword,
-        }),
-      });
+        }
+      );
+      return response.json();
     },
     onSuccess: () => {
       toast({
