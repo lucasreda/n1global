@@ -197,11 +197,8 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
     
-    console.log("getUserWithPassword result:", { 
-      id: user.id, 
-      hasPassword: !!user.passwordHash,
-      passwordLength: user.passwordHash?.length 
-    });
+    console.log("getUserWithPassword RAW result from DB:", user);
+    console.log("getUserWithPassword passwordHash field:", user.passwordHash);
     
     return user;
   }
