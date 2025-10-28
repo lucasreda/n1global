@@ -1842,6 +1842,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
         try {
           console.log(`🔐 Testing ${providerKey} credentials before saving account...`);
+          
+          // Validate required fields
+          if (!credentials.email?.trim()) {
+            return res.status(400).json({ 
+              message: "Email é obrigatório para conectar ao warehouse.",
+              error_type: "missing_credentials"
+            });
+          }
+          
+          if (!credentials.password?.trim()) {
+            return res.status(400).json({ 
+              message: "Senha é obrigatória para conectar ao warehouse.",
+              error_type: "missing_credentials"
+            });
+          }
+          
+          if (!credentials.apiUrl?.trim()) {
+            return res.status(400).json({ 
+              message: "URL da API é obrigatória para conectar ao warehouse.",
+              error_type: "missing_credentials"
+            });
+          }
+          
+          console.log(`📋 Credentials received:`, {
+            email: credentials.email,
+            hasPassword: !!credentials.password,
+            apiUrl: credentials.apiUrl
+          });
+          
           // Dynamic import to prevent global TLS disable
           const { EuropeanFulfillmentService } = await import('./fulfillment-service');
           const europeanService = new EuropeanFulfillmentService(
@@ -1856,6 +1885,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ ${providerKey} credentials validated successfully`);
         } catch (error: any) {
           console.error(`❌ ${providerKey} credentials validation failed:`, error.message);
+          if (error.message.includes('Credenciais do provedor não configuradas')) {
+            return res.status(400).json({ 
+              message: "Email e senha são obrigatórios para conectar ao warehouse.",
+              details: "Por favor, preencha todos os campos de credenciais.",
+              error_type: "missing_credentials"
+            });
+          }
           if (error.message.includes('Invalid credentials') || error.message.includes('401')) {
             return res.status(400).json({ 
               message: `As credenciais ${providerKey === 'elogy' ? 'eLogy' : 'European Fulfillment'} fornecidas são inválidas. Por favor, verifique o email e senha.`,

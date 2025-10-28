@@ -219,13 +219,7 @@ export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProp
   const europeanFields = [
     { fieldName: 'email', label: 'Email European Fulfillment', fieldType: 'email', required: true },
     { fieldName: 'password', label: 'Senha European Fulfillment', fieldType: 'password', required: true },
-    { 
-      fieldName: 'country', 
-      label: 'País', 
-      fieldType: 'select', 
-      required: true,
-      options: ['spain', 'portugal', 'italy', 'poland', 'slovakia', 'czechrepublic', 'romania', 'bulgaria', 'greece', 'hungary', 'slovenia', 'croatia', 'austria', 'germany', 'france', 'belgium', 'netherlands']
-    }
+    { fieldName: 'apiUrl', label: 'URL da API', fieldType: 'text', required: true }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={europeanFields} />;
@@ -235,8 +229,7 @@ export function ElogyIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFi
   const elogyFields = [
     { fieldName: 'email', label: 'Email eLogy', fieldType: 'email', required: true },
     { fieldName: 'password', label: 'Senha eLogy', fieldType: 'password', required: true },
-    { fieldName: 'authHeader', label: 'Auth Header', fieldType: 'text', required: false },
-    { fieldName: 'warehouseId', label: 'Warehouse ID', fieldType: 'text', required: false }
+    { fieldName: 'apiUrl', label: 'URL da API', fieldType: 'text', required: true }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={elogyFields} />;
