@@ -786,6 +786,17 @@ export class AdminService {
         .where(eq(userOperationAccess.operationId, operationId));
       console.log(`✅ Deleted user operation access for operation ${operationId}`);
       
+      // Delete platform integrations
+      await db
+        .delete(shopifyIntegrations)
+        .where(eq(shopifyIntegrations.operationId, operationId));
+      console.log(`✅ Deleted Shopify integrations for operation ${operationId}`);
+      
+      await db
+        .delete(cartpandaIntegrations)
+        .where(eq(cartpandaIntegrations.operationId, operationId));
+      console.log(`✅ Deleted CartPanda integrations for operation ${operationId}`);
+      
       // Delete campaigns first (they reference ad_accounts)
       const operationAdAccounts = await db
         .select({ accountId: adAccounts.accountId })
