@@ -69,7 +69,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
           newPassword: data.newPassword,
         }
       );
-      return response.json();
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -80,9 +80,29 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
       onOpenChange(false);
     },
     onError: (error: any) => {
+      // Extract clean error message
+      let errorMessage = "Ocorreu um erro ao tentar alterar sua senha.";
+      
+      if (error?.message) {
+        // Parse error message from apiRequest format (e.g., "401: ...")
+        const messageParts = error.message.split(": ");
+        errorMessage = messageParts.length > 1 ? messageParts.slice(1).join(": ") : error.message;
+        
+        // Try to parse JSON error response
+        try {
+          const jsonMatch = errorMessage.match(/\{.*\}/);
+          if (jsonMatch) {
+            const errorData = JSON.parse(jsonMatch[0]);
+            errorMessage = errorData.message || errorMessage;
+          }
+        } catch {
+          // If not JSON, use the message as is
+        }
+      }
+      
       toast({
         title: "Erro ao alterar senha",
-        description: error.message || "Ocorreu um erro ao tentar alterar sua senha.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
