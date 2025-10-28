@@ -315,57 +315,53 @@ export function Sidebar() {
       </ul>
 
       <div className="mt-auto pb-2">
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-4 mt-3 sm:mt-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 gradient-success rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-foreground" data-testid="text-user-initials">
-                {user ? getUserInitials(user.name) : "U"}
-              </span>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-white" data-testid="text-username">
-                {user?.name || "Usuário"}
-              </p>
-              <p className="text-xs text-gray-400" data-testid="text-user-role">
-                {user?.role === "admin" ? "Administrador" : user?.role === "product_seller" ? "Vendedor" : "Usuário"}
-              </p>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-400 hover:text-white transition-colors p-1.5 h-auto"
-                  data-testid="button-profile"
-                >
-                  <User size={18} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                align="end" 
-                alignOffset={-150} 
-                sideOffset={-40}
-                className="w-48"
+        <div className="relative">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-4 mt-3 sm:mt-6 cursor-pointer hover:bg-card/80 transition-colors">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 gradient-success rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-foreground" data-testid="text-user-initials">
+                      {user ? getUserInitials(user.name) : "U"}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white" data-testid="text-username">
+                      {user?.name || "Usuário"}
+                    </p>
+                    <p className="text-xs text-gray-400" data-testid="text-user-role">
+                      {user?.role === "admin" ? "Administrador" : user?.role === "product_seller" ? "Vendedor" : "Usuário"}
+                    </p>
+                  </div>
+                  <div className="text-gray-400">
+                    <User size={18} />
+                  </div>
+                </div>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              side="top"
+              sideOffset={8}
+              className="w-[calc(100%-2rem)] min-w-[200px] mx-4"
+            >
+              <DropdownMenuItem 
+                className="cursor-pointer"
+                onClick={() => setShowChangePasswordDialog(true)}
+                data-testid="menu-change-password"
               >
-                <DropdownMenuItem 
-                  className="cursor-pointer"
-                  onClick={() => setShowChangePasswordDialog(true)}
-                  data-testid="menu-change-password"
-                >
-                  <Key className="mr-2 h-4 w-4" />
-                  Alterar Senha
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="cursor-pointer text-red-600 hover:text-red-700 focus:text-red-700"
-                  onClick={logout}
-                  data-testid="menu-logout"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                <Key className="mr-2 h-4 w-4" />
+                Alterar Senha
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="cursor-pointer text-red-600 hover:text-red-700 focus:text-red-700"
+                onClick={logout}
+                data-testid="menu-logout"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
