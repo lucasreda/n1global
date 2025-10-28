@@ -316,14 +316,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "A nova senha deve ter pelo menos 8 caracteres" });
       }
 
-      const user = await storage.getUser(req.user.id);
-      if (!user) {
+      // Get user with password hash
+      const userWithPassword = await storage.getUserWithPassword(req.user.id);
+      if (!userWithPassword) {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
 
       // Verify current password
       const bcrypt = await import("bcryptjs");
-      const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      const isPasswordValid = await bcrypt.compare(currentPassword, userWithPassword.passwordHash);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Senha atual incorreta" });
       }
