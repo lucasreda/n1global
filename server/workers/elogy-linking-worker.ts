@@ -206,6 +206,13 @@ async function processUnprocessedOrders() {
           .limit(1);
         
         if (existingOrder.length > 0) {
+          // Check if order is already linked to a different warehouse
+          if (existingOrder[0].carrierOrderId && existingOrder[0].provider !== 'elogy') {
+            console.warn(`⚠️ Order ${existingOrder[0].id} already linked to ${existingOrder[0].provider}, skipping eLogy update`);
+            skipped++;
+            continue;
+          }
+          
           // Update existing order
           await db.update(orders)
             .set({
@@ -219,7 +226,7 @@ async function processUnprocessedOrders() {
               providerData: stagingOrder.rawData,
               lastStatusUpdate: new Date()
             })
-            .where(eq(orders.id, stagingOrder.orderNumber));
+            .where(eq(orders.id, existingOrder[0].id));
           
           updated++;
           

@@ -206,6 +206,13 @@ async function processUnprocessedOrders() {
           const rawData = fhbOrder.rawData as any;
           
           if (existingOrder.length > 0) {
+            // Check if order is already linked to a different warehouse
+            if (existingOrder[0].carrierOrderId && existingOrder[0].provider !== 'fhb') {
+              console.warn(`⚠️ Order ${existingOrder[0].id} already linked to ${existingOrder[0].provider}, skipping FHB update`);
+              batchSkipped++;
+              continue;
+            }
+            
             // Update existing order with FHB data
             const currentProviderData = existingOrder[0].providerData as any || {};
             

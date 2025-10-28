@@ -350,6 +350,21 @@ async function processUnprocessedOrders() {
         let linkedOrderId: string;
         
         if (existingOrderId) {
+          // Check if order is already linked to a different warehouse
+          const existingOrder = await db.select({
+            carrierOrderId: orders.carrierOrderId,
+            provider: orders.provider
+          })
+            .from(orders)
+            .where(eq(orders.id, existingOrderId))
+            .limit(1);
+          
+          if (existingOrder[0]?.carrierOrderId && existingOrder[0]?.provider !== 'european_fulfillment') {
+            console.warn(`⚠️ Order ${existingOrderId} already linked to ${existingOrder[0].provider}, skipping European Fulfillment update`);
+            skipped++;
+            continue;
+          }
+          
           // Update existing Shopify order with carrier data
           await db.update(orders)
             .set({
