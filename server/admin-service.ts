@@ -780,17 +780,25 @@ export class AdminService {
         .where(eq(userWarehouseAccountOperations.operationId, operationId));
       console.log(`✅ Deleted warehouse account operations for operation ${operationId}`);
       
+      // Delete campaigns first (they reference ad_accounts)
+      const operationAdAccounts = await db
+        .select({ accountId: adAccounts.accountId })
+        .from(adAccounts)
+        .where(eq(adAccounts.operationId, operationId));
+      
+      if (operationAdAccounts.length > 0) {
+        const accountIds = operationAdAccounts.map(a => a.accountId);
+        await db
+          .delete(campaigns)
+          .where(sql`${campaigns.accountId} IN (${sql.join(accountIds.map(id => sql`${id}`), sql`, `)})`);
+        console.log(`✅ Deleted campaigns for operation ${operationId}`);
+      }
+      
       // Delete ad_accounts
       await db
         .delete(adAccounts)
         .where(eq(adAccounts.operationId, operationId));
       console.log(`✅ Deleted ad accounts for operation ${operationId}`);
-      
-      // Delete campaigns
-      await db
-        .delete(campaigns)
-        .where(eq(campaigns.operationId, operationId));
-      console.log(`✅ Deleted campaigns for operation ${operationId}`);
       
       
       // Finally, delete the operation itself
