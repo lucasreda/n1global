@@ -4,7 +4,7 @@
 
 import { db } from '../db';
 import { elogyOrders, orders, operations, userWarehouseAccountOperations, userWarehouseAccounts } from '@shared/schema';
-import { eq, and, inArray, isNull } from 'drizzle-orm';
+import { eq, and, inArray, isNull, sql } from 'drizzle-orm';
 
 // Reentrancy guard
 let isLinkingRunning = false;
@@ -117,10 +117,29 @@ async function processUnprocessedOrders() {
       return;
     }
     
-    // Get unprocessed staging orders
+    // Get active eLogy account IDs only
+    const activeElogyAccounts = await db.select({ id: userWarehouseAccounts.id })
+      .from(userWarehouseAccounts)
+      .where(
+        and(
+          eq(userWarehouseAccounts.providerKey, 'elogy'),
+          eq(userWarehouseAccounts.status, 'active')
+        )
+      );
+    
+    const elogyAccountIds = activeElogyAccounts.map(a => a.id);
+    
+    // Get unprocessed staging orders ONLY from eLogy accounts
     const stagingOrders = await db.select()
       .from(elogyOrders)
-      .where(eq(elogyOrders.processedToOrders, false))
+      .where(
+        and(
+          eq(elogyOrders.processedToOrders, false),
+          elogyAccountIds.length > 0
+            ? inArray(elogyOrders.accountId, elogyAccountIds)
+            : sql`false` // No accounts = no orders to process
+        )
+      )
       .limit(100); // Process in batches
     
     if (stagingOrders.length === 0) {

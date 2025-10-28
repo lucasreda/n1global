@@ -3,7 +3,7 @@
 
 import { db } from '../db';
 import { fhbOrders, orders, operations, fulfillmentIntegrations, userWarehouseAccountOperations, userWarehouseAccounts } from '@shared/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql, or } from 'drizzle-orm';
 
 // Reentrancy guard
 let isLinkingRunning = false;
@@ -121,10 +121,32 @@ async function processUnprocessedOrders() {
     while (true) {
       batchCount++;
       
-      // Fetch unprocessed orders
+      // Get active FHB account IDs only
+      const activeFhbAccounts = await db.select({ id: userWarehouseAccounts.id })
+        .from(userWarehouseAccounts)
+        .where(
+          and(
+            eq(userWarehouseAccounts.providerKey, 'fhb'),
+            inArray(userWarehouseAccounts.status, ['active', 'pending'])
+          )
+        );
+      
+      const fhbAccountIds = activeFhbAccounts.map(a => a.id);
+      
+      // Fetch unprocessed orders ONLY from FHB accounts
       const unprocessedOrders = await db.select()
         .from(fhbOrders)
-        .where(eq(fhbOrders.processedToOrders, false))
+        .where(
+          and(
+            eq(fhbOrders.processedToOrders, false),
+            fhbAccountIds.length > 0
+              ? or(
+                  inArray(fhbOrders.warehouseAccountId, fhbAccountIds),
+                  inArray(fhbOrders.fhbAccountId, fhbAccountIds) // Support legacy field
+                )
+              : sql`false` // No accounts = no orders to process
+          )
+        )
         .limit(BATCH_SIZE);
       
       if (unprocessedOrders.length === 0) {

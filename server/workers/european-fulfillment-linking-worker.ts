@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { europeanFulfillmentOrders, orders, operations, userWarehouseAccountOperations, userWarehouseAccounts } from '@shared/schema';
-import { eq, and, inArray, isNull, or } from 'drizzle-orm';
+import { eq, and, inArray, isNull, or, sql } from 'drizzle-orm';
 
 // Reentrancy guard
 let isLinkingRunning = false;
@@ -252,10 +252,29 @@ async function processUnprocessedOrders() {
       return;
     }
     
-    // Get unprocessed staging orders
+    // Get active European Fulfillment account IDs only
+    const activeEuropeanAccounts = await db.select({ id: userWarehouseAccounts.id })
+      .from(userWarehouseAccounts)
+      .where(
+        and(
+          eq(userWarehouseAccounts.providerKey, 'european_fulfillment'),
+          eq(userWarehouseAccounts.status, 'active')
+        )
+      );
+    
+    const europeanAccountIds = activeEuropeanAccounts.map(a => a.id);
+    
+    // Get unprocessed staging orders ONLY from European Fulfillment accounts
     const stagingOrders = await db.select()
       .from(europeanFulfillmentOrders)
-      .where(eq(europeanFulfillmentOrders.processedToOrders, false))
+      .where(
+        and(
+          eq(europeanFulfillmentOrders.processedToOrders, false),
+          europeanAccountIds.length > 0 
+            ? inArray(europeanFulfillmentOrders.accountId, europeanAccountIds)
+            : sql`false` // No accounts = no orders to process
+        )
+      )
       .limit(100); // Process in batches
     
     if (stagingOrders.length === 0) {
