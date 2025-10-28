@@ -341,7 +341,12 @@ export function Sidebar() {
                   <User size={18} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent 
+                align="end" 
+                alignOffset={-150} 
+                sideOffset={-40}
+                className="w-48"
+              >
                 <DropdownMenuItem 
                   className="cursor-pointer"
                   onClick={() => setShowChangePasswordDialog(true)}
