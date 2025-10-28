@@ -1391,7 +1391,12 @@ export class DatabaseStorage implements IStorage {
 
   // Warehouse Providers methods
   async getWarehouseProviders(): Promise<WarehouseProvider[]> {
-    return await db.select().from(warehouseProviders).where(eq(warehouseProviders.isActive, true));
+    const results = await db.select().from(warehouseProviders).where(eq(warehouseProviders.isActive, true));
+    console.log('🔍 getWarehouseProviders Debug:', {
+      resultsCount: results.length,
+      results: results.map(r => ({ key: r.key, name: r.name, isActive: r.isActive }))
+    });
+    return results;
   }
 
   async getWarehouseProvider(key: string): Promise<WarehouseProvider | undefined> {
