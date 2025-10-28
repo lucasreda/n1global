@@ -152,6 +152,21 @@ export default function AdminUsers() {
     enabled: (showCreateUserModal && createWizardStep === 'integrations') || (showEditModal && activeTab === 'warehouse')
   });
 
+  // Debug logging para warehouse providers
+  useEffect(() => {
+    console.log('🔍 Warehouse Providers Debug:', {
+      showCreateUserModal,
+      createWizardStep,
+      showEditModal,
+      activeTab,
+      queryEnabled: (showCreateUserModal && createWizardStep === 'integrations') || (showEditModal && activeTab === 'warehouse'),
+      isLoading: warehouseProvidersLoading,
+      isError: warehouseProvidersError,
+      hasProviders: !!warehouseProviders,
+      providersCount: warehouseProviders?.length || 0
+    });
+  }, [showCreateUserModal, createWizardStep, showEditModal, activeTab, warehouseProvidersLoading, warehouseProvidersError, warehouseProviders]);
+
   // Buscar todas as operações disponíveis
   const { data: allOperations, isLoading: operationsLoading } = useQuery<{ id: string; name: string; country: string }[]>({
     queryKey: ['/api/operations'],
