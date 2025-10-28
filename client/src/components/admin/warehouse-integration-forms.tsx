@@ -218,8 +218,7 @@ export function FHBIntegrationForm({
 export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
   const europeanFields = [
     { fieldName: 'email', label: 'Email European Fulfillment', fieldType: 'email', required: true },
-    { fieldName: 'password', label: 'Senha European Fulfillment', fieldType: 'password', required: true },
-    { fieldName: 'apiUrl', label: 'URL da API', fieldType: 'text', required: true }
+    { fieldName: 'password', label: 'Senha European Fulfillment', fieldType: 'password', required: true }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={europeanFields} />;
@@ -228,8 +227,7 @@ export function EuropeanFulfillmentIntegrationForm(props: Omit<WarehouseFormProp
 export function ElogyIntegrationForm(props: Omit<WarehouseFormProps, 'requiredFields'>) {
   const elogyFields = [
     { fieldName: 'email', label: 'Email eLogy', fieldType: 'email', required: true },
-    { fieldName: 'password', label: 'Senha eLogy', fieldType: 'password', required: true },
-    { fieldName: 'apiUrl', label: 'URL da API', fieldType: 'text', required: true }
+    { fieldName: 'password', label: 'Senha eLogy', fieldType: 'password', required: true }
   ];
 
   return <WarehouseIntegrationForm {...props} requiredFields={elogyFields} />;

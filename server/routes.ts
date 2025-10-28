@@ -1745,10 +1745,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
         try {
           console.log(`🔐 Testing ${providerKey} credentials...`);
+          
+          // Automatically set the default API URL based on provider
+          const defaultApiUrl = providerKey === 'european_fulfillment' 
+            ? 'https://api.ecomfulfilment.eu/' 
+            : 'https://api.elogy.io';
+          
+          // Add apiUrl to credentials if not already present
+          if (!credentials.apiUrl) {
+            credentials.apiUrl = defaultApiUrl;
+          }
+          
+          // Dynamic import to prevent global TLS disable
+          const { EuropeanFulfillmentService } = await import('./fulfillment-service');
           const europeanService = new EuropeanFulfillmentService(
             credentials.email,
             credentials.password,
-            credentials.apiUrl // Pass the API URL, not country
+            credentials.apiUrl
           );
           const testResult = await europeanService.testConnection();
           if (!testResult.connected) {
@@ -1858,11 +1871,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          if (!credentials.apiUrl?.trim()) {
-            return res.status(400).json({ 
-              message: "URL da API é obrigatória para conectar ao warehouse.",
-              error_type: "missing_credentials"
-            });
+          // Automatically set the default API URL based on provider
+          const defaultApiUrl = providerKey === 'european_fulfillment' 
+            ? 'https://api.ecomfulfilment.eu/' 
+            : 'https://api.elogy.io';
+          
+          // Add apiUrl to credentials if not already present
+          if (!credentials.apiUrl) {
+            credentials.apiUrl = defaultApiUrl;
           }
           
           console.log(`📋 Credentials received:`, {
@@ -1876,7 +1892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const europeanService = new EuropeanFulfillmentService(
             credentials.email,
             credentials.password,
-            credentials.apiUrl // Pass the API URL, not country
+            credentials.apiUrl
           );
           const testResult = await europeanService.testConnection();
           if (!testResult.connected) {
