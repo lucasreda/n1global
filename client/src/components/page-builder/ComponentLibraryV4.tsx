@@ -1,4 +1,4 @@
-import { Plus, Trash2, FolderOpen, Download, Upload } from 'lucide-react';
+import { Plus, Trash2, FolderOpen, Download, Upload, Search, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageNodeV4 } from '@shared/schema';
 import { useToast } from '@/hooks/use-toast';
 import { nanoid } from 'nanoid';
@@ -28,8 +28,10 @@ interface SavedComponentV4 {
   id: string;
   name: string;
   category: string;
+  tags?: string[];
   createdAt: string;
   node: PageNodeV4;
+  thumbnail?: string; // Base64 or URL
 }
 
 const COMPONENT_CATEGORIES = [
@@ -63,7 +65,17 @@ export function ComponentLibraryV4({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [componentName, setComponentName] = useState('');
   const [componentCategory, setComponentCategory] = useState<string>('Other');
+  const [componentTags, setComponentTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Auto-open save dialog when nodeToSave is provided
+  useEffect(() => {
+    if (selectedNode) {
+      setSaveDialogOpen(true);
+    }
+  }, [selectedNode]);
 
   const handleSave = () => {
     if (componentName.trim() && selectedNode) {
@@ -71,6 +83,7 @@ export function ComponentLibraryV4({
         id: nanoid(),
         name: componentName.trim(),
         category: componentCategory,
+        tags: componentTags.length > 0 ? componentTags : undefined,
         createdAt: new Date().toISOString(),
         node: selectedNode,
       };
@@ -78,6 +91,8 @@ export function ComponentLibraryV4({
       onSaveComponent(newComponent);
       setComponentName('');
       setComponentCategory('Other');
+      setComponentTags([]);
+      setTagInput('');
       setSaveDialogOpen(false);
       
       toast({
@@ -87,17 +102,32 @@ export function ComponentLibraryV4({
     }
   };
 
+  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && tagInput.trim() && !componentTags.includes(tagInput.trim())) {
+      e.preventDefault();
+      setComponentTags([...componentTags, tagInput.trim()]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setComponentTags(componentTags.filter(tag => tag !== tagToRemove));
+  };
+
   const handleInsert = (component: SavedComponentV4) => {
     // Generate new ID for inserted component to avoid conflicts
+    // Mark as component instance with reference
     const nodeWithNewId: PageNodeV4 = {
       ...component.node,
       id: nanoid(),
+      componentRef: component.id, // Mark as instance of this component
+      instanceOverrides: undefined, // Start with no overrides
     };
     onInsertComponent(nodeWithNewId);
     
     toast({
-      title: 'Component inserted',
-      description: `"${component.name}" has been added to your page`,
+      title: 'Componente inserido',
+      description: `"${component.name}" foi adicionado à página como instância`,
     });
   };
 
@@ -126,9 +156,24 @@ export function ComponentLibraryV4({
     });
   };
 
-  const filteredComponents = filterCategory === 'all'
-    ? components
-    : components.filter(c => c.category === filterCategory);
+  const filteredComponents = components.filter(c => {
+    // Filter by category
+    if (filterCategory !== 'all' && c.category !== filterCategory) {
+      return false;
+    }
+
+    // Filter by search term (name or tags)
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase();
+      const matchesName = c.name.toLowerCase().includes(search);
+      const matchesTags = c.tags?.some(tag => tag.toLowerCase().includes(search));
+      if (!matchesName && !matchesTags) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   return (
     <div className="space-y-4 p-4">
@@ -156,6 +201,16 @@ export function ComponentLibraryV4({
             Save Component
           </Button>
         </div>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome ou tag..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       <Select value={filterCategory} onValueChange={setFilterCategory}>
@@ -188,27 +243,42 @@ export function ComponentLibraryV4({
                 onClick={() => handleInsert(component)}
                 data-testid={`component-card-v4-${component.id}`}
               >
-                <CardContent className="p-3 flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm truncate">{component.name}</h4>
-                    <p className="text-xs text-muted-foreground">{component.category}</p>
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{component.name}</h4>
+                      <p className="text-xs text-muted-foreground">{component.category}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteComponent(component.id);
+                        toast({
+                          title: 'Component deleted',
+                          description: `"${component.name}" has been removed`,
+                        });
+                      }}
+                      className="h-8 w-8 p-0 text-destructive"
+                      data-testid={`button-delete-component-v4-${component.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteComponent(component.id);
-                      toast({
-                        title: 'Component deleted',
-                        description: `"${component.name}" has been removed`,
-                      });
-                    }}
-                    className="h-8 w-8 p-0 text-destructive"
-                    data-testid={`button-delete-component-v4-${component.id}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {component.tags && component.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {component.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-muted rounded-md text-muted-foreground"
+                        >
+                          <Tag className="w-3 h-3" />
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -252,6 +322,37 @@ export function ComponentLibraryV4({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="component-tags">Tags (opcional)</Label>
+              <Input
+                id="component-tags"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleAddTag}
+                placeholder="Digite uma tag e pressione Enter"
+                data-testid="input-component-tags-v4"
+              />
+              {componentTags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {componentTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-primary text-primary-foreground rounded-md"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="hover:bg-primary-foreground/20 rounded"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

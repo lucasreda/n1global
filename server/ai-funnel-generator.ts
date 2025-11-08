@@ -47,13 +47,19 @@ interface TemplateConfig {
 }
 
 export class AIFunnelGenerator {
-  private openai: OpenAI;
+  private openaiApiKey: string | undefined;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // Lazy initialization - OpenAI will be created only when needed
+    this.openaiApiKey = process.env.OPENAI_API_KEY;
     console.log('🤖 AI Funnel Generator initialized');
+  }
+
+  private getOpenAI(): OpenAI {
+    if (!this.openaiApiKey) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+    return new OpenAI({ apiKey: this.openaiApiKey });
   }
 
   /**
@@ -156,7 +162,8 @@ DIRETRIZES:
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
@@ -227,7 +234,8 @@ DIRETRIZES:
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
@@ -297,7 +305,8 @@ DIRETRIZES:
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
@@ -377,7 +386,8 @@ DIRETRIZES:
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
@@ -452,7 +462,8 @@ DIRETRIZES:
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           {

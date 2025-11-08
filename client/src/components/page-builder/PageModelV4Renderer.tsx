@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, memo } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
+import { isComponentInstance, getInstanceStyles, getInstanceAttributes, getInstanceTextContent } from '@/lib/componentInstance';
 import { cn } from '@/lib/utils';
 import { HoverTooltip } from './HoverTooltip';
 import { SelectionToolbar } from './SelectionToolbar';
@@ -72,6 +73,18 @@ function normalizeAttributes(tag: string, attributes: Record<string, any> = {}):
   return normalized;
 }
 
+// Helper function to find a node in the tree
+function findNodeInTree(nodes: PageNodeV4[], nodeId: string): PageNodeV4 | null {
+  for (const node of nodes) {
+    if (node.id === nodeId) return node;
+    if (node.children) {
+      const found = findNodeInTree(node.children, nodeId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 interface PageModelV4RendererProps {
   model: PageModelV4;
   selectedNodeId?: string | null;
@@ -80,6 +93,7 @@ interface PageModelV4RendererProps {
   onDeleteNode?: () => void;
   onUpdateNode?: (updates: Partial<PageNodeV4>) => void;
   breakpoint?: 'desktop' | 'tablet' | 'mobile';
+  savedComponents?: any[]; // For component instances to get base component
 }
 
 export function PageModelV4Renderer({ 
@@ -89,11 +103,17 @@ export function PageModelV4Renderer({
   onDuplicateNode,
   onDeleteNode,
   onUpdateNode,
-  breakpoint = 'desktop'
+  breakpoint = 'desktop',
+  savedComponents = []
 }: PageModelV4RendererProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [hoveredNodeInfo, setHoveredNodeInfo] = useState<{ tag: string; classNames: string[]; dimensions?: { width: number; height: number } } | null>(null);
+  const [hoveredNodeInfo, setHoveredNodeInfo] = useState<{ 
+    tag: string; 
+    classNames: string[]; 
+    dimensions?: { width: number; height: number };
+    hasResponsiveOverrides?: boolean;
+  } | null>(null);
   
   // Collect all nodes for CSS generation
   const collectNodes = useCallback((node: PageNodeV4): PageNodeV4[] => {
@@ -124,8 +144,13 @@ export function PageModelV4Renderer({
 
   const handleMouseEnter = useCallback((nodeId: string, tag: string, classNames: string[], dimensions?: { width: number; height: number }) => {
     setHoveredNodeId(nodeId);
-    setHoveredNodeInfo({ tag, classNames, dimensions });
-  }, []);
+    // Find node to check for responsive overrides using the helper
+    const node = findNodeInTree(model.nodes, nodeId);
+    const hasResponsiveOverrides = node?.styles 
+      ? (!!node.styles.mobile || !!node.styles.tablet)
+      : false;
+    setHoveredNodeInfo({ tag, classNames, dimensions, hasResponsiveOverrides });
+  }, [model.nodes]);
 
   const handleMouseLeave = useCallback(() => {
     setHoveredNodeId(null);
@@ -137,7 +162,7 @@ export function PageModelV4Renderer({
   }, []);
 
   // Sanitize global styles to remove unwanted overflow and scrollbar rules
-  const sanitizeGlobalStyles = (css: string): string => {
+  const sanitizeGlobalStyles = useCallback((css: string): string => {
     if (!css) return '';
     
     let sanitized = css;
@@ -174,14 +199,23 @@ export function PageModelV4Renderer({
     );
     
     return sanitized;
-  };
+  }, []);
 
   // Generate override styles with maximum specificity using IDs
-  const generateOverrideStyles = (nodes: PageNodeV4[]): string => {
+  const generateOverrideStyles = useCallback((nodes: PageNodeV4[]): string => {
     let css = '';
     
     const processNode = (node: PageNodeV4) => {
-      const styles = node.styles?.[breakpoint];
+      // Get effective styles for component instances
+      let styles: Record<string, any> = {};
+      if (isComponentInstance(node)) {
+        const baseComponent = savedComponents.find(c => c.id === node.componentRef);
+        const baseNode = baseComponent?.node || null;
+        styles = getInstanceStyles(node, baseNode, breakpoint);
+      } else {
+        styles = node.styles?.[breakpoint] || {};
+      }
+      
       if (styles && Object.keys(styles).length > 0) {
         const uniqueId = `style-override-${node.id}-${breakpoint}`;
         const styleRules = Object.entries(styles)
@@ -203,7 +237,17 @@ export function PageModelV4Renderer({
     
     nodes.forEach(processNode);
     return css;
-  };
+  }, [breakpoint, savedComponents]);
+  
+  // Memoize sanitized global styles
+  const sanitizedGlobalStyles = useMemo(() => {
+    return model.globalStyles ? sanitizeGlobalStyles(model.globalStyles) : '';
+  }, [model.globalStyles, sanitizeGlobalStyles]);
+  
+  // Memoize override styles
+  const overrideStyles = useMemo(() => {
+    return generateOverrideStyles(model.nodes);
+  }, [model.nodes, generateOverrideStyles]);
 
   return (
     <div 
@@ -213,9 +257,9 @@ export function PageModelV4Renderer({
     >
       {/* Inject global CSS (variables, resets, classes) */}
       {/* Font Awesome is loaded globally in index.html */}
-      {model.globalStyles && (
+      {sanitizedGlobalStyles && (
         <style dangerouslySetInnerHTML={{ 
-          __html: sanitizeGlobalStyles(model.globalStyles) 
+          __html: sanitizedGlobalStyles 
         }} />
       )}
       
@@ -260,46 +304,49 @@ export function PageModelV4Renderer({
             onDeleteNode={onDeleteNode}
             onUpdateNode={onUpdateNode}
             breakpoint={breakpoint}
+            savedComponents={savedComponents}
           />
         ))}
       </div>
       
       {/* CRITICAL: Inject user overrides AFTER rendered content to win cascade order */}
       {/* This ensures overrides come after any <style> tags embedded in the imported HTML */}
-      <style id="user-overrides" dangerouslySetInnerHTML={{
-        __html: generateOverrideStyles(model.nodes)
-      }} />
-
+      {overrideStyles && (
+        <style id="user-overrides" dangerouslySetInnerHTML={{
+          __html: overrideStyles
+        }} />
+      )}
+      
+      {/* Hover Tooltip */}
+      {hoveredNodeInfo && (
+        <HoverTooltip
+          tag={hoveredNodeInfo.tag}
+          classNames={hoveredNodeInfo.classNames}
+          dimensions={hoveredNodeInfo.dimensions}
+          position={mousePosition}
+          visible={!!hoveredNodeId && hoveredNodeId !== selectedNodeId}
+          hasResponsiveOverrides={hoveredNodeInfo.hasResponsiveOverrides}
+        />
+      )}
     </div>
   );
-}
-
-// Helper function to find a node in the tree
-function findNodeInTree(nodes: PageNodeV4[], nodeId: string): PageNodeV4 | null {
-  for (const node of nodes) {
-    if (node.id === nodeId) return node;
-    if (node.children) {
-      const found = findNodeInTree(node.children, nodeId);
-      if (found) return found;
-    }
-  }
-  return null;
 }
 
 interface PageNodeV4RendererProps {
   node: PageNodeV4;
   selectedNodeId?: string | null;
   hoveredNodeId?: string | null;
-  onSelectNode?: (nodeId: string) => void;
+  onSelectNode?: (nodeId: string, modifiers?: { ctrlKey?: boolean; shiftKey?: boolean; metaKey?: boolean; altKey?: boolean }) => void;
   onMouseEnter?: (nodeId: string, tag: string, classNames: string[], dimensions?: { width: number; height: number }) => void;
   onMouseLeave?: () => void;
   onDuplicateNode?: () => void;
   onDeleteNode?: () => void;
   onUpdateNode?: (updates: Partial<PageNodeV4>) => void;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
+  savedComponents?: any[];
 }
 
-function PageNodeV4Renderer({ 
+const PageNodeV4Renderer = memo(function PageNodeV4Renderer({ 
   node, 
   selectedNodeId,
   hoveredNodeId,
@@ -309,10 +356,25 @@ function PageNodeV4Renderer({
   onDuplicateNode,
   onDeleteNode,
   onUpdateNode,
-  breakpoint 
+  breakpoint,
+  savedComponents = []
 }: PageNodeV4RendererProps) {
   const isSelected = selectedNodeId === node.id;
   const isHovered = hoveredNodeId === node.id && !isSelected;
+  
+  // Get base component if this is an instance
+  const baseComponent = node.componentRef 
+    ? savedComponents.find(c => c.id === node.componentRef)
+    : null;
+  const baseNode = baseComponent?.node || null;
+  
+  // Get effective attributes and text content for component instances
+  const effectiveAttributes = isComponentInstance(node) 
+    ? getInstanceAttributes(node, baseNode)
+    : node.attributes || {};
+  const effectiveTextContent = isComponentInstance(node)
+    ? (getInstanceTextContent(node, baseNode) ?? node.textContent)
+    : node.textContent;
   
   // Drag and drop
   const { attributes: draggableAttributes, listeners: draggableListeners, setNodeRef: setDraggableRef, isDragging } = useDraggable({
@@ -364,7 +426,10 @@ function PageNodeV4Renderer({
   });
   
   // Get styles for current breakpoint (used for CSS generation, not inline)
-  const styles = node.styles?.[breakpoint] || {};
+  // For component instances, use effective styles (base + overrides)
+  const styles = isComponentInstance(node)
+    ? getInstanceStyles(node, baseNode, breakpoint)
+    : (node.styles?.[breakpoint] || {});
   
   // Merge only layout and inline styles (overrides are in CSS Layers)
   const finalStyles: React.CSSProperties = {
@@ -397,7 +462,7 @@ function PageNodeV4Renderer({
   const allowScrollbarTags = ['textarea', 'pre', 'code'];
   const isScrollableContainer = node.classNames?.some(c => 
     c.includes('scroll') || c.includes('overflow')
-  ) || node.attributes?.role === 'region';
+  ) || effectiveAttributes?.role === 'region';
   
   if (!allowScrollbarTags.includes(node.tag) && !isScrollableContainer) {
     // Remove overflow auto/scroll to prevent unwanted scrollbars
@@ -419,7 +484,12 @@ function PageNodeV4Renderer({
       e.stopPropagation();
     }
     if (onSelectNode) {
-      onSelectNode(node.id);
+      onSelectNode(node.id, { 
+        ctrlKey: e.ctrlKey, 
+        shiftKey: e.shiftKey,
+        metaKey: e.metaKey,
+        altKey: e.altKey
+      });
     }
   };
 
@@ -458,7 +528,7 @@ function PageNodeV4Renderer({
         ref={setDraggableRef}
         {...draggableAttributes}
         {...draggableListeners}
-        {...normalizeAttributes('span', node.attributes)}
+        {...normalizeAttributes('span', effectiveAttributes)}
         id={uniqueStyleId}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
@@ -472,7 +542,7 @@ function PageNodeV4Renderer({
         onMouseEnter={handleMouseEnterNode}
         onMouseLeave={handleMouseLeaveNode}
       >
-        {node.textContent}
+        {effectiveTextContent}
         
         {/* Render toolbar for selected node */}
         {isSelected && onDuplicateNode && onDeleteNode && (
@@ -497,17 +567,18 @@ function PageNodeV4Renderer({
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
   if (isSelfClosing) {
     // Handle responsive images - normalize attributes first
-    let finalAttributes = normalizeAttributes(node.tag, node.attributes);
+    // Use effective attributes for component instances
+    let finalAttributes = normalizeAttributes(node.tag, effectiveAttributes);
     if (node.tag === 'img') {
       // Priority 1: Check responsiveAttributes for the current breakpoint
       const responsiveSrc = node.responsiveAttributes?.src?.[breakpoint];
       
-      // Priority 2: Check data-src attributes
-      const dataSrcDesktop = node.attributes?.['data-src-desktop'];
-      const dataSrcMobile = node.attributes?.['data-src-mobile'];
+      // Priority 2: Check data-src attributes (use effective attributes for instances)
+      const dataSrcDesktop = effectiveAttributes?.['data-src-desktop'];
+      const dataSrcMobile = effectiveAttributes?.['data-src-mobile'];
       
-      // Priority 3: Regular src attribute
-      const baseSrc = node.attributes?.src;
+      // Priority 3: Regular src attribute (use effective attributes for instances)
+      const baseSrc = effectiveAttributes?.src;
       
       // Debug: Log image src resolution
       console.log('🖼️ Image rendering:', {
@@ -577,7 +648,7 @@ function PageNodeV4Renderer({
       ref={setDraggableRef}
       {...draggableAttributes}
       {...draggableListeners}
-      {...normalizeAttributes(node.tag, node.attributes)}
+      {...normalizeAttributes(node.tag, effectiveAttributes)}
       id={uniqueStyleId}
       data-node-id={node.id}
       data-testid={`node-${node.tag}-${node.id}`}
@@ -591,7 +662,7 @@ function PageNodeV4Renderer({
       onMouseEnter={handleMouseEnterNode}
       onMouseLeave={handleMouseLeaveNode}
     >
-      {node.textContent}
+      {effectiveTextContent}
       {node.children?.map(child => (
         <PageNodeV4Renderer 
           key={child.id} 
@@ -605,6 +676,7 @@ function PageNodeV4Renderer({
           onDeleteNode={onDeleteNode}
           onUpdateNode={onUpdateNode}
           breakpoint={breakpoint}
+          savedComponents={savedComponents}
         />
       ))}
       
@@ -620,4 +692,26 @@ function PageNodeV4Renderer({
       )}
     </Tag>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo
+  if (prevProps.node.id !== nextProps.node.id) return false;
+  if (prevProps.selectedNodeId !== nextProps.selectedNodeId) return false;
+  if (prevProps.hoveredNodeId !== nextProps.hoveredNodeId) return false;
+  if (prevProps.breakpoint !== nextProps.breakpoint) return false;
+  
+  // Deep comparison of node data
+  const prevNode = prevProps.node;
+  const nextNode = nextProps.node;
+  
+  if (prevNode.textContent !== nextNode.textContent) return false;
+  if (JSON.stringify(prevNode.styles) !== JSON.stringify(nextNode.styles)) return false;
+  if (JSON.stringify(prevNode.attributes) !== JSON.stringify(nextNode.attributes)) return false;
+  if (JSON.stringify(prevNode.classNames) !== JSON.stringify(nextNode.classNames)) return false;
+  if (prevNode.children?.length !== nextNode.children?.length) return false;
+  
+  // Compare component instance overrides
+  if (JSON.stringify(prevNode.componentRef) !== JSON.stringify(nextNode.componentRef)) return false;
+  if (JSON.stringify(prevNode.instanceOverrides) !== JSON.stringify(nextNode.instanceOverrides)) return false;
+  
+  return true;
+});

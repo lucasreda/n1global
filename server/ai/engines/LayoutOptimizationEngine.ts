@@ -30,12 +30,17 @@ export interface LayoutResult {
 }
 
 export class LayoutOptimizationEngine {
-  private openai: OpenAI;
+  private openaiApiKey: string | undefined;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    this.openaiApiKey = process.env.OPENAI_API_KEY;
+  }
+
+  private getOpenAI(): OpenAI {
+    if (!this.openaiApiKey) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+    return new OpenAI({ apiKey: this.openaiApiKey });
   }
 
   async optimizeLayout(content: any, template: any, options: any): Promise<LayoutResult> {
@@ -113,7 +118,8 @@ Forneça análise detalhada para mobile-first. Retorne JSON:
 }
     `;
 
-    const completion = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -173,7 +179,8 @@ Crie estratégia responsiva detalhada. Retorne JSON:
 }
     `;
 
-    const completion = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {

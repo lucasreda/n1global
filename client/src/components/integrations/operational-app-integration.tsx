@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ export function OperationalAppIntegration() {
   const { selectedOperation: operationId } = useCurrentOperation();
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
+  const [appLoginUrl, setAppLoginUrl] = useState("");
+  const [welcomeEmailEnabled, setWelcomeEmailEnabled] = useState(true);
   const [isActive, setIsActive] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [generatedSecret, setGeneratedSecret] = useState("");
@@ -34,9 +36,21 @@ export function OperationalAppIntegration() {
 
   const config = configData?.config;
 
+  // Initialize state from config when loaded
+  useEffect(() => {
+    if (config) {
+      if (config.appLoginUrl !== undefined) {
+        setAppLoginUrl(config.appLoginUrl || "");
+      }
+      if (config.welcomeEmailEnabled !== undefined) {
+        setWelcomeEmailEnabled(config.welcomeEmailEnabled);
+      }
+    }
+  }, [config]);
+
   // Save config mutation
   const saveMutation = useMutation({
-    mutationFn: async (data: { webhookUrl: string; webhookSecret?: string; isActive: boolean }) => {
+    mutationFn: async (data: { webhookUrl: string; webhookSecret?: string; appLoginUrl?: string; welcomeEmailEnabled?: boolean; isActive: boolean }) => {
       const res = await apiRequest("/api/integrations/operational-app", "POST", {
         ...data,
         operationId,
@@ -122,11 +136,13 @@ export function OperationalAppIntegration() {
       return;
     }
 
-    console.log('✅ Sending mutation:', { webhookUrl: url, webhookSecret: webhookSecret || undefined, isActive });
+    console.log('✅ Sending mutation:', { webhookUrl: url, webhookSecret: webhookSecret || undefined, appLoginUrl, welcomeEmailEnabled, isActive });
     
     saveMutation.mutate({
       webhookUrl: url,
       webhookSecret: webhookSecret || undefined,
+      appLoginUrl: appLoginUrl || undefined,
+      welcomeEmailEnabled: welcomeEmailEnabled,
       isActive: isActive,
     });
   };
@@ -242,6 +258,35 @@ export function OperationalAppIntegration() {
             <p className="text-xs text-gray-400">
               Use este secret para validar a assinatura HMAC SHA-256 no header X-Webhook-Signature
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="appLoginUrl" className="text-gray-300">URL do Aplicativo</Label>
+            <Input
+              id="appLoginUrl"
+              placeholder="https://app.seu-app.com/login"
+              value={appLoginUrl || config?.appLoginUrl || ""}
+              onChange={(e) => setAppLoginUrl(e.target.value)}
+              className="bg-black/20 border-white/10 text-white"
+              data-testid="input-app-login-url"
+            />
+            <p className="text-xs text-gray-400">
+              URL para o botão "Acessar meu APP" no email de boas-vindas
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-black/20 rounded-lg">
+            <div className="space-y-0.5">
+              <Label className="text-gray-300">Enviar Email de Boas-Vindas</Label>
+              <p className="text-sm text-gray-400">
+                {welcomeEmailEnabled !== undefined ? (welcomeEmailEnabled ? "Ativado - Emails serão enviados" : "Desativado - Nenhum email será enviado") : ""}
+              </p>
+            </div>
+            <Switch
+              checked={welcomeEmailEnabled !== undefined ? welcomeEmailEnabled : config?.welcomeEmailEnabled !== undefined ? config.welcomeEmailEnabled : true}
+              onCheckedChange={setWelcomeEmailEnabled}
+              data-testid="switch-welcome-email-enabled"
+            />
           </div>
 
           <div className="flex items-center justify-between p-4 bg-black/20 rounded-lg">

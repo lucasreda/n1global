@@ -35,15 +35,20 @@ export interface MediaResult {
 }
 
 export class MediaEnrichmentEngine {
-  private openai: OpenAI;
+  private openaiApiKey: string | undefined;
   private imageCache: Map<string, GeneratedImage> = new Map();
   private promptTemplates: ImagePromptTemplate[] = [];
 
   constructor() {
     // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    this.openaiApiKey = process.env.OPENAI_API_KEY;
+  }
+
+  private getOpenAI(): OpenAI {
+    if (!this.openaiApiKey) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+    return new OpenAI({ apiKey: this.openaiApiKey });
   }
 
   async enrichWithMedia(content: any, enrichedBrief: any, visualIdentity?: any): Promise<MediaResult> {
@@ -150,7 +155,8 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
 }
     `;
 
-    const completion = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const completion = await openai.chat.completions.create({
       model: "gpt-5",
       messages: [
         {
@@ -482,7 +488,8 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
 
       console.log(`  🎨 Generating AI image: ${enhancedPrompt.substring(0, 100)}...`);
 
-      const response = await this.openai.images.generate({
+      const openaiClient = this.getOpenAI();
+      const response = await openaiClient.images.generate({
         model: "dall-e-3",
         prompt: enhancedPrompt,
         n: 1,

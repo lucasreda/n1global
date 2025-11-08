@@ -735,21 +735,21 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
           </div>
 
-          {/* Tempo Médio de Entrega */}
+          {/* Ticket Médio */}
           <div 
             className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-            data-testid="card-tempo-entrega"
+            data-testid="card-ticket-medio"
           >
             <div className="flex items-center justify-between mb-3">
-              <Truck className="w-4 h-4 text-slate-400" />
+              <Calculator className="w-4 h-4 text-slate-400" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white mb-1">{(metrics?.avgDeliveryTimeDays || 0).toFixed(1)} dias</h3>
-              <p className="text-sm font-medium text-gray-400">Tempo Médio de Entrega</p>
-              <p className="text-sm text-gray-500 mt-1">Da criação até entrega</p>
+              <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(averageOrderValue, currency)}</h3>
+              <p className="text-sm font-medium text-gray-400">Ticket Médio</p>
+              <p className="text-sm text-gray-500 mt-1">Ticket médio geral</p>
             </div>
           </div>
 

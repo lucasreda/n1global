@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import cors from "cors";
@@ -19,6 +20,8 @@ app.use(cors({
 // Raw body middleware for webhook signature verification (must come before JSON parsing)
 app.use('/api/voice/telnyx-incoming-call', express.raw({ type: 'application/json', limit: '10mb' }));
 app.use('/api/voice/telnyx-call-status', express.raw({ type: 'application/json', limit: '10mb' }));
+app.use('/api/webhooks/shopify/orders', express.raw({ type: 'application/json', limit: '10mb' }));
+app.use('/api/webhooks/cartpanda/orders', express.raw({ type: 'application/json', limit: '10mb' }));
 
 // Store raw body for webhook verification
 app.use('/api/voice/telnyx-incoming-call', (req: any, res: any, next: any) => {
@@ -37,38 +40,66 @@ app.use('/api/voice/telnyx-call-status', (req: any, res: any, next: any) => {
   next();
 });
 
+app.use('/api/webhooks/shopify/orders', (req: any, res: any, next: any) => {
+  if (req.body instanceof Buffer) {
+    req.rawBody = req.body.toString();
+    req.body = JSON.parse(req.rawBody);
+  }
+  next();
+});
+
+app.use('/api/webhooks/cartpanda/orders', (req: any, res: any, next: any) => {
+  if (req.body instanceof Buffer) {
+    req.rawBody = req.body.toString();
+    req.body = JSON.parse(req.rawBody);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '10mb' })); // Increased limit for ElevenLabs audio
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+  // DEBUG: Log ALL requests to see what's being intercepted
+  app.use((req, res, next) => {
+    if (req.path === "/api/user/profile" || req.originalUrl === "/api/user/profile") {
+      console.log("🔍 [DEBUG] Requisição detectada para /api/user/profile");
+      console.log("🔍 [DEBUG] Method:", req.method);
+      console.log("🔍 [DEBUG] Path:", req.path);
+      console.log("🔍 [DEBUG] Original URL:", req.originalUrl);
+      console.log("🔍 [DEBUG] Headers:", Object.keys(req.headers));
     }
+    next();
   });
 
-  next();
-});
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const path = req.path;
+    let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      if (path.startsWith("/api")) {
+        let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+        if (capturedJsonResponse) {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        }
+
+        if (logLine.length > 80) {
+          logLine = logLine.slice(0, 79) + "…";
+        }
+
+        log(logLine);
+      }
+    });
+
+    next();
+  });
 
 (async () => {
   // Push database schema in production
@@ -128,6 +159,32 @@ app.use((req, res, next) => {
   const { startElogyLinkingWorker } = await import('./workers/elogy-linking-worker');
   startElogyLinkingWorker();
   
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
+
+  // 🛍️ Start Shopify/CartPanda Polling Workers
+  console.log('🛍️  Starting Shopify/CartPanda Polling Workers...');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  // Start Shopify polling worker
+  const { startShopifyPollingWorker } = await import('./workers/shopify-sync-worker');
+  startShopifyPollingWorker();
+
+  // Start CartPanda polling worker
+  const { startCartPandaPollingWorker } = await import('./workers/cartpanda-sync-worker');
+  startCartPandaPollingWorker();
+
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
+
+  // 🔄 Start Staging Sync Worker
+  console.log('🔄 Starting Staging Sync Worker...');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  // Start staging sync worker
+  const { startStagingSyncWorker } = await import('./workers/staging-sync-worker');
+  startStagingSyncWorker();
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 

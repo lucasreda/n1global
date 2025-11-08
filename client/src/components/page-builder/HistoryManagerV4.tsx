@@ -160,74 +160,48 @@ export function HistoryManagerV4({ currentPageModel, onRestore, maxHistorySize =
   }, [canUndo, canRedo, history, currentIndex]);
 
   return (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleUndo}
-        disabled={!canUndo}
-        title="Undo (Ctrl+Z)"
-        data-testid="button-undo-v4"
-        className="h-8 px-2"
-      >
-        <Undo2 className="w-4 h-4" />
-      </Button>
-      
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleRedo}
-        disabled={!canRedo}
-        title="Redo (Ctrl+Y)"
-        data-testid="button-redo-v4"
-        className="h-8 px-2"
-      >
-        <Redo2 className="w-4 h-4" />
-      </Button>
-
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            title="View History"
-            data-testid="button-history-v4"
-            className="h-8 px-2"
-          >
-            <History className="w-4 h-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80" data-testid="popover-history-v4">
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm">History</h4>
-            <p className="text-xs text-muted-foreground">
-              {history.length} entries • Current: {currentIndex + 1}
-            </p>
-            
-            <ScrollArea className="h-64">
-              <div className="space-y-1">
-                {history.map((entry, index) => (
-                  <button
-                    key={entry.id}
-                    onClick={() => handleJumpTo(index)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                      index === currentIndex
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
-                    }`}
-                    data-testid={`history-entry-${index}`}
-                  >
-                    <div className="font-medium">{entry.description}</div>
-                    <div className="text-xs opacity-70">
-                      {formatTimestamp(entry.timestamp)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-        </PopoverContent>
-      </Popover>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Ver Histórico"
+          data-testid="button-history-v4"
+          className="h-8 px-2 text-foreground dark:text-gray-200"
+        >
+          <History className="w-4 h-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" data-testid="popover-history-v4">
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm">Histórico</h4>
+          <p className="text-xs text-muted-foreground">
+            {history.length} entradas • Atual: {currentIndex + 1}
+          </p>
+          
+          <ScrollArea className="h-64">
+            <div className="space-y-1">
+              {history.map((entry, index) => (
+                <button
+                  key={entry.id}
+                  onClick={() => handleJumpTo(index)}
+                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                    index === currentIndex
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  }`}
+                  data-testid={`history-entry-${index}`}
+                >
+                  <div className="font-medium">{entry.description}</div>
+                  <div className="text-xs opacity-70">
+                    {formatTimestamp(entry.timestamp)}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

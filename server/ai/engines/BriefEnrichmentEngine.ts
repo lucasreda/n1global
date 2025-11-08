@@ -31,12 +31,18 @@ export interface EnrichmentResult {
 }
 
 export class BriefEnrichmentEngine {
-  private openai: OpenAI;
+  private openaiApiKey: string | undefined;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // Lazy initialization - OpenAI will be created only when needed
+    this.openaiApiKey = process.env.OPENAI_API_KEY;
+  }
+
+  private getOpenAI(): OpenAI {
+    if (!this.openaiApiKey) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+    return new OpenAI({ apiKey: this.openaiApiKey });
   }
 
   async enrichBrief(briefData: any): Promise<EnrichmentResult> {
@@ -45,7 +51,8 @@ export class BriefEnrichmentEngine {
     try {
       const enrichmentPrompt = this.buildEnrichmentPrompt(briefData);
       
-      const completion = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {

@@ -12,6 +12,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  phone: text("phone"), // Phone number for contact
+  avatarUrl: text("avatar_url"), // URL for profile picture/avatar
   role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor', 'admin_investimento', 'affiliate'
   storeId: varchar("store_id"), // For product_seller role - links to parent store
   onboardingCompleted: boolean("onboarding_completed").default(false),
@@ -35,6 +37,7 @@ export const users = pgTable("users", {
   forcePasswordChange: boolean("force_password_change").default(false), // Force password change on next login
   lastLoginAt: timestamp("last_login_at"), // Last login timestamp
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Stores table - main tenant entities
@@ -62,6 +65,7 @@ export const operations = pgTable("operations", {
   timezone: text("timezone").notNull().default("Europe/Madrid"), // IANA timezone e.g., "Europe/Madrid", "Europe/Rome"
   operationType: text("operation_type").notNull().default("Cash on Delivery"), // 'Cash on Delivery', 'Pagamento no Cartão'
   status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
+  language: text("language").default("es"), // ISO 639-1: es, pt, en, it, fr, de, pl, ro, cs, hu, bg, hr, sk, sl
   
   // Shopify order prefix for FHB multi-tenant filtering (e.g., "LOJA01", "PDREAMS")
   shopifyOrderPrefix: text("shopify_order_prefix"), // Unique prefix for Shopify orders
@@ -784,6 +788,7 @@ export const updateOperationSettingsSchema = z.object({
   operationType: operationTypeSchema.optional(),
   timezone: z.string().optional(),
   currency: z.string().optional(),
+  language: z.string().optional(),
   shopifyOrderPrefix: z.string().optional().transform((val) => {
     // If undefined (field not in request), return undefined to preserve existing value
     if (val === undefined) return undefined;
@@ -5971,6 +5976,25 @@ export type PageNodeV4 = {
   // Custom CSS
   customCSS?: string;
   
+  // Component instance support (for reusable components)
+  componentRef?: string;        // Reference to saved component ID (from ComponentLibraryV4)
+  instanceOverrides?: {          // Overridden properties for this instance
+    // Override styles by breakpoint
+    styles?: {
+      desktop?: Partial<ResponsiveStylesV4['desktop']>;
+      tablet?: Partial<ResponsiveStylesV4['tablet']>;
+      mobile?: Partial<ResponsiveStylesV4['mobile']>;
+    };
+    // Override attributes
+    attributes?: Partial<Record<string, string>>;
+    // Override responsive attributes
+    responsiveAttributes?: Partial<PageNodeV4['responsiveAttributes']>;
+    // Override text content
+    textContent?: string;
+    // Override inline styles
+    inlineStyles?: Partial<Record<string, string>>;
+  };
+  
   // Metadata
   metadata?: {
     sourceHTML?: string;        // Original HTML snippet
@@ -6118,6 +6142,8 @@ export const integrationConfigs = pgTable("integration_configs", {
   integrationType: text("integration_type").notNull(), // 'operational_app'
   webhookUrl: text("webhook_url").notNull(),
   webhookSecret: text("webhook_secret").notNull(), // Encrypted secret for HMAC
+  appLoginUrl: text("app_login_url"), // URL do CTA "Acessar meu APP"
+  welcomeEmailEnabled: boolean("welcome_email_enabled").default(true),
   isActive: boolean("is_active").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

@@ -21,9 +21,13 @@ import {
 } from "@shared/schema";
 import { eq, desc, and, sql, or } from "drizzle-orm";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy OpenAI initialization
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+};
 
 export class SupportService {
   // ... existing methods ...
@@ -66,6 +70,7 @@ export class SupportService {
         contentLength: (email.textContent || email.htmlContent || '').length
       });
 
+      const openai = getOpenAI();
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],

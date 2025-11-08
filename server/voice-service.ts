@@ -21,9 +21,13 @@ import Telnyx from 'telnyx';
 // @ts-ignore
 import { container } from "./container";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+// Lazy OpenAI initialization
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+};
 
 // Voice processing with Telnyx Neural HD TTS
 
@@ -510,6 +514,7 @@ export class VoiceService {
       );
 
       // Call OpenAI for response
+      const openai = getOpenAI();
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
@@ -1576,8 +1581,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       // Build voice-specific prompt using directives
       const prompt = await this.buildVoiceCallPrompt(operationId, userSpeech, directives, callType as 'test' | 'sales');
       
-      // Get OpenAI from container and generate response
-      const openai = container.resolve('openai') as any;
+      // Get OpenAI and generate response
+      const openai = getOpenAI();
       const response = await openai.chat.completions.create({
         model: 'gpt-4',
         messages: [{ role: 'user', content: prompt }],
@@ -1788,6 +1793,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       
       // Call OpenAI for response
       console.log(`🤖 Calling OpenAI GPT-4 for voice response...`);
+      const openai = getOpenAI();
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],

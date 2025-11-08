@@ -47,7 +47,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { NewOperationDialog } from "./new-operation-dialog";
-import { ChangePasswordDialog } from "./change-password-dialog";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 
 const getNavigationForRole = (userRole: string, userPermissions: string[] = []) => {
@@ -104,10 +103,9 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = []) 
 };
 
 export function Sidebar() {
-  const [location] = useLocation();
+  const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
-  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
   
@@ -349,11 +347,13 @@ export function Sidebar() {
               </div>
               <DropdownMenuItem 
                 className="cursor-pointer"
-                onClick={() => setShowChangePasswordDialog(true)}
-                data-testid="menu-change-password"
+                onClick={() => {
+                  setLocation("/profile");
+                }}
+                data-testid="menu-profile"
               >
-                <Key className="mr-2 h-4 w-4" />
-                Alterar Senha
+                <User className="mr-2 h-4 w-4" />
+                Minha Conta
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className="cursor-pointer text-red-600 hover:text-red-700 focus:text-red-700"
@@ -375,11 +375,6 @@ export function Sidebar() {
         onOperationCreated={handleOperationCreated}
       />
 
-      {/* Change Password Dialog */}
-      <ChangePasswordDialog
-        open={showChangePasswordDialog}
-        onOpenChange={setShowChangePasswordDialog}
-      />
     </nav>
   );
 }

@@ -4,12 +4,15 @@ import { PageModelV4Renderer } from './PageModelV4Renderer';
 import { LayersPanelV4 } from './LayersPanelV4';
 import { PropertiesPanelV4 } from './PropertiesPanelV4';
 import { ElementsToolbarV4 } from './ElementsToolbarV4';
+import { ComponentLibraryV4 } from './ComponentLibraryV4';
 import { DropIndicatorLayer } from './DropIndicatorLayer';
 import { SelectionOverlay } from './SelectionOverlay';
 import { InlineTextToolbar } from './InlineTextToolbar';
 import { HoverTooltip } from './HoverTooltip';
+import { AlignmentGuides } from './AlignmentGuides';
 import { useHistoryV4 } from './HistoryManagerV4';
 import { nanoid } from 'nanoid';
+import { isComponentInstance, addOverride } from '@/lib/componentInstance';
 import {
   DndContext,
   DragOverlay,
@@ -36,7 +39,12 @@ interface VisualEditorV4Props {
   showElements?: boolean;
   showLayers?: boolean;
   showProperties?: boolean;
+  showComponents?: boolean;
   className?: string;
+  zoomLevel?: number;
+  showGrid?: boolean;
+  snapToGrid?: boolean;
+  onSaveAsComponent?: (node: PageNodeV4) => void;
 }
 
 export function VisualEditorV4({ 
@@ -47,10 +55,25 @@ export function VisualEditorV4({
   showElements = true,
   showLayers = false,
   showProperties = true,
-  className = "" 
-}: VisualEditorV4Props) {
+  showComponents = false,
+  className = "",
+  zoomLevel = 100,
+  showGrid = false,
+  snapToGrid = false,
+  onSaveAsComponent,
+  savedComponents = [],
+  onSaveComponent,
+  onDeleteComponent,
+  onInsertComponent
+}: VisualEditorV4Props & {
+  savedComponents?: any[];
+  onSaveComponent?: (component: any) => void;
+  onDeleteComponent?: (componentId: string) => void;
+  onInsertComponent?: (node: PageNodeV4) => void;
+}) {
   const { toast } = useToast();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [draggedTemplate, setDraggedTemplate] = useState<PageNodeV4 | null>(null);
@@ -60,11 +83,13 @@ export function VisualEditorV4({
   // History management
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistoryV4(model);
 
-  // Drag and drop sensors - using MouseSensor instead of PointerSensor for better compatibility
+  // Drag and drop sensors - using MouseSensor with optimized constraints
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 3, // Reduced from 8px to 3px for easier drag initiation
+        distance: 5, // Increased from 3px to 5px to prevent accidental drags
+        delay: 100, // Add small delay to differentiate click from drag
+        tolerance: 5,
       },
     }),
     useSensor(TouchSensor, {
@@ -76,10 +101,48 @@ export function VisualEditorV4({
     useSensor(KeyboardSensor)
   );
 
-  const handleSelectNode = useCallback((nodeId: string) => {
-    console.log('🖱️ handleSelectNode called with:', nodeId);
-    setSelectedNodeId(nodeId);
-  }, []);
+  const handleSelectNode = useCallback((nodeId: string, modifiers?: { ctrlKey?: boolean; shiftKey?: boolean; metaKey?: boolean; altKey?: boolean }) => {
+    console.log('🖱️ handleSelectNode called with:', nodeId, modifiers);
+    
+    if (modifiers?.altKey) {
+      // Alt+Click - select parent element
+      const parentNode = getParentNode(model.nodes, nodeId);
+      if (parentNode) {
+        setSelectedNodeIds(new Set([parentNode.id]));
+        setSelectedNodeId(parentNode.id);
+        toast({
+          title: "Pai selecionado",
+          description: `Selecionado: <${parentNode.tag}>`,
+        });
+      }
+    } else if (modifiers?.ctrlKey || modifiers?.metaKey) {
+      // Ctrl+Click - toggle selection
+      setSelectedNodeIds(prev => {
+        const next = new Set(prev);
+        if (next.has(nodeId)) {
+          next.delete(nodeId);
+          setSelectedNodeId(null);
+        } else {
+          next.add(nodeId);
+          setSelectedNodeId(nodeId);
+        }
+        return next;
+      });
+    } else if (modifiers?.shiftKey && selectedNodeIds.size > 0) {
+      // Shift+Click - select range (if one node selected, select all between)
+      // TODO: Implement range selection between selected nodes
+      setSelectedNodeIds(prev => {
+        const next = new Set(prev);
+        next.add(nodeId);
+        return next;
+      });
+      setSelectedNodeId(nodeId);
+    } else {
+      // Regular click - single selection
+      setSelectedNodeIds(new Set([nodeId]));
+      setSelectedNodeId(nodeId);
+    }
+  }, [selectedNodeIds, model.nodes, toast]);
 
   const findNodeInTree = (nodes: PageNodeV4[], id: string): PageNodeV4 | null => {
     for (const node of nodes) {
@@ -91,6 +154,31 @@ export function VisualEditorV4({
     }
     return null;
   };
+  
+  // Build breadcrumb path for selected node
+  const buildBreadcrumb = useCallback((nodes: PageNodeV4[], targetId: string): { id: string; tag: string; label?: string }[] => {
+    const result: { id: string; tag: string; label?: string }[] = [];
+    
+    const findPath = (nodeList: PageNodeV4[]): boolean => {
+      for (const node of nodeList) {
+        result.push({ id: node.id, tag: node.tag, label: node.textContent?.substring(0, 20) });
+        
+        if (node.id === targetId) {
+          return true; // Found target
+        }
+        
+        if (node.children && findPath(node.children)) {
+          return true; // Found in children
+        }
+        
+        result.pop(); // Remove if not in path
+      }
+      return false;
+    };
+    
+    findPath(nodes);
+    return result;
+  }, []);
 
   const deepMergeStyles = (
     existing: ResponsiveStylesV4 | undefined,
@@ -168,12 +256,53 @@ export function VisualEditorV4({
   const handleUpdateNode = useCallback((updates: Partial<PageNodeV4>) => {
     if (!selectedNodeId) return;
     
-    const updatedNodes = updateNodeInTree(model.nodes, selectedNodeId, updates);
-    updateModel({
-      ...model,
-      nodes: updatedNodes,
-    }, 'Update node');
-  }, [selectedNodeId, model, updateModel]);
+    const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
+    
+    // If this is a component instance, apply updates as overrides
+    if (selectedNode && isComponentInstance(selectedNode)) {
+      let nodeWithOverrides = selectedNode;
+      
+      // Apply style overrides if styles are being updated
+      if (updates.styles && viewport) {
+        const styleOverrides = updates.styles[viewport] || {};
+        nodeWithOverrides = addOverride(nodeWithOverrides, 'styles', viewport, styleOverrides);
+      }
+      
+      // Apply attribute overrides
+      if (updates.attributes) {
+        nodeWithOverrides = addOverride(nodeWithOverrides, 'attributes', null, updates.attributes);
+      }
+      
+      // Apply text content override
+      if (updates.textContent !== undefined) {
+        nodeWithOverrides = addOverride(nodeWithOverrides, 'textContent', null, updates.textContent);
+      }
+      
+      // Apply responsive attributes override
+      if (updates.responsiveAttributes) {
+        nodeWithOverrides = addOverride(nodeWithOverrides, 'responsiveAttributes', null, updates.responsiveAttributes);
+      }
+      
+      // Apply inline styles override
+      if (updates.inlineStyles) {
+        nodeWithOverrides = addOverride(nodeWithOverrides, 'inlineStyles', null, updates.inlineStyles);
+      }
+      
+      // Update the node in tree
+      const updatedNodes = updateNodeInTree(model.nodes, selectedNodeId, nodeWithOverrides);
+      updateModel({
+        ...model,
+        nodes: updatedNodes,
+      }, 'Override component instance');
+    } else {
+      // Regular update for non-instance nodes
+      const updatedNodes = updateNodeInTree(model.nodes, selectedNodeId, updates);
+      updateModel({
+        ...model,
+        nodes: updatedNodes,
+      }, 'Update node');
+    }
+  }, [selectedNodeId, model, updateModel, viewport]);
 
   const handleInsertElement = useCallback((node: PageNodeV4) => {
     updateModel({
@@ -232,6 +361,22 @@ export function VisualEditorV4({
       }, 'Duplicate node');
     }
   }, [selectedNodeId, model, updateModel]);
+
+  const handleSaveAsComponent = useCallback(() => {
+    if (!selectedNodeId || !onSaveAsComponent) return;
+
+    const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
+    if (!selectedNode) return;
+
+    // Deep clone to avoid mutations
+    const nodeToSave = JSON.parse(JSON.stringify(selectedNode));
+    onSaveAsComponent(nodeToSave);
+    
+    toast({
+      title: 'Componente selecionado',
+      description: 'Abra a biblioteca de componentes para salvar',
+    });
+  }, [selectedNodeId, model.nodes, onSaveAsComponent, toast]);
 
   // Copy/Paste handlers with visual feedback
   const handleCopyNode = useCallback(() => {
@@ -386,6 +531,27 @@ export function VisualEditorV4({
         e.preventDefault();
         handleRedo();
       }
+      
+      // Ctrl+A - select all elements
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        const collectAllIds = (nodes: PageNodeV4[]): string[] => {
+          const ids: string[] = [];
+          const traverse = (n: PageNodeV4) => {
+            ids.push(n.id);
+            if (n.children) {
+              n.children.forEach(traverse);
+            }
+          };
+          nodes.forEach(traverse);
+          return ids;
+        };
+        const allIds = collectAllIds(model.nodes);
+        setSelectedNodeIds(new Set(allIds));
+        if (allIds.length > 0) {
+          setSelectedNodeId(allIds[allIds.length - 1]);
+        }
+      }
 
       // Copy/Cut/Paste
       if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedNodeId) {
@@ -436,11 +602,55 @@ export function VisualEditorV4({
         e.preventDefault();
         setSelectedNodeId(null);
       }
+      
+      // Tab/Shift+Tab - navigate between elements
+      if (e.key === 'Tab' && selectedNodeId) {
+        e.preventDefault();
+        const collectAllIds = (nodes: PageNodeV4[]): string[] => {
+          const ids: string[] = [];
+          const traverse = (n: PageNodeV4) => {
+            ids.push(n.id);
+            if (n.children) {
+              n.children.forEach(traverse);
+            }
+          };
+          nodes.forEach(traverse);
+          return ids;
+        };
+        const allIds = collectAllIds(model.nodes);
+        const currentIndex = allIds.indexOf(selectedNodeId);
+        if (currentIndex !== -1) {
+          const nextIndex = e.shiftKey 
+            ? (currentIndex - 1 + allIds.length) % allIds.length
+            : (currentIndex + 1) % allIds.length;
+          const nextId = allIds[nextIndex];
+          setSelectedNodeIds(new Set([nextId]));
+          setSelectedNodeId(nextId);
+        }
+      }
+      
+      // Ctrl+G or Cmd+G - group selected elements
+      if ((e.ctrlKey || e.metaKey) && e.key === 'g' && selectedNodeIds.size > 1) {
+        e.preventDefault();
+        toast({
+          title: "Agrupar elementos",
+          description: "Funcionalidade em desenvolvimento",
+        });
+      }
+      
+      // Ctrl+L or Cmd+L - lock/unlock selected element
+      if ((e.ctrlKey || e.metaKey) && e.key === 'l' && selectedNodeId) {
+        e.preventDefault();
+        toast({
+          title: "Bloquear elemento",
+          description: "Funcionalidade em desenvolvimento",
+        });
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, clipboard, handleDeleteNode, handleDuplicateNode, handleCopyNode, handleCutNode, handlePasteNode, handleNudge, handleUndo, handleRedo]);
+  }, [selectedNodeId, selectedNodeIds, clipboard, model.nodes, handleDeleteNode, handleDuplicateNode, handleCopyNode, handleCutNode, handlePasteNode, handleNudge, handleUndo, handleRedo, toast]);
 
   // Prevent iframes from stealing focus (fixes keyboard shortcuts freezing)
   useEffect(() => {
@@ -705,15 +915,46 @@ export function VisualEditorV4({
         </div>
       )}
 
+      {/* Components Library Panel */}
+      {showComponents && onSaveComponent && onDeleteComponent && onInsertComponent && (
+        <div className="w-72 border-r bg-background overflow-auto">
+          <ComponentLibraryV4
+            components={savedComponents}
+            selectedNode={findNodeInTree(model.nodes, selectedNodeId || '')}
+            onSaveComponent={onSaveComponent}
+            onDeleteComponent={onDeleteComponent}
+            onInsertComponent={onInsertComponent}
+          />
+        </div>
+      )}
+
       {/* Center - Canvas */}
       <div 
         id="page-builder-canvas" 
         data-canvas-container 
         tabIndex={0}
         className="flex-1 p-4 bg-gray-100 dark:bg-gray-900 overflow-auto relative focus:outline-none"
+        style={{
+          transform: `scale(${(zoomLevel || 100) / 100})`,
+          transformOrigin: 'top center'
+        }}
       >
+        {/* Grid Overlay */}
+        {showGrid && (
+          <div
+            className="absolute inset-0 pointer-events-none opacity-5"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #000 1px, transparent 1px),
+                linear-gradient(to bottom, #000 1px, transparent 1px)
+              `,
+              backgroundSize: '16px 16px'
+            }}
+          />
+        )}
+        
         <div 
-          className="mx-auto bg-white shadow-lg"
+          className="mx-auto bg-white shadow-lg relative"
           style={{
             width: viewport === 'desktop' ? '100%' : viewport === 'tablet' ? '768px' : '375px',
             minHeight: '100vh'
@@ -727,13 +968,15 @@ export function VisualEditorV4({
             onDeleteNode={handleDeleteNode}
             onUpdateNode={handleUpdateNode}
             breakpoint={viewport}
+            savedComponents={savedComponents}
           />
           
           {/* Overlays rendered outside PageModelV4Renderer for correct positioning */}
           {/* Selection Overlay with Label and Controls */}
           {selectedNodeId && (() => {
             const selectedNodeForOverlay = findNodeInTree(model.nodes, selectedNodeId);
-            console.log('🔍 Rendering SelectionOverlay:', { selectedNodeId, tag: selectedNodeForOverlay?.tag });
+            const breadcrumbPath = buildBreadcrumb(model.nodes, selectedNodeId);
+            console.log('🔍 Rendering SelectionOverlay:', { selectedNodeId, tag: selectedNodeForOverlay?.tag, breadcrumb: breadcrumbPath.length });
             return (
               <SelectionOverlay
                 nodeId={selectedNodeId}
@@ -741,6 +984,9 @@ export function VisualEditorV4({
                 isVisible={true}
                 onDuplicate={handleDuplicateNode}
                 onDelete={handleDeleteNode}
+                onSaveAsComponent={onSaveAsComponent ? handleSaveAsComponent : undefined}
+                breadcrumb={breadcrumbPath}
+                onSelectParent={handleSelectNode}
               />
             );
           })()}
@@ -783,6 +1029,7 @@ export function VisualEditorV4({
           <PropertiesPanelV4
             node={selectedNode}
             onUpdateNode={handleUpdateNode}
+            savedComponents={savedComponents}
           />
         </div>
       )}
@@ -795,6 +1042,16 @@ export function VisualEditorV4({
       findNode={(nodeId) => findNodeInTree(model.nodes, nodeId)}
       nodes={model.nodes}
       validation={dropValidation}
+    />
+
+    {/* Alignment Guides - Shows alignment lines when dragging */}
+    <AlignmentGuides
+      canvasContainerId="visual-editor-canvas"
+      draggedElementId={activeId ? (findNodeInTree(model.nodes, activeId)?.id || null) : null}
+      activeId={activeId}
+      showGrid={showGrid}
+      gridSize={16}
+      snapToGrid={snapToGrid}
     />
     
     {/* Drag Overlay - Shows visual preview of dragged element */}

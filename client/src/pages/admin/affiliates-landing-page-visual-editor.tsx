@@ -3,14 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Save, Eye, Undo2, Redo2, Layers, Settings, Plus } from "lucide-react";
+import { ArrowLeft, Save, Eye, Undo2, Redo2, Layers, Settings, Plus, History } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { PageModelV4 } from "@shared/schema";
 import { isPageModelV4 } from "@shared/pageModelAdapter";
 import { VisualEditorV4 } from "@/components/page-builder/VisualEditorV4";
-import { useHistoryV4 } from "@/components/page-builder/HistoryManagerV4";
+import { useHistoryV4, HistoryManagerV4 } from "@/components/page-builder/HistoryManagerV4";
 import { BreakpointSelector } from "@/components/page-builder/BreakpointSelector";
+import { ComponentLibraryV4 } from "@/components/page-builder/ComponentLibraryV4";
+import { PageNodeV4 } from "@shared/schema";
 
 interface AffiliateLandingPage {
   id: string;
@@ -41,10 +43,18 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   const [currentModel, setCurrentModel] = useState<PageModelV4 | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [showGrid, setShowGrid] = useState(false);
+  const [snapToGrid, setSnapToGrid] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
   const [showProperties, setShowProperties] = useState(true);
   const [showElements, setShowElements] = useState(true);
+  const [showComponents, setShowComponents] = useState(false);
   const [historyInitialized, setHistoryInitialized] = useState(false);
+  
+  // Saved components library
+  const [savedComponents, setSavedComponents] = useState<any[]>([]);
+  const [nodeToSave, setNodeToSave] = useState<PageNodeV4 | null>(null);
   
   // Ref to always have the latest model for auto-save
   const currentModelRef = useRef<PageModelV4 | null>(null);
@@ -142,6 +152,50 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     },
   });
 
+  // Component handlers
+  const handleSaveAsComponent = useCallback((node: PageNodeV4) => {
+    setNodeToSave(node);
+    setShowComponents(true);
+  }, []);
+
+  const handleSaveComponent = useCallback((component: any) => {
+    setSavedComponents(prev => [...prev, component]);
+    setNodeToSave(null);
+    toast({
+      title: 'Componente salvo',
+      description: `"${component.name}" foi adicionado à biblioteca`,
+    });
+  }, [toast]);
+
+  const handleDeleteComponent = useCallback((componentId: string) => {
+    setSavedComponents(prev => prev.filter(c => c.id !== componentId));
+  }, []);
+
+  const handleInsertComponent = useCallback((node: PageNodeV4) => {
+    if (!currentModel) return;
+    
+    // If node already has componentRef (from ComponentLibraryV4), keep it
+    // Otherwise, generate new ID (for direct insertion)
+    const nodeWithNewId: PageNodeV4 = node.componentRef ? node : {
+      ...node,
+      id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    };
+    
+    // Insert at root level
+    const newNodes = [...currentModel.nodes, nodeWithNewId];
+    handleModelChange({
+      ...currentModel,
+      nodes: newNodes,
+    });
+    
+    toast({
+      title: 'Componente inserido',
+      description: node.componentRef 
+        ? 'Instância do componente adicionada à página'
+        : 'Componente adicionado à página',
+    });
+  }, [currentModel]);
+
   const handleSave = useCallback(() => {
     if (currentModel) {
       const editIdAtSave = lastEditIdRef.current;
@@ -212,7 +266,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
   useEffect(() => {
     // Only auto-save if there are unsaved changes
-    if (!isDirty || !currentModel) return;
+    if (!isDirty) return;
 
     // Clear existing timers
     if (autoSaveTimerRef.current) {
@@ -231,7 +285,15 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
       console.log('🔄 Auto-saving changes (editId:', editIdAtDebounceStart, 'current:', lastEditIdRef.current, ')...');
       setAutoSaveStatus('saving');
       
-      savePageMutation.mutate(currentModel, {
+      // Use model from ref to avoid stale closure
+      const modelToSave = currentModelRef.current;
+      if (!modelToSave) {
+        console.warn('⚠️ No model available for auto-save');
+        setAutoSaveStatus('idle');
+        return;
+      }
+      
+      savePageMutation.mutate(modelToSave, {
         onSuccess: () => {
           // Only clear isDirty if no newer edits happened
           if (editIdAtDebounceStart === lastEditIdRef.current) {
@@ -278,7 +340,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
         clearTimeout(statusResetTimerRef.current);
       }
     };
-  }, [currentModel, isDirty, savePageMutation]);
+  }, [isDirty, savePageMutation]);
 
   const handleUndo = () => {
     const previousModel = undo();
@@ -383,6 +445,16 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
                 <Redo2 className="h-4 w-4" />
               </Button>
             </div>
+            
+            {/* History Popover */}
+            <HistoryManagerV4 
+              currentPageModel={currentModel} 
+              onRestore={(model) => {
+                setCurrentModel(model);
+                setIsDirty(true);
+              }}
+              maxHistorySize={50}
+            />
 
             {/* Auto-save Status Indicator */}
             <div className="flex items-center gap-2 ml-4 text-sm">
@@ -443,6 +515,17 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
               <Settings className="h-4 w-4 mr-2" />
               Properties
             </Button>
+            <Button
+              variant={showComponents ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setShowComponents(!showComponents)}
+              title="Components Library"
+              data-testid="button-toggle-components-header"
+              className={showComponents ? "" : "text-foreground dark:text-gray-200"}
+            >
+              <Layers className="h-4 w-4 mr-2" />
+              Components
+            </Button>
 
             <div className="w-px h-6 bg-border mx-1" />
 
@@ -450,6 +533,12 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
             <BreakpointSelector
               activeBreakpoint={viewport as 'desktop' | 'tablet' | 'mobile'}
               onChange={setViewport}
+              zoomLevel={zoomLevel}
+              onZoomChange={setZoomLevel}
+              showGrid={showGrid}
+              onGridToggle={setShowGrid}
+              snapToGrid={snapToGrid}
+              onSnapToggle={setSnapToGrid}
               data-testid="page-breakpoint-selector"
             />
             
@@ -499,6 +588,15 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
           showElements={showElements}
           showLayers={showLayers}
           showProperties={showProperties}
+          zoomLevel={zoomLevel}
+          showGrid={showGrid}
+          snapToGrid={snapToGrid}
+          onSaveAsComponent={handleSaveAsComponent}
+          showComponents={showComponents}
+          savedComponents={savedComponents}
+          onSaveComponent={handleSaveComponent}
+          onDeleteComponent={handleDeleteComponent}
+          onInsertComponent={handleInsertComponent}
         />
       </div>
     </div>

@@ -262,6 +262,7 @@ export class DashboardService {
   }
   
   private async calculateMetrics(period: string, provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string, productId?: string) {
+    console.log(`🚀 [CALCULATE METRICS] Iniciando - period: ${period}, dateFrom: ${dateFrom}, dateTo: ${dateTo}, provider: ${provider || 'all'}`);
     // Use custom date range if provided, otherwise calculate from period
     const dateRange = (dateFrom && dateTo) 
       ? { from: new Date(dateFrom), to: new Date(dateTo + 'T23:59:59.000Z') } 
@@ -300,22 +301,34 @@ export class DashboardService {
     
     // CRITICAL: Use operationId + TIMEZONE-AWARE date filtering
     // Filter by operation timezone to match Shopify's display
+    // IMPORTANT: For carrier-delivered orders, include them regardless of orderDate
+    // (they may have old orderDate but were recently updated to delivered)
     let whereConditions = [
       eq(orders.operationId, currentOperation.id),
-      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
-      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`
+      or(
+        // Shopify orders: filter by orderDate and provider
+        and(
+          sql`${orders.carrierImported} IS NOT TRUE`,
+          sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+          sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`,
+          provider ? eq(orders.provider, provider) : sql`TRUE`
+        ),
+        // Carrier-delivered orders: include ALL regardless of orderDate, but respect provider filter
+        and(
+          eq(orders.carrierImported, true),
+          eq(orders.status, 'delivered'),
+          provider ? eq(orders.provider, provider) : sql`TRUE`
+        )
+      )
     ];
-    
-    if (provider) {
-      whereConditions.push(eq(orders.provider, provider));
-    }
 
     // Note: Product filtering removed - orders table doesn't have productId column
     // Products are stored in JSONB array, filtering would require JSON queries
     
     const whereClause = and(...whereConditions);
     
-    // 1. Get order counts by status filtered by Shopify order date (for counting)
+    // 1. Get order counts by status
+    // Include carrier-delivered orders regardless of period
     const statusCounts = await db
       .select({
         status: orders.status,
@@ -326,6 +339,7 @@ export class DashboardService {
       .groupBy(orders.status);
     
     // 2. Get revenue data: total, delivered, and PAID revenue (with timezone-aware filtering)
+    // IMPORTANT: Include carrier-delivered orders regardless of orderDate
     const revenueQuery = await db
       .select({
         totalRevenue: sum(orders.total),
@@ -337,11 +351,22 @@ export class DashboardService {
       .from(orders)
       .where(and(
         eq(orders.operationId, currentOperation.id),
-        sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
-        sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`,
-        ne(orders.status, 'cancelled'), // All orders except cancelled (total Shopify revenue)
-        sql`(shopify_data->>'financial_status' IS NULL OR shopify_data->>'financial_status' != 'voided')`, // Exclude voided orders
-        provider ? eq(orders.provider, provider) : sql`TRUE`
+        or(
+          // Shopify orders: filter by orderDate
+          and(
+            sql`${orders.carrierImported} IS NOT TRUE`,
+            sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+            sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`,
+            ne(orders.status, 'cancelled'),
+            sql`(shopify_data->>'financial_status' IS NULL OR shopify_data->>'financial_status' != 'voided')`
+          ),
+          // Carrier-delivered orders: include ALL regardless of orderDate
+          and(
+            eq(orders.carrierImported, true),
+            eq(orders.status, 'delivered'),
+            provider ? eq(orders.provider, provider) : sql`TRUE`
+          )
+        )
       ));
     
     // 3. Get transportadora data WITHOUT period filter (count ALL carrier orders)
@@ -372,6 +397,182 @@ export class DashboardService {
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ))
       .groupBy(orders.carrierConfirmation);
+    
+    // Detectar se é período "total" ou "all" (quando dateFrom é muito antiga, indicando período total)
+    // Verificar se dateFrom é anterior ou igual a 2020 (período total) ou se o range é muito grande (>5 anos)
+    console.log(`🔍 [PERÍODO DETECTION] dateFrom: ${dateFrom}, dateTo: ${dateTo}`);
+    const dateFromDate = dateFrom ? new Date(dateFrom) : null;
+    const dateToDate = dateTo ? new Date(dateTo) : null;
+    console.log(`🔍 [PERÍODO DETECTION] dateFromDate: ${dateFromDate}, dateToDate: ${dateToDate}`);
+    if (dateFromDate) {
+      console.log(`🔍 [PERÍODO DETECTION] dateFromDate.getFullYear(): ${dateFromDate.getFullYear()}, < 2021: ${dateFromDate.getFullYear() < 2021}`);
+    }
+    const isTotalPeriod = dateFromDate && (
+      dateFromDate.getFullYear() < 2021 || // Inclui 2020 e anteriores
+      (dateToDate && (dateToDate.getTime() - dateFromDate.getTime()) > (5 * 365 * 24 * 60 * 60 * 1000))
+    );
+    console.log(`🔍 [PERÍODO DETECTION] isTotalPeriod: ${isTotalPeriod}`);
+    console.log(`🔍 [DEBUG INICIO] Iniciando queries de debug para diagnóstico...`);
+    
+    // DEBUG: Verificar total de pedidos Shopify sem filtros para diagnóstico
+    const debugTotalOrdersQuery = await db
+      .select({
+        count: count()
+      })
+      .from(orders)
+      .where(eq(orders.operationId, currentOperation.id));
+    
+    const debugTotalOrders = Number(debugTotalOrdersQuery[0]?.count || 0);
+    
+    // Verificar pedidos com dataSource='shopify'
+    const debugShopifyOrdersQuery = await db
+      .select({
+        count: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        eq(orders.dataSource, 'shopify')
+      ));
+    
+    const debugShopifyOrders = Number(debugShopifyOrdersQuery[0]?.count || 0);
+    
+    // Verificar pedidos com dataSource NULL ou diferente de 'shopify' (pedidos antigos)
+    const debugNonShopifyOrdersQuery = await db
+      .select({
+        count: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        sql`${orders.dataSource} IS NULL OR ${orders.dataSource} != 'shopify'`
+      ));
+    
+    const debugNonShopifyOrders = Number(debugNonShopifyOrdersQuery[0]?.count || 0);
+    
+    // Verificar pedidos com shopifyOrderId (mesmo que não tenham dataSource='shopify')
+    const debugWithShopifyIdQuery = await db
+      .select({
+        count: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        sql`${orders.shopifyOrderId} IS NOT NULL`
+      ));
+    
+    const debugWithShopifyId = Number(debugWithShopifyIdQuery[0]?.count || 0);
+    
+    const debugCarrierImportedQuery = await db
+      .select({
+        count: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        eq(orders.dataSource, 'shopify'),
+        eq(orders.carrierImported, true)
+      ));
+    
+    const debugCarrierImported = Number(debugCarrierImportedQuery[0]?.count || 0);
+    
+    console.log(`🔍 [DEBUG SHOPIFY] Total pedidos na operação: ${debugTotalOrders}`);
+    console.log(`🔍 [DEBUG SHOPIFY] Pedidos com dataSource='shopify': ${debugShopifyOrders}`);
+    console.log(`🔍 [DEBUG SHOPIFY] Pedidos sem dataSource='shopify' (antigos?): ${debugNonShopifyOrders}`);
+    console.log(`🔍 [DEBUG SHOPIFY] Pedidos com shopifyOrderId (qualquer dataSource): ${debugWithShopifyId}`);
+    console.log(`🔍 [DEBUG SHOPIFY] Pedidos Shopify com carrierImported=true: ${debugCarrierImported}`);
+    console.log(`🔍 [DEBUG FIM] Queries de debug concluídas. Iniciando cálculo de shopifyOrdersCount...`);
+    
+    // Sempre calcular pedidos Shopify corretamente (com ou sem filtro de data)
+    // CORREÇÃO: Contar TODOS os pedidos importados da Shopify, seja por dataSource='shopify' OU por shopifyOrderId
+    let shopifyOrdersCount = 0;
+    
+    if (isTotalPeriod) {
+      console.log(`📊 [PERÍODO TOTAL] Detectado período total - dateFrom: ${dateFrom}, dateTo: ${dateTo}`);
+      console.log(`📊 [PERÍODO TOTAL] Provider filtro: ${provider || 'all'}`);
+      
+      // DEBUG: Contar pedidos sem filtro de provider primeiro
+      const allShopifyOrdersNoProviderQuery = await db
+        .select({
+          count: count()
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.operationId, currentOperation.id),
+          sql`(${orders.dataSource} = 'shopify' OR ${orders.shopifyOrderId} IS NOT NULL)`
+        ));
+      
+      const allShopifyOrdersNoProvider = Number(allShopifyOrdersNoProviderQuery[0]?.count || 0);
+      console.log(`🔍 [DEBUG PERÍODO TOTAL] Pedidos Shopify sem filtro de provider: ${allShopifyOrdersNoProvider}`);
+      
+      // Período total: buscar TODOS os pedidos Shopify importados (sem filtro de data)
+      // IMPORTANTE: Se provider for 'all' ou undefined, não aplicar filtro de provider
+      let whereConditions = [
+        eq(orders.operationId, currentOperation.id),
+        sql`(${orders.dataSource} = 'shopify' OR ${orders.shopifyOrderId} IS NOT NULL)`
+      ];
+      
+      // Aplicar filtro de provider apenas se for um provider específico (não 'all')
+      if (provider && provider !== 'all') {
+        whereConditions.push(eq(orders.provider, provider));
+        console.log(`🔍 [DEBUG PERÍODO TOTAL] Aplicando filtro de provider: ${provider}`);
+      } else {
+        console.log(`🔍 [DEBUG PERÍODO TOTAL] Não aplicando filtro de provider (provider: ${provider || 'all'})`);
+      }
+      
+      const allShopifyOrdersQuery = await db
+        .select({
+          count: count()
+        })
+        .from(orders)
+        .where(and(...whereConditions));
+      
+      shopifyOrdersCount = Number(allShopifyOrdersQuery[0]?.count || 0);
+      console.log(`📊 [PERÍODO TOTAL] Total de pedidos Shopify importados (sem filtro de data): ${shopifyOrdersCount}`);
+      console.log(`🔍 [DEBUG PERÍODO TOTAL] Diferença com/sem filtro provider: ${allShopifyOrdersNoProvider - shopifyOrdersCount}`);
+    } else {
+      console.log(`📊 [PERÍODO FILTRADO] Período não é total - dateFrom: ${dateFrom}, dateTo: ${dateTo}`);
+      console.log(`📊 [PERÍODO FILTRADO] dateRange calculado: from=${dateRange.from.toISOString()}, to=${dateRange.to.toISOString()}`);
+      console.log(`📊 [PERÍODO FILTRADO] Timezone da operação: ${operationTimezone}`);
+      
+      // Período filtrado: buscar pedidos Shopify filtrados por data
+      // Usar dateFrom/dateTo diretamente se fornecidos, respeitando timezone
+      let dateFromFilter: string;
+      let dateToFilter: string;
+      
+      if (dateFrom && dateTo) {
+        // Se dateFrom e dateTo foram fornecidos, usar diretamente
+        dateFromFilter = dateFrom;
+        dateToFilter = dateTo;
+      } else {
+        // Usar dateRange calculado, convertendo para formato de data (YYYY-MM-DD)
+        dateFromFilter = dateRange.from.toISOString().split('T')[0];
+        dateToFilter = dateRange.to.toISOString().split('T')[0];
+      }
+      
+      console.log(`📊 [PERÍODO FILTRADO] Filtros de data: dateFromFilter=${dateFromFilter}, dateToFilter=${dateToFilter}`);
+      
+      // Período filtrado: buscar pedidos Shopify filtrados por data
+      // Usar shopifyOrderId IS NOT NULL para incluir pedidos antigos que podem não ter dataSource='shopify'
+      // IMPORTANTE: Se orderDate for NULL, não incluir no filtro de data (pode ser pedido antigo ou sem data)
+      const shopifyOrdersQuery = await db
+        .select({
+          count: count()
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.operationId, currentOperation.id),
+          sql`(${orders.dataSource} = 'shopify' OR ${orders.shopifyOrderId} IS NOT NULL)`, // Incluir pedidos com dataSource='shopify' OU com shopifyOrderId
+          sql`${orders.orderDate} IS NOT NULL`, // Garantir que orderDate não é NULL
+          sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateFromFilter}::date`,
+          sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateToFilter}::date`,
+          provider ? eq(orders.provider, provider) : sql`TRUE`
+        ));
+      
+      shopifyOrdersCount = Number(shopifyOrdersQuery[0]?.count || 0);
+      console.log(`📊 [PERÍODO FILTRADO] Total de pedidos Shopify importados (filtrado por data): ${shopifyOrdersCount}`);
+      console.log(`📊 [PERÍODO FILTRADO] Filtros aplicados: dateFromFilter=${dateFromFilter}, dateToFilter=${dateToFilter}, timezone=${operationTimezone}, provider=${provider || 'all'}`);
+    }
     
     // Calculate metrics from order counts (filtered by period)
     let totalOrders = 0;
@@ -448,6 +649,7 @@ export class DashboardService {
     const totalCombinedCostsBRL = productCosts.totalCombinedCostsBRL; // BRL value (product + shipping)
     
     console.log(`🔍 Debug Shopify (all orders): Total: ${totalOrders}, Pending: ${pendingOrders}, Delivered: ${deliveredOrders}, Shipped: ${shippedOrders}, Confirmed status: ${confirmedOrders}`);
+    console.log(`🔍 [SHOPIFY ORDERS COUNT] shopifyOrdersCount calculado: ${shopifyOrdersCount}, isTotalPeriod: ${isTotalPeriod}`);
     
     // Process carrier confirmation stats (original API field) - for EXACT carrier dashboard match
     let totalCarrierLeads = 0;
@@ -600,10 +802,12 @@ export class DashboardService {
     console.log(`🔍 Customer Analysis Debug - Unique: ${uniqueCustomers}, Avg Delivery: ${avgDeliveryTimeDays} days`);
     console.log(`🔍 CPA Debug - Marketing BRL: ${marketingCostsBRL}, Delivered: ${deliveredOrders}, CPA: ${cpaBRL}`);
     
+    console.log(`📊 [RETURN] shopifyOrders será retornado: ${shopifyOrdersCount} (isTotalPeriod: ${isTotalPeriod}, totalOrders: ${totalOrders})`);
+    
     return {
       exchangeRates, // Include current exchange rates
       totalOrders: totalCarrierLeads, // 🆕 Total leads from carrier API (original confirmation field)
-      shopifyOrders: totalOrders, // Shopify orders filtered by period
+      shopifyOrders: shopifyOrdersCount, // Shopify orders: sempre correto, com ou sem filtro de data
       previousPeriodOrders, // Previous period orders for growth comparison
       deliveredOrders, // Shopify delivered orders filtered by period  
       cancelledOrders: cancelledCarrierLeads, // 🆕 Cancelled from carrier API (original confirmation field)

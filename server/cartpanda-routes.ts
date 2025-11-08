@@ -182,6 +182,21 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
         .returning();
     }
 
+    // Configurar webhook automaticamente após criar/atualizar integração
+    try {
+      const { cartpandaWebhookService } = await import('./services/cartpanda-webhook-service');
+      const webhookResult = await cartpandaWebhookService.configureWebhook(operationId, integration.storeSlug, integration.bearerToken);
+      if (webhookResult.success && webhookResult.webhook) {
+        console.log(`✅ Webhook CartPanda configurado automaticamente para operação ${operationId}`);
+      } else {
+        console.log(`ℹ️ Webhook CartPanda não configurado (sem URL pública) - usando polling inteligente como fallback`);
+      }
+    } catch (webhookError) {
+      console.error('⚠️ Erro ao configurar webhook CartPanda (continuando mesmo assim):', webhookError);
+      // Não falhar a criação da integração se webhook falhar
+      // O polling inteligente funcionará como fallback automático
+    }
+
     // Não retornar o token por segurança
     const { bearerToken: _, ...safeIntegration } = integration;
 

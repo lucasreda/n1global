@@ -76,7 +76,7 @@ router.post('/api/upload', authenticateToken, upload.single('file'), async (req:
       return res.status(400).json({ error: 'No file provided' });
     }
     
-    // Initialize Replit Object Storage client
+    // Initialize Replit Object Storage client (lazy)
     const client = new Client();
     
     // Generate a unique filename  
@@ -120,7 +120,7 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       return res.status(400).json({ error: 'No files provided' });
     }
     
-    // Initialize Replit Object Storage client
+    // Initialize Replit Object Storage client (lazy)
     const client = new Client();
     const urls: { desktop?: string; mobile?: string } = {};
     

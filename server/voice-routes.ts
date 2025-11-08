@@ -204,9 +204,13 @@ function validatePublicUrl(): { isValid: boolean; domain?: string; protocol?: st
   return { isValid: true, domain, protocol };
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+// Lazy OpenAI initialization
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+};
 
 // Store active WebSocket connections
 const activeConnections = new Map<string, {

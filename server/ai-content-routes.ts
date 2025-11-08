@@ -6,10 +6,13 @@ import OpenAI from 'openai';
 
 const router = Router();
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy OpenAI initialization
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+};
 
 // Generate section content
 router.post('/generate-section', authenticateToken, operationAccess, async (req, res) => {
@@ -40,6 +43,7 @@ router.post('/generate-section', authenticateToken, operationAccess, async (req,
         return res.status(400).json({ success: false, error: 'Tipo de solicitação inválido' });
     }
 
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -103,6 +107,7 @@ Formate a resposta como JSON:
 }
 `;
 
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -181,6 +186,7 @@ Formate como JSON:
 }
 `;
 
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -247,6 +253,7 @@ Formate como JSON:
 }
 `;
 
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [

@@ -28,7 +28,7 @@ function mapProviderStatus(status: string): string {
     'returned': 'returned',
     // European Fulfillment specific
     'in delivery': 'shipped',
-    'unpacked': 'delivered', // Cliente desembalou = entregue
+    'unpacked': 'shipped', // Cliente desembalou = ainda não confirmado como entregue, considera como enviado
     'redeployment': 'processing',
     'in transit': 'shipped', // Em trânsito = enviado
     'incident': 'pending' // Incidente mantém pendente

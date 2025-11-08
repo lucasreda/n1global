@@ -27,12 +27,17 @@ export interface ContentResult {
 }
 
 export class ContentGenerationEngine {
-  private openai: OpenAI;
+  private openaiApiKey: string | undefined;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    this.openaiApiKey = process.env.OPENAI_API_KEY;
+  }
+
+  private getOpenAI(): OpenAI {
+    if (!this.openaiApiKey) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+    return new OpenAI({ apiKey: this.openaiApiKey });
   }
 
   async generateContent(enrichedBrief: any, template: any): Promise<ContentResult> {
@@ -95,7 +100,8 @@ export class ContentGenerationEngine {
   private async generateSectionContent(sectionType: string, enrichedBrief: any, template: any) {
     const prompt = this.buildSectionPrompt(sectionType, enrichedBrief);
     
-    const completion = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -280,7 +286,8 @@ Crie SEO otimizado para conversão. Retorne JSON:
 }
     `;
 
-    const completion = await this.openai.chat.completions.create({
+      const openai = this.getOpenAI();
+      const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {

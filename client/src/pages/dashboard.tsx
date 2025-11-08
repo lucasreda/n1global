@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
-import { SyncStatus } from "@/components/dashboard/sync-status";
 import { OnboardingCard } from "@/components/dashboard/onboarding-card";
 import { WelcomeMessage } from "@/components/dashboard/welcome-message";
 import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
+import { SyncConfirmationDialog } from "@/components/sync/SyncConfirmationDialog";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -31,8 +31,30 @@ export default function Dashboard() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
   const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
   const [currentSyncState, setCurrentSyncState] = useState(false);
+  
+  // Verificar status da sync quando necessário
+  const handleSyncButtonClick = async () => {
+    try {
+      // Verificar se há uma sync ativa
+      const response = await authenticatedApiRequest("GET", "/api/sync/complete-status");
+      const status = await response.json();
+      
+      // Se há sync ativa, abrir diretamente o modal de progresso
+      if (status.isRunning) {
+        setIsSyncDialogOpen(true);
+      } else {
+        // Se não há sync ativa, mostrar modal de confirmação
+        setIsSyncConfirmationOpen(true);
+      }
+    } catch (error) {
+      console.error("Erro ao verificar status da sync:", error);
+      // Em caso de erro, mostrar modal de confirmação normalmente
+      setIsSyncConfirmationOpen(true);
+    }
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
@@ -491,7 +513,7 @@ export default function Dashboard() {
             <TooltipTrigger asChild>
               <div>
                 <Button
-                  onClick={() => setIsSyncDialogOpen(true)}
+                  onClick={handleSyncButtonClick}
                   disabled={!integrationsStatus?.hasPlatform}
                   variant="outline"
                   size="sm"
@@ -533,8 +555,16 @@ export default function Dashboard() {
         isLoading={revenueLoading}
         currency={operationCurrency}
       />
-      
-      <SyncStatus />
+
+      {/* Sync Confirmation Dialog */}
+      <SyncConfirmationDialog
+        isOpen={isSyncConfirmationOpen}
+        onClose={() => setIsSyncConfirmationOpen(false)}
+        onConfirm={() => {
+          setIsSyncDialogOpen(true);
+        }}
+        operationId={selectedOperation}
+      />
 
       {/* Complete Sync Dialog */}
       <CompleteSyncDialog 

@@ -29,6 +29,8 @@ integrationsRouter.get('/operational-app', async (req: AuthRequest, res: Respons
         id: integrationConfigs.id,
         webhookUrl: integrationConfigs.webhookUrl,
         operationId: integrationConfigs.operationId,
+        appLoginUrl: integrationConfigs.appLoginUrl,
+        welcomeEmailEnabled: integrationConfigs.welcomeEmailEnabled,
         isActive: integrationConfigs.isActive,
         createdAt: integrationConfigs.createdAt,
         updatedAt: integrationConfigs.updatedAt,
@@ -70,7 +72,7 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
   
   try {
     const userId = req.user!.id;
-    const { webhookUrl, webhookSecret, isActive, operationId } = req.body;
+    const { webhookUrl, webhookSecret, appLoginUrl, welcomeEmailEnabled, isActive, operationId } = req.body;
 
     // Validate inputs
     if (!webhookUrl) {
@@ -86,6 +88,15 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
       new URL(webhookUrl);
     } catch {
       return res.status(400).json({ message: 'URL inválida' });
+    }
+
+    // Validate appLoginUrl if provided
+    if (appLoginUrl) {
+      try {
+        new URL(appLoginUrl);
+      } catch {
+        return res.status(400).json({ message: 'URL do aplicativo inválida' });
+      }
     }
 
     // In production, ensure HTTPS
@@ -116,6 +127,8 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
         .set({
           webhookUrl,
           webhookSecret: secret,
+          appLoginUrl,
+          welcomeEmailEnabled: welcomeEmailEnabled !== undefined ? welcomeEmailEnabled : existing.welcomeEmailEnabled,
           isActive: isActive ?? existing.isActive,
           updatedAt: new Date(),
         })
@@ -124,6 +137,8 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
           id: integrationConfigs.id,
           webhookUrl: integrationConfigs.webhookUrl,
           operationId: integrationConfigs.operationId,
+          appLoginUrl: integrationConfigs.appLoginUrl,
+          welcomeEmailEnabled: integrationConfigs.welcomeEmailEnabled,
           isActive: integrationConfigs.isActive,
           createdAt: integrationConfigs.createdAt,
           updatedAt: integrationConfigs.updatedAt,
@@ -143,12 +158,16 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
           integrationType: 'operational_app',
           webhookUrl,
           webhookSecret: secret,
+          appLoginUrl,
+          welcomeEmailEnabled: welcomeEmailEnabled !== undefined ? welcomeEmailEnabled : true,
           isActive: isActive ?? false,
         })
         .returning({
           id: integrationConfigs.id,
           webhookUrl: integrationConfigs.webhookUrl,
           operationId: integrationConfigs.operationId,
+          appLoginUrl: integrationConfigs.appLoginUrl,
+          welcomeEmailEnabled: integrationConfigs.welcomeEmailEnabled,
           isActive: integrationConfigs.isActive,
           createdAt: integrationConfigs.createdAt,
           updatedAt: integrationConfigs.updatedAt,

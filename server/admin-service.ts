@@ -165,6 +165,7 @@ export class AdminService {
           ownerId: operations.ownerId,
           country: operations.country,
           currency: operations.currency,
+          language: operations.language,
           operationType: operations.operationType,
           status: operations.status,
           shopifyOrderPrefix: operations.shopifyOrderPrefix,

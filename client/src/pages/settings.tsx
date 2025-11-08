@@ -1,5 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Briefcase, PlayCircle, Clock, Hash } from "lucide-react";
+import { Briefcase, PlayCircle, Clock, Hash, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,23 @@ const CURRENCIES = [
   { value: "AED", label: "Dirham dos Emirados (د.إ)", symbol: "د.إ" },
 ];
 
+const LANGUAGES = [
+  { value: "es", label: "Español" },
+  { value: "pt", label: "Português" },
+  { value: "en", label: "English" },
+  { value: "it", label: "Italiano" },
+  { value: "fr", label: "Français" },
+  { value: "de", label: "Deutsch" },
+  { value: "pl", label: "Polski" },
+  { value: "ro", label: "Română" },
+  { value: "cs", label: "Čeština" },
+  { value: "hu", label: "Magyar" },
+  { value: "bg", label: "Български" },
+  { value: "hr", label: "Hrvatski" },
+  { value: "sk", label: "Slovenčina" },
+  { value: "sl", label: "Slovenščina" },
+];
+
 export default function Settings() {
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
   const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
@@ -54,6 +71,8 @@ export default function Settings() {
   const [originalTimezone, setOriginalTimezone] = useState<string>("Europe/Madrid");
   const [currency, setCurrency] = useState<string>("EUR");
   const [originalCurrency, setOriginalCurrency] = useState<string>("EUR");
+  const [language, setLanguage] = useState<string>("es");
+  const [originalLanguage, setOriginalLanguage] = useState<string>("es");
   const [shopifyPrefix, setShopifyPrefix] = useState<string>("");
   const [originalShopifyPrefix, setOriginalShopifyPrefix] = useState<string>("");
   const [hasChanges, setHasChanges] = useState(false);
@@ -72,13 +91,13 @@ export default function Settings() {
     navigate('/');
   };
 
-  // Fetch full operations data to get operationType, timezone, currency, and shopifyOrderPrefix
-  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string; timezone?: string; currency?: string; shopifyOrderPrefix?: string }>>({
+  // Fetch full operations data to get operationType, timezone, currency, language, and shopifyOrderPrefix
+  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string; timezone?: string; currency?: string; language?: string; shopifyOrderPrefix?: string }>>({
     queryKey: ['/api/operations'],
     enabled: !!selectedOperation,
   });
 
-  // Set initial operationType, timezone, currency, and shopifyPrefix from current operation
+  // Set initial operationType, timezone, currency, language, and shopifyPrefix from current operation
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
@@ -95,6 +114,10 @@ export default function Settings() {
         setCurrency(operation.currency);
         setOriginalCurrency(operation.currency);
       }
+      if (operation?.language) {
+        setLanguage(operation.language);
+        setOriginalLanguage(operation.language);
+      }
       if (operation?.shopifyOrderPrefix !== undefined) {
         console.log('🏷️ Setting prefix from backend:', operation.shopifyOrderPrefix);
         setShopifyPrefix(operation.shopifyOrderPrefix || "");
@@ -106,17 +129,22 @@ export default function Settings() {
 
   const handleOperationTypeChange = (value: string) => {
     setOperationType(value);
-    setHasChanges(value !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || shopifyPrefix !== originalShopifyPrefix);
+    setHasChanges(value !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || language !== originalLanguage || shopifyPrefix !== originalShopifyPrefix);
   };
 
   const handleTimezoneChange = (value: string) => {
     setTimezone(value);
-    setHasChanges(operationType !== originalOperationType || value !== originalTimezone || currency !== originalCurrency || shopifyPrefix !== originalShopifyPrefix);
+    setHasChanges(operationType !== originalOperationType || value !== originalTimezone || currency !== originalCurrency || language !== originalLanguage || shopifyPrefix !== originalShopifyPrefix);
   };
 
   const handleCurrencyChange = (value: string) => {
     setCurrency(value);
-    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || value !== originalCurrency || shopifyPrefix !== originalShopifyPrefix);
+    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || value !== originalCurrency || language !== originalLanguage || shopifyPrefix !== originalShopifyPrefix);
+  };
+
+  const handleLanguageChange = (value: string) => {
+    setLanguage(value);
+    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || value !== originalLanguage || shopifyPrefix !== originalShopifyPrefix);
   };
 
   const handleShopifyPrefixChange = (value: string) => {
@@ -133,11 +161,11 @@ export default function Settings() {
     }
     
     setShopifyPrefix(finalValue);
-    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || finalValue !== originalShopifyPrefix);
+    setHasChanges(operationType !== originalOperationType || timezone !== originalTimezone || currency !== originalCurrency || language !== originalLanguage || finalValue !== originalShopifyPrefix);
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'shopifyPrefix:', shopifyPrefix);
+    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'language:', language, 'shopifyPrefix:', shopifyPrefix);
     
     if (!selectedOperation) {
       toast({
@@ -150,15 +178,16 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency, shopifyOrderPrefix: shopifyPrefix });
+      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
       
-      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, shopifyOrderPrefix: shopifyPrefix });
+      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
       
       console.log('✅ API response received:', response);
 
       setOriginalOperationType(operationType);
       setOriginalTimezone(timezone);
       setOriginalCurrency(currency);
+      setOriginalLanguage(language);
       setOriginalShopifyPrefix(shopifyPrefix);
       setHasChanges(false);
       
@@ -270,6 +299,31 @@ export default function Settings() {
               </Select>
               <p className="text-gray-400 text-xs mt-2">
                 Moeda em que os valores serão exibidos no dashboard
+              </p>
+            </div>
+
+            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+              <label className="text-gray-300 text-sm mb-3 block flex items-center">
+                <Globe className="mr-2" size={16} />
+                Idioma da Operação
+              </label>
+              <Select value={language} onValueChange={handleLanguageChange}>
+                <SelectTrigger 
+                  className="bg-black/20 border-white/10 text-white hover:bg-black/30"
+                  data-testid="select-language"
+                >
+                  <SelectValue placeholder="Selecione o idioma" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 border-white/10">
+                  {LANGUAGES.map((lang) => (
+                    <SelectItem key={lang.value} value={lang.value} data-testid={`option-language-${lang.value}`}>
+                      {lang.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-gray-400 text-xs mt-2">
+                Idioma usado nos emails de boas-vindas e comunicações automáticas
               </p>
             </div>
 

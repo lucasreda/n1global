@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -41,6 +41,8 @@ import { EnterpriseAIPageOrchestrator } from "./ai/EnterpriseAIPageOrchestrator.
 import { FHBSyncService } from "./services/fhb-sync-service";
 import { EuropeanFulfillmentSyncService } from "./services/european-fulfillment-sync-service";
 import EventEmitter from "events";
+import { shopifyWebhookService } from "./services/shopify-webhook-service";
+import { cartpandaWebhookService } from "./services/cartpanda-webhook-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -104,6 +106,80 @@ const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // IMPORTANT: Register user profile routes FIRST to avoid Vite interception
+  // Get user profile (same as GET /api/user but with explicit route)
+  app.get("/api/user/profile", authenticateToken, async (req: AuthRequest, res: Response) => {
+    console.log("🔵🔵🔵 ROTA /api/user/profile FOI CHAMADA! 🔵🔵🔵");
+    console.log("🔵 Request URL:", req.originalUrl);
+    console.log("🔵 Request path:", req.path);
+    console.log("🔵 Request method:", req.method);
+    console.log("🔵 User ID:", req.user?.id);
+    try {
+      console.log("📋 Buscando perfil para userId:", req.user?.id);
+      
+      if (!req.user || !req.user.id) {
+        console.error("❌ Usuário não autenticado");
+        return res.status(401).json({ message: "Usuário não autenticado" });
+      }
+      
+      // Get user directly from database to ensure we have all fields
+      // Use select with explicit field mapping to handle potential missing columns gracefully
+      const userResult = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          phone: users.phone,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(users)
+        .where(eq(users.id, req.user.id))
+        .limit(1);
+      
+      if (!userResult || userResult.length === 0) {
+        console.error("❌ Usuário não encontrado:", req.user.id);
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      const user = userResult[0];
+      console.log("✅ Usuário encontrado:", { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        phone: user.phone || null, 
+        avatarUrl: user.avatarUrl || null 
+      });
+      
+      const profileData = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone || null,
+        avatarUrl: user.avatarUrl || null,
+      };
+      
+      console.log("📤 Enviando dados do perfil:", profileData);
+      res.json(profileData);
+    } catch (error: any) {
+      console.error("❌ Get user profile error:", error);
+      console.error("❌ Error stack:", error?.stack);
+      
+      // Check if it's a database column error
+      if (error?.message?.includes("column") || error?.message?.includes("does not exist")) {
+        console.error("❌ Erro: Coluna não existe no banco. Verifique se a migration foi executada.");
+        return res.status(500).json({ 
+          message: "Erro de configuração do banco de dados. Verifique se as migrations foram executadas.",
+          error: error.message
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Erro ao buscar perfil do usuário",
+        error: error?.message || "Erro desconhecido"
+      });
+    }
+  });
+
   // Initialize Creative Intelligence services
   const proprietaryBenchmarkingService = new ProprietaryBenchmarkingService();
   const performancePredictionService = new PerformancePredictionService();
@@ -663,6 +739,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard last update endpoint - para polling do frontend
+  app.get("/api/dashboard/last-update", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      if (!operationId || typeof operationId !== 'string') {
+        return res.status(400).json({ message: 'operationId é obrigatório' });
+      }
+
+      const { getLastUpdate } = await import('./services/dashboard-cache-service');
+      const lastUpdate = await getLastUpdate(operationId);
+
+      res.json({
+        operationId,
+        lastUpdate: lastUpdate?.toISOString() || null
+      });
+    } catch (error) {
+      console.error('Erro ao obter última atualização do dashboard:', error);
+      res.status(500).json({ message: 'Erro ao buscar última atualização' });
+    }
+  });
+
   app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const period = (req.query.period as string) || '30d';
@@ -1215,8 +1313,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔄 PATCH /api/operations/${operationId}/settings - User: ${req.user?.email}, Body:`, req.body);
       
       // Validate request body
-      const { operationType, timezone, currency, shopifyOrderPrefix } = updateOperationSettingsSchema.parse(req.body);
-      console.log('✅ Validation passed, operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'shopifyOrderPrefix:', shopifyOrderPrefix);
+      const { operationType, timezone, currency, language, shopifyOrderPrefix } = updateOperationSettingsSchema.parse(req.body);
+      console.log('✅ Validation passed, operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'language:', language, 'shopifyOrderPrefix:', shopifyOrderPrefix);
       
       // Verify user has access to this operation
       const userOperations = await storage.getUserOperations(req.user.id);
@@ -1231,6 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (operationType !== undefined) updates.operationType = operationType;
       if (timezone !== undefined) updates.timezone = timezone;
       if (currency !== undefined) updates.currency = currency;
+      if (language !== undefined) updates.language = language;
       if (shopifyOrderPrefix !== undefined) updates.shopifyOrderPrefix = shopifyOrderPrefix;
 
       // Update operation settings
@@ -1562,6 +1661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: user.id,
         email: user.email,
         name: user.name,
+        phone: user.phone || null,
+        avatarUrl: user.avatarUrl || null,
         role: user.role,
         tourCompleted: user.tourCompleted || false,
         onboardingCompleted: user.onboardingCompleted,
@@ -1618,6 +1719,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Change password error:", error);
       res.status(500).json({ message: "Erro ao alterar senha" });
+    }
+  });
+
+  // Update user profile
+  app.patch("/api/user/profile", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { name, email, phone } = req.body;
+
+      // Validate input
+      if (name && typeof name === 'string' && name.trim().length < 2) {
+        return res.status(400).json({ message: "Nome deve ter pelo menos 2 caracteres" });
+      }
+
+      if (email) {
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          return res.status(400).json({ message: "Email inválido" });
+        }
+
+        // Check if email is already taken by another user
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser && existingUser.id !== req.user.id) {
+          return res.status(400).json({ message: "Este email já está em uso" });
+        }
+      }
+
+      // Validate phone format if provided
+      if (phone && phone.trim() !== '') {
+        // Basic phone validation (allows international format)
+        const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+        if (!phoneRegex.test(phone)) {
+          return res.status(400).json({ message: "Formato de telefone inválido" });
+        }
+      }
+
+      // Build update object
+      const updates: any = {};
+      if (name !== undefined) updates.name = name.trim();
+      if (email !== undefined) updates.email = email.trim().toLowerCase();
+      if (phone !== undefined) updates.phone = phone.trim() || null;
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "Nenhum campo para atualizar" });
+      }
+
+      // Update user
+      const updatedUser = await storage.updateUser(req.user.id, updates);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      res.json({
+        message: "Perfil atualizado com sucesso",
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          phone: updatedUser.phone || null,
+          avatarUrl: updatedUser.avatarUrl || null,
+        }
+      });
+    } catch (error) {
+      console.error("Update user profile error:", error);
+      res.status(500).json({ message: "Erro ao atualizar perfil" });
+    }
+  });
+
+  // Configure multer for avatar upload
+  const avatarUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit for avatars
+    },
+    fileFilter: (req, file, cb) => {
+      // Only allow image files
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Apenas imagens são permitidas (JPG, PNG, WEBP)'));
+      }
+    },
+  });
+
+  // Upload user avatar
+  app.post("/api/user/avatar", authenticateToken, avatarUpload.single('file'), async (req: AuthRequest, res: Response) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: 'Nenhum arquivo fornecido' });
+      }
+
+      // Initialize Replit Object Storage client
+      const { Client } = await import('@replit/object-storage');
+      const { nanoid } = await import('nanoid');
+      const client = new Client();
+
+      // Generate unique filename
+      const fileExt = file.originalname.split('.').pop() || 'png';
+      const fileName = `avatar-${req.user.id}-${nanoid()}.${fileExt}`;
+      const objectPath = `public/avatars/${fileName}`;
+
+      // Upload to Object Storage
+      await client.uploadFromBytes(objectPath, file.buffer);
+
+      // Construct the public URL
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
+        `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+        'http://localhost:5000';
+      const publicUrl = `${baseUrl}/api/storage/public/avatars/${fileName}`;
+
+      // Update user avatar URL in database
+      const updatedUser = await storage.updateUser(req.user.id, { avatarUrl: publicUrl });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      console.log(`✅ Avatar uploaded successfully - URL: ${publicUrl}`);
+
+      res.json({
+        message: "Foto de perfil atualizada com sucesso",
+        avatarUrl: publicUrl
+      });
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      res.status(500).json({ 
+        message: 'Erro ao fazer upload da foto de perfil',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
+  });
+
+  // Remove user avatar
+  app.delete("/api/user/avatar", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Get current user to check if has avatar
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      // Remove avatar URL from database (set to null)
+      const updatedUser = await storage.updateUser(req.user.id, { avatarUrl: null });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      res.json({
+        message: "Foto de perfil removida com sucesso"
+      });
+    } catch (error) {
+      console.error("Remove avatar error:", error);
+      res.status(500).json({ message: "Erro ao remover foto de perfil" });
     }
   });
 
@@ -1805,7 +2063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create warehouse account
   app.post("/api/user/warehouse-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { providerKey, displayName, credentials, userId } = req.body;
+      const { providerKey, displayName, credentials, userId, operationIds } = req.body;
       
       if (!providerKey?.trim()) {
         return res.status(400).json({ message: "Provider key é obrigatório" });
@@ -1929,6 +2187,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         credentials,
         status: 'pending'
       });
+      
+      // Link account to operations if operationIds provided
+      if (operationIds && Array.isArray(operationIds) && operationIds.length > 0) {
+        console.log(`🔗 Linking warehouse account ${account.id} to ${operationIds.length} operation(s)`);
+        
+        // Verify operations belong to target user
+        const userOperations = await storage.getUserOperations(targetUserId);
+        const validOperationIds = operationIds.filter(opId => 
+          userOperations.some(op => op.id === opId)
+        );
+        
+        if (validOperationIds.length > 0) {
+          for (const operationId of validOperationIds) {
+            try {
+              await storage.linkAccountToOperation({
+                accountId: account.id,
+                operationId,
+                isDefault: validOperationIds.length === 1 // Set as default if only one operation
+              });
+              console.log(`✅ Linked account ${account.id} to operation ${operationId}`);
+            } catch (linkError: any) {
+              console.error(`⚠️ Error linking account to operation ${operationId}:`, linkError.message);
+              // Continue linking other operations even if one fails
+            }
+          }
+        }
+        
+        // Update account status to 'active' after linking operations
+        await storage.updateUserWarehouseAccount(account.id, { status: 'active' });
+        console.log(`✅ Account ${account.id} status updated to 'active'`);
+      }
       
       // Trigger automatic initial sync (3 months) in background
       // Don't await - let it run asynchronously
@@ -2603,12 +2892,240 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get sync info (first sync check, auto sync status, last updates)
+  app.get('/api/sync/sync-info', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      const userId = req.user.id;
+
+      // Verificar se é a primeira sincronização (se há pedidos sincronizados)
+      let isFirstSync = true;
+      let lastCompleteSync: Date | null = null;
+
+      if (operationId) {
+        // Verificar se há pedidos para esta operação (verificar createdAt para saber se já houve sync)
+        const ordersCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(orders)
+          .where(eq(orders.operationId, operationId as string));
+
+        isFirstSync = (ordersCount[0]?.count || 0) === 0;
+
+        // Buscar última sync completa (última vez que pedido foi criado/atualizado)
+        // Usar createdAt como referência da última sync completa
+        const lastSyncedOrder = await db
+          .select({ createdAt: orders.createdAt })
+          .from(orders)
+          .where(eq(orders.operationId, operationId as string))
+          .orderBy(desc(orders.createdAt))
+          .limit(1);
+
+        if (lastSyncedOrder.length > 0 && lastSyncedOrder[0].createdAt) {
+          lastCompleteSync = new Date(lastSyncedOrder[0].createdAt);
+        }
+      } else {
+        // Sem operationId, verificar todos os pedidos do usuário
+        const userOperations = await db
+          .select({ id: operations.id })
+          .from(userOperationAccess)
+          .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
+          .where(eq(userOperationAccess.userId, userId));
+
+        const operationIds = userOperations.map(op => op.id);
+
+        if (operationIds.length > 0) {
+          const ordersCount = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(orders)
+            .where(inArray(orders.operationId, operationIds));
+
+          isFirstSync = (ordersCount[0]?.count || 0) === 0;
+
+          // Buscar última sync completa
+          const lastSyncedOrder = await db
+            .select({ createdAt: orders.createdAt })
+            .from(orders)
+            .where(inArray(orders.operationId, operationIds))
+            .orderBy(desc(orders.createdAt))
+            .limit(1);
+
+          if (lastSyncedOrder.length > 0 && lastSyncedOrder[0].createdAt) {
+            lastCompleteSync = new Date(lastSyncedOrder[0].createdAt);
+          }
+        }
+      }
+
+      // Verificar status da sincronização automática (webhooks/polling)
+      let hasWebhooks = false;
+      let hasPolling = true; // Polling sempre está ativo (worker)
+
+      if (operationId) {
+        // Verificar se há integração Shopify com webhooks configurados
+        const shopifyIntegration = await db
+          .select()
+          .from(shopifyIntegrations)
+          .where(eq(shopifyIntegrations.operationId, operationId as string))
+          .limit(1);
+
+        if (shopifyIntegration.length > 0) {
+          // Verificar se webhooks estão configurados
+          // Por enquanto, assumir que se há integração, webhooks podem estar ativos
+          hasWebhooks = true; // Será verificado através do webhook service se necessário
+        }
+      } else {
+        // Verificar todas as integrações do usuário
+        const userOperations = await db
+          .select({ id: operations.id })
+          .from(userOperationAccess)
+          .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
+          .where(eq(userOperationAccess.userId, userId));
+
+        const operationIds = userOperations.map(op => op.id);
+
+        if (operationIds.length > 0) {
+          const shopifyIntegrationsList = await db
+            .select()
+            .from(shopifyIntegrations)
+            .where(inArray(shopifyIntegrations.operationId, operationIds));
+
+          hasWebhooks = shopifyIntegrationsList.length > 0;
+        }
+      }
+
+      // Polling sempre está ativo através do worker
+      const autoSyncActive = hasWebhooks || hasPolling;
+
+      // Última atualização automática (buscar do staging-sync-service ou workers)
+      // Por enquanto, vamos usar o lastCompleteSync como referência
+      // Em produção, isso deveria vir de uma tabela de logs ou tracking
+      const lastAutoSync = lastCompleteSync; // Pode ser ajustado para buscar de workers
+
+      res.json({
+        isFirstSync,
+        autoSyncActive,
+        lastAutoSync: lastAutoSync ? lastAutoSync.toISOString() : null,
+        lastCompleteSync: lastCompleteSync ? lastCompleteSync.toISOString() : null,
+        hasWebhooks,
+        hasPolling,
+      });
+    } catch (error) {
+      console.error('Error getting sync info:', error);
+      res.status(500).json({ 
+        error: 'Failed to get sync info', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
   // Rota para sincronização completa progressiva
   // MIGRATED TO STAGING TABLES: Sincroniza Shopify primeiro, depois staging tables
   app.post('/api/sync/complete-progressive', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;
-      console.log(`🔄 [COMPLETE SYNC] Iniciando sincronização completa para user ${req.user.id}, operation ${operationId || 'all'}`);
+      const userId = req.user.id;
+      console.log(`🔄 [COMPLETE SYNC] Iniciando sincronização completa para user ${userId}, operation ${operationId || 'all'}`);
+
+      // Importar funções de progresso
+        const { setCurrentStep, updateShopifyProgress, getUserSyncProgress, resetSyncProgress } = await import("./services/staging-sync-service");
+      const { ShopifySyncService } = await import("./shopify-sync-service");
+
+      // CRÍTICO: Resetar progresso ANTES de fazer qualquer coisa
+      // Limpar progresso do Shopify também
+      if (operationId && typeof operationId === 'string') {
+        ShopifySyncService.resetOperationProgress(operationId);
+      }
+      resetSyncProgress(userId);
+      
+      // Pequeno delay para garantir que o reset foi processado
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Verificar que resetou corretamente
+      let progress = getUserSyncProgress(userId);
+      console.log(`🔍 [RESET VERIFICATION] Progresso após reset:`, {
+        isRunning: progress.isRunning,
+        phase: progress.phase,
+        overallProgress: progress.overallProgress,
+        shopifyProcessed: progress.shopifyProgress.processedOrders,
+        shopifyTotal: progress.shopifyProgress.totalOrders,
+        shopifyPercentage: progress.shopifyProgress.percentage,
+        currentStep: progress.currentStep
+      });
+      
+      if (progress.phase === 'completed' || progress.isRunning || progress.overallProgress > 0 || progress.shopifyProgress.processedOrders > 0 || progress.shopifyProgress.totalOrders > 0) {
+        console.warn(`⚠️ [COMPLETE SYNC] Progresso ainda está em estado antigo após reset, forçando reset novamente...`);
+        resetSyncProgress(userId);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        progress = getUserSyncProgress(userId);
+        console.log(`🔍 [RESET VERIFICATION #2] Progresso após segundo reset:`, {
+          isRunning: progress.isRunning,
+          phase: progress.phase,
+          overallProgress: progress.overallProgress,
+          shopifyProcessed: progress.shopifyProgress.processedOrders,
+          shopifyTotal: progress.shopifyProgress.totalOrders,
+          shopifyPercentage: progress.shopifyProgress.percentage,
+          currentStep: progress.currentStep
+        });
+      }
+      
+      // Inicializar progress tracking combinado com valores corretos
+      // CRÍTICO: Garantir que TUDO está zerado
+      progress.isRunning = true;
+      progress.phase = 'preparing';
+      progress.message = 'Iniciando sincronização...';
+      progress.startTime = new Date();
+      progress.endTime = null;
+      progress.overallProgress = 0; // CRÍTICO: Forçar 0
+      progress.currentStep = null; // CRÍTICO: Não definir step ainda
+      
+      // Criar um runId único por execução
+      try {
+        // Node 18+: crypto.randomUUID disponível
+        const { randomUUID } = await import('crypto');
+        (progress as any).runId = randomUUID();
+      } catch {
+        (progress as any).runId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      }
+      (progress as any).version = 1; // Começar com 1, não 0
+      
+      // CRÍTICO: Garantir que os progressos estão COMPLETAMENTE zerados
+      progress.shopifyProgress = {
+        processedOrders: 0,
+        totalOrders: 0,
+        newOrders: 0,
+        updatedOrders: 0,
+        currentPage: 0,
+        totalPages: 0,
+        percentage: 0
+      };
+      progress.stagingProgress = {
+        processedLeads: 0,
+        totalLeads: 0,
+        newLeads: 0,
+        updatedLeads: 0
+      };
+      
+      // CRÍTICO: Forçar overallProgress para 0 após zerar tudo
+      // Será recalculado automaticamente quando updateShopifyProgress for chamado
+      progress.overallProgress = 0;
+      (progress as any).version = 1;
+      
+      console.log(`✅ [INIT] Progresso completamente zerado e inicializado:`, {
+        overallProgress: progress.overallProgress,
+        shopifyProcessed: progress.shopifyProgress.processedOrders,
+        shopifyTotal: progress.shopifyProgress.totalOrders,
+        shopifyPercentage: progress.shopifyProgress.percentage,
+        currentStep: progress.currentStep
+      });
+      
+      const runId = (progress as any).runId;
+      
+      console.log(`✅ [COMPLETE SYNC] Progresso inicializado para user ${userId}:`, {
+        isRunning: progress.isRunning,
+        phase: progress.phase,
+        message: progress.message,
+        overallProgress: progress.overallProgress,
+        runId: runId
+      });
 
       // Executar sincronização completa de forma assíncrona
       (async () => {
@@ -2616,24 +3133,334 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // 1️⃣ PRIMEIRO: Sincronizar Shopify (importar pedidos)
           if (operationId && typeof operationId === 'string') {
             console.log(`📦 [SHOPIFY SYNC] Sincronizando Shopify para operação ${operationId}...`);
+              
+              // CRÍTICO: Definir etapa atual como shopify ANTES de iniciar
+              // Garantir que o progresso geral começa em 0% e evolui gradualmente
+              const currentProgress = getUserSyncProgress(userId);
+              currentProgress.currentStep = 'shopify'; // Forçar como 'shopify' durante todo o processo do Shopify
+              currentProgress.phase = 'syncing';
+              currentProgress.message = 'Importando pedidos do Shopify...';
+              currentProgress.overallProgress = 0; // Garantir que começa em 0%
+              currentProgress.version++;
+              
+              console.log(`🔄 [SHOPIFY SYNC] Etapa definida como 'shopify', progresso geral resetado para 0%`);
+            
             const { ShopifySyncService } = await import("./shopify-sync-service");
+            
+            // CRÍTICO: Resetar progressTracker IMEDIATAMENTE antes de criar a instância do serviço
+            // Isso garante que quando importShopifyOrders atualizar o progressTracker, ele está limpo
+            ShopifySyncService.resetOperationProgress(operationId);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // CRÍTICO: Verificar que o progressTracker foi realmente limpo antes de iniciar
+            const verifyProgress = ShopifySyncService.getOperationProgress(operationId);
+            if (verifyProgress.totalOrders > 0 || verifyProgress.processedOrders > 0 || verifyProgress.percentage > 0) {
+              console.warn(`⚠️ [SHOPIFY SYNC] progressTracker ainda tem valores antigos após reset, forçando reset novamente:`, {
+                totalOrders: verifyProgress.totalOrders,
+                processedOrders: verifyProgress.processedOrders,
+                percentage: verifyProgress.percentage
+              });
+              ShopifySyncService.resetOperationProgress(operationId);
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
             const shopifyService = new ShopifySyncService();
+            
+            let shopifySyncCompleted = false;
+            let updateCount = 0;
+            
+            // CRÍTICO: Garantir que o runId é capturado DEPOIS do reset ser aplicado
+            const currentRunId = (getUserSyncProgress(userId) as any).runId;
+            
+            console.log(`✅ [SHOPIFY SYNC] Progresso do Shopify resetado ANTES de iniciar importação, runId atual: ${currentRunId}`);
+            
+            // Monitor progresso do Shopify e atualizar progress compartilhado
+            let firstUpdateReceived = false;
+            
+            const progressInterval = setInterval(() => {
+              updateCount++;
+              const shopifyProgress = ShopifySyncService.getOperationProgress(operationId);
+              const currentProgressRunId = (getUserSyncProgress(userId) as any).runId;
+              
+              // CRÍTICO PRIMEIRO: Se não está rodando E não recebemos primeira atualização,
+              // QUALQUER valor não-zero é antigo e deve ser SEMPRE ignorado
+              // Isso previne mostrar "369/369" antes da nova sync começar
+              if (!shopifyProgress.isRunning && !firstUpdateReceived) {
+                // Se tem QUALQUER valor não-zero mas não está rodando, SEMPRE ignorar - é antigo
+                if (shopifyProgress.totalOrders > 0 || shopifyProgress.processedOrders > 0 || shopifyProgress.percentage > 0) {
+                  console.log(`⏭️ [SHOPIFY PROGRESS] Ignorando atualização #${updateCount}: Shopify ainda não iniciou mas tem valores (antigo):`, {
+                    isRunning: shopifyProgress.isRunning,
+                    firstUpdate: firstUpdateReceived,
+                    totalOrders: shopifyProgress.totalOrders,
+                    processedOrders: shopifyProgress.processedOrders,
+                    percentage: shopifyProgress.percentage,
+                    hasRunId: !!currentProgressRunId
+                  });
+                  return;
+                }
+              }
+              
+              // CRÍTICO: Ignorar atualizações antigas que não correspondem ao runId atual
+              // Se temos valores não-zero mas o runId não corresponde, é um valor antigo
+              if ((shopifyProgress.totalOrders > 0 || shopifyProgress.processedOrders > 0) && 
+                  currentProgressRunId && 
+                  currentRunId && 
+                  currentProgressRunId !== currentRunId) {
+                console.log(`⏭️ [SHOPIFY PROGRESS] Ignorando atualização #${updateCount}: runId não corresponde (antigo):`, {
+                  shopifyRunId: currentRunId,
+                  progressRunId: currentProgressRunId,
+                  shopifyTotal: shopifyProgress.totalOrders,
+                  shopifyProcessed: shopifyProgress.processedOrders
+                });
+                return;
+              }
+              
+              // CRÍTICO: Ignorar atualizações que têm valores não-zero mas não há runId ainda
+              // Isso indica que são valores antigos de uma sync anterior
+              if ((shopifyProgress.totalOrders > 0 || shopifyProgress.processedOrders > 0) && 
+                  !currentProgressRunId && 
+                  !currentRunId) {
+                console.log(`⏭️ [SHOPIFY PROGRESS] Ignorando atualização #${updateCount}: valores não-zero mas sem runId (antigo):`, {
+                  shopifyTotal: shopifyProgress.totalOrders,
+                  shopifyProcessed: shopifyProgress.processedOrders,
+                  hasProgressRunId: !!currentProgressRunId,
+                  hasCurrentRunId: !!currentRunId
+                });
+                return;
+              }
+              
+              // Marcar que recebemos a primeira atualização válida
+              if (!firstUpdateReceived && shopifyProgress.isRunning) {
+                firstUpdateReceived = true;
+                console.log(`✅ [SHOPIFY PROGRESS] Primeira atualização válida recebida (isRunning=true)`);
+              }
+              
+              // SEMPRE atualizar após primeira atualização válida (para garantir que o estado está atualizado)
+              console.log(`🔄 [SHOPIFY PROGRESS] Update #${updateCount}:`, {
+                processed: shopifyProgress.processedOrders,
+                total: shopifyProgress.totalOrders,
+                percentage: shopifyProgress.percentage,
+                isRunning: shopifyProgress.isRunning,
+                firstUpdateReceived,
+                runId: currentProgressRunId
+              });
+              
+              updateShopifyProgress(userId, {
+                processedOrders: shopifyProgress.processedOrders,
+                totalOrders: shopifyProgress.totalOrders,
+                newOrders: shopifyProgress.newOrders,
+                updatedOrders: shopifyProgress.updatedOrders,
+                currentPage: shopifyProgress.currentPage,
+                totalPages: shopifyProgress.totalPages,
+                percentage: shopifyProgress.percentage
+              });
+              
+              if (updateCount % 5 === 0 || !shopifyProgress.isRunning) {
+                const currentProgress = getUserSyncProgress(userId);
+                console.log(`📊 [SHOPIFY PROGRESS] Update #${updateCount} resumido: ${shopifyProgress.processedOrders}/${shopifyProgress.totalOrders} (${shopifyProgress.percentage}%) - Overall: ${currentProgress.overallProgress}% - Running: ${shopifyProgress.isRunning}`);
+              }
+              
+              // Parar intervalo depois que completou E já atualizou várias vezes (pelo menos 4 updates = 2 segundos)
+              if (!shopifyProgress.isRunning && shopifySyncCompleted && updateCount >= 4) {
+                clearInterval(progressInterval);
+                console.log('🛑 [SHOPIFY PROGRESS] Interval parado após completar');
+              }
+            }, 500);
+            
+            try {
             const shopifyResult = await shopifyService.importShopifyOrders(operationId);
             console.log(`✅ [SHOPIFY SYNC] Shopify sincronizado:`, shopifyResult);
+              
+              shopifySyncCompleted = true;
+              
+              // Aguardar um pouco e atualizar progresso final (garantir que está no staging-sync-service)
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              const finalShopifyProgress = ShopifySyncService.getOperationProgress(operationId);
+              updateShopifyProgress(userId, {
+                processedOrders: finalShopifyProgress.processedOrders,
+                totalOrders: finalShopifyProgress.totalOrders,
+                newOrders: finalShopifyProgress.newOrders,
+                updatedOrders: finalShopifyProgress.updatedOrders,
+                currentPage: finalShopifyProgress.currentPage,
+                totalPages: finalShopifyProgress.totalPages,
+                percentage: finalShopifyProgress.percentage
+              });
+              
+              console.log(`📊 [SHOPIFY PROGRESS] Progresso final sincronizado: ${finalShopifyProgress.processedOrders}/${finalShopifyProgress.totalOrders}`);
+              
+              // Deixar intervalo rodando por mais alguns ciclos para garantir atualização
+            } catch (error) {
+              shopifySyncCompleted = true;
+              clearInterval(progressInterval);
+              throw error;
+            }
           }
 
           // 2️⃣ DEPOIS: Processar staging tables (fazer matching com transportadora)
-          console.log(`🔄 [STAGING SYNC] Processando staging tables para user ${req.user.id}...`);
-          const { performStagingSync } = await import("./services/staging-sync-service");
-          await performStagingSync(req.user.id);
-          console.log(`✅ [COMPLETE SYNC] Sincronização completa finalizada!`);
+          console.log(`🔄 [STAGING SYNC] Processando staging tables para user ${userId}...`);
+          
+          // Pequeno delay para garantir que o Shopify completou completamente
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const { performStagingSync, getSyncProgress, calculateOverallProgress } = await import("./services/staging-sync-service");
+          
+          // CRÍTICO: Verificar se o Shopify REALMENTE completou antes de mudar para staging
+          const currentProgress = getUserSyncProgress(userId);
+          const shopifyCompleted = 
+            currentProgress.shopifyProgress.totalOrders > 0 &&
+            currentProgress.shopifyProgress.processedOrders >= currentProgress.shopifyProgress.totalOrders &&
+            currentProgress.shopifyProgress.percentage >= 100;
+          
+          if (!shopifyCompleted) {
+            console.warn(`⚠️ [STAGING SYNC] Shopify ainda não completou! Processed: ${currentProgress.shopifyProgress.processedOrders}/${currentProgress.shopifyProgress.totalOrders}, Percentage: ${currentProgress.shopifyProgress.percentage}%`);
+          }
+          
+          // CRÍTICO: Só mudar para 'staging' quando o Shopify REALMENTE completou
+          // Durante todo o processo do Shopify, currentStep deve ser 'shopify'
+          // Isso garante que o progresso geral evolui de 0% a 40% gradualmente
+          setCurrentStep(userId, 'staging');
+          currentProgress.isRunning = true;
+          currentProgress.phase = 'syncing';
+          currentProgress.message = 'Fazendo matching com transportadora...';
+          
+          // CRÍTICO: Recalcular progresso geral agora que estamos em staging
+          // Deve ser 40% (Shopify 100% * 0.4) + 0% (Staging 0% * 0.6) = 40%
+          currentProgress.overallProgress = calculateOverallProgress(
+            currentProgress.shopifyProgress,
+            currentProgress.stagingProgress,
+            'staging'
+          );
+          
+          currentProgress.version++;
+          
+          console.log(`🔄 [STAGING SYNC] Etapa mudou para 'staging', progresso geral: ${currentProgress.overallProgress}%`, {
+            shopifyPercent: currentProgress.shopifyProgress.percentage,
+            shopifyProcessed: currentProgress.shopifyProgress.processedOrders,
+            shopifyTotal: currentProgress.shopifyProgress.totalOrders,
+            stagingPercent: 0,
+            overallProgress: currentProgress.overallProgress
+          });
+          
+          // Pequeno delay para garantir que o frontend recebeu a atualização
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Monitor progresso do staging sync em tempo real
+          const stagingProgressInterval = setInterval(async () => {
+            const currentProgress = await getSyncProgress(userId);
+            const stagingProgress = currentProgress.stagingProgress;
+            
+            // Log a cada 10 updates (5 segundos)
+            const stagingUpdateCount = Math.floor(Date.now() / 500) % 100;
+            if (stagingUpdateCount % 10 === 0) {
+              console.log(`📊 [STAGING PROGRESS] Atualizado: ${stagingProgress.processedLeads}/${stagingProgress.totalLeads} leads (${stagingProgress.newLeads} novos, ${stagingProgress.updatedLeads} atualizados)`);
+            }
+            
+            // Não precisamos atualizar manualmente porque o performStagingSync já atualiza o progress diretamente
+          }, 500);
+          
+          try {
+            await performStagingSync(userId);
+            
+            // Garantir atualização final
+            const finalProgress = await getSyncProgress(userId);
+            console.log(`✅ [COMPLETE SYNC] Sincronização completa finalizada!`, {
+              shopify: {
+                processed: finalProgress.shopifyProgress.processedOrders,
+                total: finalProgress.shopifyProgress.totalOrders,
+                new: finalProgress.shopifyProgress.newOrders,
+                updated: finalProgress.shopifyProgress.updatedOrders
+              },
+              staging: {
+                processed: finalProgress.stagingProgress.processedLeads,
+                total: finalProgress.stagingProgress.totalLeads,
+                new: finalProgress.stagingProgress.newLeads,
+                updated: finalProgress.stagingProgress.updatedLeads
+              },
+              overall: finalProgress.overallProgress
+            });
+          } finally {
+            clearInterval(stagingProgressInterval);
+          }
         } catch (error) {
           console.error('❌ [COMPLETE SYNC] Erro na sincronização completa:', error);
+          const progress = getUserSyncProgress(userId);
+          progress.phase = 'error';
+          progress.message = error instanceof Error ? error.message : 'Erro desconhecido';
+          progress.isRunning = false;
+          progress.endTime = new Date();
         }
       })();
       
+      // CRÍTICO: Aguardar um pouco para garantir que o reset foi completamente processado
+      // e que o progresso está realmente zerado antes de retornar
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // IMPORTANTE: Obter progresso FRESCO novamente para garantir que tem o runId
+      const freshProgress = getUserSyncProgress(userId);
+      const responseRunId = (freshProgress as any).runId;
+      
+      console.log(`📤 [COMPLETE SYNC] Retornando resposta para user ${userId}:`, {
+        runId: responseRunId,
+        isRunning: freshProgress.isRunning,
+        phase: freshProgress.phase,
+        version: (freshProgress as any).version,
+        overallProgress: freshProgress.overallProgress,
+        shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
+        shopifyTotal: freshProgress.shopifyProgress.totalOrders,
+        shopifyPercentage: freshProgress.shopifyProgress.percentage,
+        currentStep: freshProgress.currentStep
+      });
+      
+      // CRÍTICO: Validar que o progresso foi realmente resetado
+      // Se ainda há valores antigos, forçar reset novamente até garantir que está zerado
+      let resetAttempts = 0;
+      const maxResetAttempts = 3;
+      while ((freshProgress.shopifyProgress.processedOrders > 0 || 
+              freshProgress.shopifyProgress.totalOrders > 0 || 
+              freshProgress.overallProgress > 0 ||
+              freshProgress.phase === 'completed') && 
+             resetAttempts < maxResetAttempts) {
+        resetAttempts++;
+        console.warn(`⚠️ [COMPLETE SYNC] ATENÇÃO: Progresso ainda tem valores antigos após reset (tentativa ${resetAttempts}/${maxResetAttempts})!`, {
+          shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
+          shopifyTotal: freshProgress.shopifyProgress.totalOrders,
+          overallProgress: freshProgress.overallProgress,
+          phase: freshProgress.phase
+        });
+        
+        // Forçar reset novamente
+        resetSyncProgress(userId);
+        if (operationId && typeof operationId === 'string') {
+          ShopifySyncService.resetOperationProgress(operationId);
+        }
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Atualizar freshProgress após reset
+        Object.assign(freshProgress, getUserSyncProgress(userId));
+      }
+      
+      if (resetAttempts > 0) {
+        console.log(`🔄 [COMPLETE SYNC] Progresso após reset(s):`, {
+          shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
+          shopifyTotal: freshProgress.shopifyProgress.totalOrders,
+          overallProgress: freshProgress.overallProgress,
+          phase: freshProgress.phase,
+          attempts: resetAttempts
+        });
+      }
+      
+      if (!responseRunId) {
+        console.error(`❌ [COMPLETE SYNC] ERRO: runId não encontrado após inicialização! Progress:`, {
+          isRunning: freshProgress.isRunning,
+          phase: freshProgress.phase,
+          hasRunId: !!(freshProgress as any).runId
+        });
+      }
+      
       res.json({ 
         success: true, 
+        runId: responseRunId, // Retornar o runId para o frontend
         message: 'Processamento de pedidos iniciado. Use /sync/complete-status para acompanhar o progresso.' 
       });
     } catch (error) {
@@ -2649,11 +3476,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // MIGRATED TO STAGING TABLES: Retorna status do staging-sync-service (per-user)
   app.get('/api/sync/complete-status', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      const userId = req.user.id;
+      console.log(`📊 [COMPLETE STATUS] Buscando status para user ${userId}`);
+      
       const { getSyncProgress } = await import("./services/staging-sync-service");
-      const status = getSyncProgress(req.user.id);
+      const status = await getSyncProgress(userId);
+      
+      // Validar que o status tem a estrutura esperada
+      if (!status || typeof status !== 'object') {
+        console.error('❌ [COMPLETE STATUS] Status inválido retornado:', status);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Status de sincronização inválido' 
+        });
+      }
+      
+      console.log(`✅ [COMPLETE STATUS] Status retornado para user ${userId}:`, {
+        isRunning: status.isRunning,
+        phase: status.phase,
+        overallProgress: status.overallProgress,
+        currentStep: status.currentStep,
+        shopify: {
+          processed: status.shopifyProgress.processedOrders,
+          total: status.shopifyProgress.totalOrders,
+          percentage: status.shopifyProgress.percentage
+        },
+        staging: {
+          processed: status.stagingProgress.processedLeads,
+          total: status.stagingProgress.totalLeads
+        },
+        runId: (status as any).runId,
+        version: (status as any).version
+      });
+      
       res.json(status);
     } catch (error) {
-      console.error('❌ [STAGING SYNC] Erro ao obter status:', error);
+      console.error('❌ [COMPLETE STATUS] Erro ao obter status:', error);
       res.status(500).json({ 
         success: false, 
         message: error instanceof Error ? error.message : 'Erro interno do servidor' 
@@ -2662,8 +3520,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rota SSE para streaming de status da sincronização completa
-  // MIGRATED TO STAGING TABLES: Usa staging-sync-service para progresso em tempo real (per-user)
-  app.get('/api/sync/complete-status-stream', authenticateToken, async (req: AuthRequest, res: Response) => {
+  // Retorna progresso combinado (Shopify + Staging)
+  // Usa authenticateTokenOrQuery porque EventSource não envia headers customizados
+  app.get('/api/sync/complete-status-stream', authenticateTokenOrQuery, async (req: AuthRequest, res: Response) => {
     // Configurar headers para SSE
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -2674,28 +3533,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       
       // Enviar status inicial imediatamente
-      const initialStatus = getSyncProgress(userId);
-      res.write(`data: ${JSON.stringify(initialStatus)}\n\n`);
+      const initialStatus = await getSyncProgress(userId);
+
+      // Serializar dates para ISO strings (startTime e endTime já vêm como string do getSyncProgress)
+      const serializableInitialStatus = {
+        ...initialStatus,
+        startTime: initialStatus.startTime ? (typeof initialStatus.startTime === 'string' ? initialStatus.startTime : new Date(initialStatus.startTime).toISOString()) : null,
+        endTime: initialStatus.endTime ? (typeof initialStatus.endTime === 'string' ? initialStatus.endTime : new Date(initialStatus.endTime).toISOString()) : null
+      };
       
-      // Se não está rodando, fechar conexão
-      if (!initialStatus.isRunning) {
-        res.end();
-        return;
-      }
+      console.log(`📤 [SSE] Enviando status inicial para user ${userId}:`, {
+        isRunning: initialStatus.isRunning,
+        phase: initialStatus.phase,
+        overallProgress: initialStatus.overallProgress,
+        currentStep: initialStatus.currentStep,
+        shopify: {
+          processed: initialStatus.shopifyProgress.processedOrders,
+          total: initialStatus.shopifyProgress.totalOrders
+        },
+        staging: {
+          processed: initialStatus.stagingProgress.processedLeads,
+          total: initialStatus.stagingProgress.totalLeads
+        }
+      });
       
-      // Enviar atualizações a cada 500ms enquanto está rodando
-      const intervalId = setInterval(() => {
+      // Enviar com formato correto SSE
+      res.write(`data: ${JSON.stringify(serializableInitialStatus)}\n\n`);
+      res.flush?.(); // Forçar envio imediato se disponível
+      
+      // Enviar atualizações a cada 500ms enquanto está rodando OU durante os primeiros 30 segundos
+      // (para capturar mudanças mesmo que o sync seja muito rápido)
+      let updateCount = 0;
+      const maxUpdates = 60; // 30 segundos (60 * 500ms)
+      
+      const intervalId = setInterval(async () => {
         try {
-          const status = getSyncProgress(userId);
-          res.write(`data: ${JSON.stringify(status)}\n\n`);
+          updateCount++;
+          const status = await getSyncProgress(userId);
           
-          // Se não está mais rodando, fechar
-          if (!status.isRunning) {
+          // Serializar status com dates convertidos para ISO strings (startTime e endTime já vêm como string do getSyncProgress)
+          const serializableStatus = {
+            ...status,
+            startTime: status.startTime ? (typeof status.startTime === 'string' ? status.startTime : new Date(status.startTime).toISOString()) : null,
+            endTime: status.endTime ? (typeof status.endTime === 'string' ? status.endTime : new Date(status.endTime).toISOString()) : null
+          };
+          
+          // Log detalhado a cada 10 updates (5 segundos)
+          if (updateCount % 10 === 0) {
+            console.log(`📤 [SSE] Update #${updateCount} para user ${userId}:`, {
+              isRunning: status.isRunning,
+              phase: status.phase,
+              overallProgress: status.overallProgress,
+              currentStep: status.currentStep,
+              shopify: {
+                processed: status.shopifyProgress.processedOrders,
+                total: status.shopifyProgress.totalOrders,
+                new: status.shopifyProgress.newOrders,
+                updated: status.shopifyProgress.updatedOrders
+              },
+              staging: {
+                processed: status.stagingProgress.processedLeads,
+                total: status.stagingProgress.totalLeads,
+                new: status.stagingProgress.newLeads,
+                updated: status.stagingProgress.updatedLeads
+              }
+            });
+          }
+          
+          // Enviar atualização via SSE
+          try {
+            res.write(`data: ${JSON.stringify(serializableStatus)}\n\n`);
+            res.flush?.(); // Forçar envio imediato se disponível
+            
+            // Log a cada update para debug (mas só detalhado a cada 5)
+            if (updateCount % 5 === 0) {
+              console.log(`📤 [SSE] Update #${updateCount} enviado para user ${userId}:`, {
+                isRunning: status.isRunning,
+                phase: status.phase,
+                overallProgress: status.overallProgress
+              });
+            }
+          } catch (writeError) {
+            console.error('❌ [SSE] Erro ao escrever no SSE:', writeError);
+            // Se não consegue escrever, cliente desconectou - fechar
+            clearInterval(intervalId);
+            res.end();
+            return;
+          }
+          
+          // Fechar se não está mais rodando E já passou tempo suficiente OU se está completo
+          if (!status.isRunning && (status.phase === 'completed' || status.phase === 'error' || updateCount >= maxUpdates)) {
+            console.log(`🔌 [SSE] Fechando conexão SSE - fase: ${status.phase}, updates: ${updateCount}`);
             clearInterval(intervalId);
             res.end();
           }
         } catch (error) {
-          console.error('❌ [STAGING SYNC] Erro ao enviar status SSE:', error);
+          console.error('❌ [COMPLETE SYNC] Erro ao enviar status SSE:', error);
           clearInterval(intervalId);
           res.end();
         }
@@ -2707,7 +3640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
     } catch (error) {
-      console.error('❌ [STAGING SYNC] Erro ao iniciar stream SSE:', error);
+      console.error('❌ [COMPLETE SYNC] Erro ao iniciar stream SSE:', error);
       res.end();
     }
   });
@@ -5281,12 +6214,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const integration = await shopifyService.saveIntegration(operationId, shopName, accessToken);
+      
+      // Webhooks agora são configurados manualmente pelo cliente na conta Shopify
+      // As informações do webhook são mostradas no card de integração
+      
       res.json(integration);
     } catch (error) {
       console.error("Error saving Shopify integration:", error);
       res.status(500).json({ 
         message: error instanceof Error ? error.message : "Erro ao salvar integração Shopify" 
       });
+    }
+  });
+
+  // Get webhook information for Shopify integration
+  app.get("/api/integrations/shopify/webhook-info", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const baseUrl = shopifyWebhookService.getWebhookBaseUrl();
+      const webhookUrl = shopifyWebhookService.getWebhookUrl();
+      const topics = shopifyWebhookService.getRequiredWebhookTopics();
+
+      res.json({
+        webhookUrl,
+        topics,
+        hasPublicUrl: !!baseUrl,
+        instructions: baseUrl ? {
+          title: "Configure Webhook na Shopify",
+          steps: [
+            "1. Acesse sua conta Shopify Admin",
+            "2. Vá em Settings → Notifications",
+            "3. Role até Webhooks",
+            "4. Clique em 'Create webhook'",
+            "5. Configure cada tópico:",
+            `   - Event: orders/create → URL: ${webhookUrl}`,
+            `   - Event: orders/updated → URL: ${webhookUrl}`,
+            "6. Format: JSON",
+            "7. Clique em 'Save webhook'"
+          ]
+        } : {
+          title: "Webhook não disponível",
+          message: "Configure PUBLIC_URL ou REPLIT_DEV_DOMAIN para usar webhooks. O sistema usará polling inteligente como fallback."
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -5309,6 +6280,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error testing Shopify connection:", error);
       res.status(500).json({ message: "Erro ao testar conexão Shopify" });
+    }
+  });
+
+  // Webhook endpoint for Shopify orders (no auth required - uses HMAC verification)
+  app.post("/api/webhooks/shopify/orders", async (req: Request, res: Response) => {
+    try {
+      const topic = req.headers['x-shopify-topic'] as string;
+      const shop = req.headers['x-shopify-shop-domain'] as string;
+      const payload = req.body;
+
+      if (!topic || !shop || !payload) {
+        return res.status(400).json({ message: 'Dados inválidos' });
+      }
+
+      // Buscar integração pela loja Shopify (necessário para verificação HMAC com access token)
+      const [integration] = await db
+        .select({ 
+          operationId: shopifyIntegrations.operationId,
+          accessToken: shopifyIntegrations.accessToken
+        })
+        .from(shopifyIntegrations)
+        .where(eq(shopifyIntegrations.shopName, shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`))
+        .limit(1);
+
+      if (!integration) {
+        console.warn(`⚠️ Integração Shopify não encontrada para loja: ${shop}`);
+        return res.status(404).json({ message: 'Integração não encontrada' });
+      }
+
+      // Verificar assinatura HMAC do Shopify usando o access token da integração
+      // Para apps privados, o shared secret geralmente é o próprio access token
+      const isValid = shopifyWebhookService.verifyWebhook(req, integration.accessToken);
+      
+      if (!isValid) {
+        // Em desenvolvimento, permitir sem verificação se não houver secret configurado
+        // Mas logar um aviso para segurança
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('⚠️ Webhook Shopify com assinatura inválida (permitindo em dev)');
+        } else {
+          console.warn('⚠️ Webhook Shopify com assinatura inválida');
+          return res.status(401).json({ message: 'Assinatura inválida' });
+        }
+      }
+
+      console.log(`📦 [WEBHOOK] ${topic} de ${shop}`);
+
+      // Processar webhook baseado no tópico
+      if (topic === 'orders/create') {
+        await shopifyWebhookService.handleOrderCreated(payload, integration.operationId);
+      } else if (topic === 'orders/updated') {
+        await shopifyWebhookService.handleOrderUpdated(payload, integration.operationId);
+      } else {
+        console.log(`ℹ️ Tópico de webhook não processado: ${topic}`);
+      }
+
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      console.error('❌ Erro ao processar webhook Shopify:', error);
+      res.status(500).json({ message: error.message || 'Erro interno' });
+    }
+  });
+
+  // Webhook endpoint for CartPanda orders (no auth required - uses signature verification)
+  app.post("/api/webhooks/cartpanda/orders", async (req: Request, res: Response) => {
+    try {
+      // Verificar assinatura do CartPanda
+      const isValid = cartpandaWebhookService.verifyWebhook(req);
+      
+      if (!isValid) {
+        console.warn('⚠️ Webhook CartPanda com assinatura inválida');
+        return res.status(401).json({ message: 'Assinatura inválida' });
+      }
+
+      const event = req.body.event || req.body['event'];
+      const storeSlug = req.headers['x-cartpanda-store'] as string || req.body.storeSlug;
+      const payload = req.body;
+
+      if (!event || !payload) {
+        return res.status(400).json({ message: 'Dados inválidos' });
+      }
+
+      console.log(`💰 [WEBHOOK] ${event} de ${storeSlug || 'CartPanda'}`);
+
+      // Buscar operação pelo storeSlug
+      const [integration] = await db
+        .select({ operationId: cartpandaIntegrations.operationId })
+        .from(cartpandaIntegrations)
+        .where(eq(cartpandaIntegrations.storeSlug, storeSlug))
+        .limit(1);
+
+      if (!integration) {
+        console.warn(`⚠️ Integração CartPanda não encontrada para loja: ${storeSlug}`);
+        return res.status(404).json({ message: 'Integração não encontrada' });
+      }
+
+      // Processar webhook baseado no evento
+      if (event === 'order.paid') {
+        await cartpandaWebhookService.handleOrderPaid(payload, integration.operationId);
+      } else {
+        console.log(`ℹ️ Evento de webhook não processado: ${event}`);
+      }
+
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      console.error('❌ Erro ao processar webhook CartPanda:', error);
+      res.status(500).json({ message: error.message || 'Erro interno' });
     }
   });
 
@@ -7987,6 +9064,49 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   app.use("/api/affiliate/pixels", affiliatePixelRoutes);
   
   // Register Page Builder Upload routes
+  // Serve avatar images from Object Storage
+  app.get("/api/storage/public/avatars/:filename", async (req: Request, res: Response) => {
+    try {
+      const { filename } = req.params;
+      const objectPath = `public/avatars/${filename}`;
+      
+      console.log('🖼️ Attempting to serve avatar:', objectPath);
+      
+      // Initialize Replit Object Storage client
+      const { Client } = await import('@replit/object-storage');
+      const client = new Client();
+      
+      // Download the file from Object Storage using the stream method
+      const readableStream = await client.downloadAsStream(objectPath);
+      
+      // Determine content type based on file extension
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const contentTypes: { [key: string]: string } = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'svg': 'image/svg+xml'
+      };
+      
+      const contentType = contentTypes[ext || ''] || 'application/octet-stream';
+      
+      // Send the file with appropriate headers
+      res.set({
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000',
+      });
+      
+      // Stream the file to the response
+      readableStream.pipe(res);
+      
+    } catch (error) {
+      console.error('❌ Error serving avatar:', error);
+      res.status(404).json({ error: 'Avatar not found' });
+    }
+  });
+
   app.use(pageBuilderUploadRoutes);
 
   // Multi-Page Funnel Deploy Routes (PHASE 2.2)

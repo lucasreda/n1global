@@ -89,64 +89,100 @@ export function DropIndicatorLayer({
     }
   }
 
-  // Não mostrar indicador se o drop for inválido
-  if (!isValidDrop) {
-    return null;
-  }
-
+  // Show visual indicator for both valid and invalid drops
   let indicator: JSX.Element | null = null;
-  const color = '#3b82f6'; // blue-500
-  const shadowColor = 'rgba(59, 130, 246, 0.6)';
-
-  if (activeDropZone.position === 'before') {
-    // Line before element
-    indicator = (
-      <div
-        className="absolute z-[100] pointer-events-none"
-        style={{
-          top: `${top}px`,
-          left: `${left}px`,
-          width: `${width}px`,
-          height: '3px',
-          backgroundColor: color,
-          boxShadow: `0 0 8px ${shadowColor}`,
-        }}
-      />
-    );
-  } else if (activeDropZone.position === 'after') {
-    // Line after element
-    indicator = (
-      <div
-        className="absolute z-[100] pointer-events-none"
-        style={{
-          top: `${top + height}px`,
-          left: `${left}px`,
-          width: `${width}px`,
-          height: '3px',
-          backgroundColor: color,
-          boxShadow: `0 0 8px ${shadowColor}`,
-        }}
-      />
-    );
-  } else if (activeDropZone.position === 'child') {
-    // Semi-transparent overlay for container
-    const bgColor = 'rgba(59, 130, 246, 0.1)';
-    const boxShadowColor = 'rgba(59, 130, 246, 0.4)';
+  
+  if (!isValidDrop) {
+    // Invalid drop - red indicator
+    const invalidColor = '#ef4444'; // red-500
+    const invalidShadowColor = 'rgba(239, 68, 68, 0.6)';
     
-    indicator = (
-      <div
-        className="absolute z-[100] pointer-events-none border-2"
-        style={{
-          top: `${top}px`,
-          left: `${left}px`,
-          width: `${width}px`,
-          height: `${height}px`,
-          borderColor: color,
-          backgroundColor: bgColor,
-          boxShadow: `0 0 12px ${boxShadowColor}`,
-        }}
-      />
-    );
+    if (activeDropZone.position === 'before' || activeDropZone.position === 'after') {
+      indicator = (
+        <div
+          className="absolute z-[100] pointer-events-none animate-pulse"
+          style={{
+            top: activeDropZone.position === 'before' ? `${top}px` : `${top + height}px`,
+            left: `${left}px`,
+            width: `${width}px`,
+            height: '4px',
+            backgroundColor: invalidColor,
+            boxShadow: `0 0 12px ${invalidShadowColor}`,
+          }}
+        />
+      );
+    } else if (activeDropZone.position === 'child') {
+      indicator = (
+        <div
+          className="absolute z-[100] pointer-events-none border-2 border-dashed animate-pulse"
+          style={{
+            top: `${top}px`,
+            left: `${left}px`,
+            width: `${width}px`,
+            height: `${height}px`,
+            borderColor: invalidColor,
+            backgroundColor: 'rgba(239, 68, 68, 0.05)',
+            boxShadow: `0 0 16px ${invalidShadowColor}`,
+          }}
+        />
+      );
+    }
+  } else {
+    // Valid drop - blue indicator with smooth animation
+    const validColor = '#3b82f6'; // blue-500
+    const validShadowColor = 'rgba(59, 130, 246, 0.6)';
+    
+    if (activeDropZone.position === 'before') {
+      // Line before element with pulsing animation
+      indicator = (
+        <div
+          className="absolute z-[100] pointer-events-none animate-pulse"
+          style={{
+            top: `${top}px`,
+            left: `${left}px`,
+            width: `${width}px`,
+            height: '4px',
+            backgroundColor: validColor,
+            boxShadow: `0 0 12px ${validShadowColor}`,
+          }}
+        />
+      );
+    } else if (activeDropZone.position === 'after') {
+      // Line after element with pulsing animation
+      indicator = (
+        <div
+          className="absolute z-[100] pointer-events-none animate-pulse"
+          style={{
+            top: `${top + height}px`,
+            left: `${left}px`,
+            width: `${width}px`,
+            height: '4px',
+            backgroundColor: validColor,
+            boxShadow: `0 0 12px ${validShadowColor}`,
+          }}
+        />
+      );
+    } else if (activeDropZone.position === 'child') {
+      // Semi-transparent overlay for container with smooth glow
+      const bgColor = 'rgba(59, 130, 246, 0.15)';
+      const boxShadowColor = 'rgba(59, 130, 246, 0.5)';
+      
+      indicator = (
+        <div
+          className="absolute z-[100] pointer-events-none border-2 transition-all duration-200"
+          style={{
+            top: `${top}px`,
+            left: `${left}px`,
+            width: `${width}px`,
+            height: `${height}px`,
+            borderColor: validColor,
+            backgroundColor: bgColor,
+            boxShadow: `0 0 16px ${boxShadowColor}`,
+            animation: 'drop-zone-glow 1.5s ease-in-out infinite alternate',
+          }}
+        />
+      );
+    }
   }
 
   return canvasContainer ? createPortal(indicator, canvasContainer) : null;

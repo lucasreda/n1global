@@ -62,16 +62,23 @@ export interface OrderActionRequest {
 }
 import { eq, and, or, inArray, ilike, desc, sql, count } from "drizzle-orm";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy OpenAI initialization
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+};
 
-// Configure Mailgun
-const mailgun = new Mailgun(formData);
-const mg = mailgun.client({
-  username: "api",
-  key: process.env.MAILGUN_API_KEY || "",
-});
+// Configure Mailgun (optional)
+let mg: any = null;
+if (process.env.MAILGUN_API_KEY) {
+  const mailgun = new Mailgun(formData);
+  mg = mailgun.client({
+    username: "api",
+    key: process.env.MAILGUN_API_KEY,
+  });
+}
 
 export class SupportService {
   /**
@@ -508,6 +515,7 @@ REGRAS B2B:
 `;
 
     try {
+      const openai = getOpenAI();
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
@@ -1184,6 +1192,7 @@ REGRAS B2B:
         contentLength: (email.textContent || email.htmlContent || '').length
       });
 
+      const openai = getOpenAI();
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
@@ -1264,6 +1273,7 @@ REGRAS B2B:
         contentLength: (email.textContent || email.htmlContent || '').length
       });
 
+      const openai = getOpenAI();
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],

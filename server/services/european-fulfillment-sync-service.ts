@@ -303,12 +303,33 @@ export class EuropeanFulfillmentSyncService {
           };
           
           if (existing.length > 0) {
+            const existingOrder = existing[0];
+            
+            // Check if data changed (status, tracking, value, recipient)
+            // Only check critical fields that affect matching/processing
+            const statusChanged = existingOrder.status !== orderData.status;
+            const trackingChanged = existingOrder.tracking !== orderData.tracking;
+            const valueChanged = String(existingOrder.value || '0') !== String(orderData.value || '0');
+            
+            // Compare recipient fields that matter for matching
+            const existingRecipient = existingOrder.recipient as any || {};
+            const newRecipient = orderData.recipient as any || {};
+            const recipientChanged = (
+              (existingRecipient.phone || '') !== (newRecipient.phone || '') ||
+              (existingRecipient.email || '') !== (newRecipient.email || '') ||
+              (existingRecipient.name || '') !== (newRecipient.name || '')
+            );
+            
+            // Only reset processedToOrders if critical data changed (not rawData which may have formatting differences)
+            const shouldReset = statusChanged || trackingChanged || valueChanged || recipientChanged;
+            
             // Update existing
             await db.update(europeanFulfillmentOrders)
               .set({
                 ...orderData,
-                processedToOrders: false, // Reset for re-linking
-                processedAt: null,
+                // Only reset processedToOrders if data changed (to allow re-linking with new data)
+                processedToOrders: shouldReset ? false : existingOrder.processedToOrders,
+                processedAt: shouldReset ? null : existingOrder.processedAt,
                 updatedAt: new Date()
               })
               .where(eq(europeanFulfillmentOrders.id, existing[0].id));

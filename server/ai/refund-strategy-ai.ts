@@ -1,7 +1,13 @@
 import OpenAI from "openai";
 import type { SupportTicket, SupportEmail } from "@shared/schema";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy initialization - only create OpenAI client when needed and API key is available
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured. OpenAI features are disabled.");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+};
 
 // ============================================================================
 // CRITICAL KEYWORDS DETECTION
@@ -289,6 +295,7 @@ REGRAS IMPORTANTES:
 Gere APENAS o texto da resposta, sem assinatura ou cabeçalho.`;
 
   try {
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [

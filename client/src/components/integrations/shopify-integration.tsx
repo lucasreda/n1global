@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, XCircle, RefreshCw, Store, ShoppingCart, Package } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, RefreshCw, Store, ShoppingCart, Package, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -34,6 +34,7 @@ export function ShopifyIntegration() {
   const [shopName, setShopName] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const [webhookUrlCopied, setWebhookUrlCopied] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation: operationId } = useCurrentOperation();
@@ -63,6 +64,24 @@ export function ShopifyIntegration() {
       }
     },
     enabled: !!operationId,
+  });
+
+  // Buscar informações do webhook
+  const { data: webhookInfo, isLoading: webhookInfoLoading } = useQuery({
+    queryKey: ["/api/integrations/shopify/webhook-info"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("/api/integrations/shopify/webhook-info", "GET");
+        if (!response.ok) {
+          console.error("Erro ao buscar informações do webhook:", response.status);
+          return null;
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Erro ao buscar informações do webhook:", error);
+        return null;
+      }
+    },
   });
 
   // Configurar/atualizar integração
@@ -337,6 +356,84 @@ export function ShopifyIntegration() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Seção de Webhook - ANTES dos campos de configuração - Só exibe se URL pública disponível */}
+            {webhookInfo?.hasPublicUrl && (
+              <>
+                {webhookInfoLoading ? (
+                  <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Carregando informações do webhook...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-4 bg-muted/50 border border-border rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground mb-2">
+                        Configurar Webhook (Opcional)
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Para sincronização em tempo real, configure o webhook na sua conta Shopify antes de preencher as credenciais abaixo.
+                      </p>
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-sm text-muted-foreground">URL do Webhook</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input
+                              value={webhookInfo.webhookUrl || ''}
+                              readOnly
+                              className="font-mono text-xs"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (webhookInfo.webhookUrl) {
+                                  navigator.clipboard.writeText(webhookInfo.webhookUrl);
+                                  setWebhookUrlCopied(true);
+                                  setTimeout(() => setWebhookUrlCopied(false), 2000);
+                                  toast({
+                                    title: "URL copiada!",
+                                    description: "Cole a URL na configuração do webhook da Shopify",
+                                  });
+                                }
+                              }}
+                            >
+                              {webhookUrlCopied ? (
+                                <Check className="w-4 h-4" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground">Tópicos Necessários</Label>
+                          <div className="mt-1 flex gap-2 flex-wrap">
+                            {webhookInfo.topics?.map((topic: string) => (
+                              <Badge key={topic} variant="secondary" className="mr-1">
+                                {topic}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        {webhookInfo.instructions && (
+                          <div className="mt-3 text-xs text-muted-foreground bg-muted/30 p-3 rounded border border-border">
+                            <p className="font-medium mb-2 text-foreground">{webhookInfo.instructions.title}</p>
+                            <ol className="list-decimal list-inside space-y-1">
+                              {webhookInfo.instructions.steps.map((step: string, idx: number) => (
+                                <li key={idx}>{step}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="shopName">Nome da Loja</Label>
               <Input

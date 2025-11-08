@@ -24,6 +24,7 @@ import Tools from "@/pages/tools";
 import CostCalculator from "@/pages/cost-calculator";
 import Funnels from "@/pages/funnels";
 import Settings from "@/pages/settings";
+import Profile from "@/pages/profile";
 import Ads from "@/pages/ads";
 import Creatives from "@/pages/creatives";
 import CreativeDetails from "@/pages/creative-details";
@@ -327,6 +328,7 @@ function Router() {
         <Route path="/tools" component={Tools} />
         <Route path="/cost-calculator" component={CostCalculator} />
         <Route path="/settings" component={Settings} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </OnboardingGuard>

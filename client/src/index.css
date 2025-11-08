@@ -591,3 +591,13 @@ html, body {
   font-family: "Font Awesome 6 Brands" !important;
   font-weight: 400;
 }
+
+/* Page Builder - Drag and Drop Animations */
+@keyframes drop-zone-glow {
+  from {
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.5);
+  }
+  to {
+    box-shadow: 0 0 24px rgba(59, 130, 246, 0.8);
+  }
+}

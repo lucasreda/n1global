@@ -1,7 +1,14 @@
 import { Client } from "@replit/object-storage";
 import { nanoid } from "nanoid";
 
-const client = new Client();
+// Lazy initialization - only create client when needed
+let clientInstance: Client | null = null;
+const getClient = (): Client => {
+  if (!clientInstance) {
+    clientInstance = new Client();
+  }
+  return clientInstance;
+};
 
 export interface UploadedFile {
   url: string;
@@ -29,6 +36,7 @@ export async function uploadFileToStorage(
     console.log(`📤 Uploading file to: ${fullPath}`);
     
     // Upload to object storage
+    const client = getClient();
     await client.uploadFromBytes(fullPath, file.buffer);
     
     // Generate URL (object storage will handle access control)

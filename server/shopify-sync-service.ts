@@ -1,6 +1,6 @@
 import { db } from './db';
 import { orders, operations, stores } from '../shared/schema';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, or, isNull, sql } from 'drizzle-orm';
 import { shopifyService, type ShopifyOrder as ShopifyServiceOrder } from './shopify-service';
 
 // Usar o tipo ShopifyOrder do shopify-service
@@ -43,6 +43,25 @@ export class ShopifySyncService {
       startTime: null,
       percentage: 0
     };
+  }
+
+  /**
+   * Limpa o progresso de uma operação específica (para iniciar nova sincronização)
+   */
+  static resetOperationProgress(operationId: string): void {
+    console.log(`🔄 [SHOPIFY RESET] Resetando progresso do Shopify para operação ${operationId}`);
+    ShopifySyncService.progressTracker.set(operationId, {
+      isRunning: false,
+      currentPage: 0,
+      totalPages: 0,
+      processedOrders: 0,
+      totalOrders: 0,
+      newOrders: 0,
+      updatedOrders: 0,
+      currentStep: '',
+      startTime: null,
+      percentage: 0
+    });
   }
 
   /**
@@ -267,13 +286,14 @@ export class ShopifySyncService {
             }
           }
           
-          // Atualizar progresso a cada 50 pedidos processados para melhor UX
-          if ((imported + updated) % 50 === 0) {
+          // Atualizar progresso a cada 10 pedidos processados para melhor UX em tempo real
+          if ((imported + updated) % 10 === 0) {
             this.updateProgress(operationId, {
               processedOrders: imported + updated,
               newOrders: imported,
               updatedOrders: updated
             });
+            console.log(`📊 [SHOPIFY SYNC] Progresso: ${imported + updated}/${totalShopifyOrders} (${Math.round((imported + updated) / totalShopifyOrders * 100)}%)`);
           }
         } catch (error) {
           console.error(`❌ Erro ao processar pedido ${shopifyOrder.name}:`, error);
@@ -331,19 +351,28 @@ export class ShopifySyncService {
       console.log(`✅ SUCESSO: Todos os ${totalShopifyOrders} pedidos da Shopify foram processados com sucesso!`);
     }
     
-    // Finalizar progresso
+    // Finalizar progresso (uma única atualização)
     this.updateProgress(operationId, {
       isRunning: false,
       processedOrders: imported + updated,
       newOrders: imported,
       updatedOrders: updated,
-      currentStep: `Concluído: ${imported + updated} pedidos processados`,
-      percentage: 100
+      currentStep: `Importação concluída: ${imported} novos, ${updated} atualizados`,
+      percentage: totalShopifyOrders > 0 ? 100 : 0
     });
+    
+    console.log(`✅ [SHOPIFY SYNC] Importação completa: ${imported} novos, ${updated} atualizados`);
     
     return { imported, updated };
   }
   
+  /**
+   * Processa um pedido individual do Shopify (método público para webhooks)
+   */
+  async processShopifyOrderDirectly(operationId: string, shopifyOrder: ShopifyOrder): Promise<{ created: boolean }> {
+    return this.processShopifyOrder(operationId, shopifyOrder);
+  }
+
   /**
    * Processa um pedido individual do Shopify
    */
@@ -358,14 +387,20 @@ export class ShopifySyncService {
       throw new Error('Operação não encontrada');
     }
     
-    // Verifica se o pedido já existe (por Shopify Order ID E operação)
+    // UPSERT: Create or update using ON CONFLICT
+    const orderId = `shopify_${shopifyOrder.id}`;
+    
+    // Verifica se o pedido já existe (por ID OU por Shopify Order ID E operação)
     const [existingOrder] = await db
       .select()
       .from(orders)
       .where(
-        and(
-          eq(orders.shopifyOrderId, shopifyOrder.id.toString()),
-          eq(orders.operationId, operationId)
+        or(
+          eq(orders.id, orderId),
+          and(
+            eq(orders.shopifyOrderId, shopifyOrder.id.toString()),
+            eq(orders.operationId, operationId)
+          )
         )
       );
     
@@ -413,20 +448,52 @@ export class ShopifySyncService {
       updatedAt: new Date(),
     };
     
-    // UPSERT: Create or update using ON CONFLICT
-    const orderId = `shopify_${shopifyOrder.id}`;
     const isNewOrder = !existingOrder;
     
-    await db
-      .insert(orders)
-      .values({
-        id: orderId,
-        ...orderData,
+    // Prepare update data - exclude status if carrier already imported it
+    const { status, ...orderDataWithoutStatus } = orderData;
+    
+    // ALWAYS check if order exists (even if existingOrder was null, it might exist by ID)
+    const [currentOrder] = await db
+      .select({ 
+        id: orders.id,
+        carrierImported: orders.carrierImported,
+        status: orders.status 
       })
-      .onConflictDoUpdate({
-        target: orders.id,
-        set: orderData
-      });
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+    
+    if (currentOrder) {
+      // Order exists - ALWAYS use UPDATE (never onConflictDoUpdate)
+      // This gives us full control over what gets updated
+      if (currentOrder.carrierImported === true) {
+        // Order has carrier - update everything EXCEPT status
+        // CRITICAL: Never overwrite carrier status
+        // Database trigger will also protect, but we prevent update here too
+        if (currentOrder.status === 'delivered' && orderData.status !== 'delivered') {
+          console.log(`🔒 [SHOPIFY SYNC] Protecting carrier status: order ${shopifyOrder.name} has carrier_imported=true and status=delivered, skipping status update`);
+        }
+        await db
+          .update(orders)
+          .set(orderDataWithoutStatus)
+          .where(eq(orders.id, orderId));
+      } else {
+        // Order exists but no carrier - update everything including status
+        await db
+          .update(orders)
+          .set(orderData)
+          .where(eq(orders.id, orderId));
+      }
+    } else {
+      // Order doesn't exist - insert new
+      await db
+        .insert(orders)
+        .values({
+          id: orderId,
+          ...orderData,
+        });
+    }
     
     if (isNewOrder) {
       console.log(`✅ Novo pedido Shopify importado: ${shopifyOrder.name}`);
