@@ -102,8 +102,12 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
   });
 
 (async () => {
-  // Push database schema in production
-  if (process.env.NODE_ENV === "production") {
+  const shouldAutoPush =
+    process.env.AUTO_DB_PUSH === "true" ||
+    (process.env.NODE_ENV === "production" && process.env.AUTO_DB_PUSH !== "false");
+
+  // Push database schema when explicitly enabled
+  if (shouldAutoPush) {
     try {
       console.log('📦 Pushing database schema changes...');
       execSync('npm run db:push -- --force', { stdio: 'inherit' });
