@@ -37,6 +37,60 @@ interface DnsRecord {
   priority?: string;
 }
 
+const normalizeStorageUrl = (value?: string | null): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  if (value.startsWith("/objects/")) {
+    return value;
+  }
+
+  if (value.startsWith("/.private/uploads/")) {
+    const legacyId = value.split("/.private/uploads/")[1];
+    if (legacyId) {
+      return `/objects/uploads/${legacyId}`;
+    }
+  }
+
+  try {
+    const url = new URL(value);
+    const host = url.hostname;
+    const path = url.pathname.replace(/^\/+/, "");
+    const pathParts = path.split("/").filter(Boolean);
+
+    if (host.includes("storage.googleapis.com")) {
+      if (path.includes(".private/uploads/")) {
+        const legacyId = path.split(".private/uploads/")[1];
+        if (legacyId) {
+          return `/objects/uploads/${legacyId}`;
+        }
+      }
+      return value;
+    }
+
+    if (host.includes(".r2.cloudflarestorage.com") && pathParts.length >= 2) {
+      const key = pathParts.slice(1).join("/");
+      return `/objects/${key}`;
+    }
+
+    const uploadsMatch = path.match(/uploads\/.+$/);
+    if (uploadsMatch) {
+      return `/objects/${uploadsMatch[0]}`;
+    }
+  } catch (error) {
+    console.error("Erro ao normalizar URL de storage:", error);
+  }
+
+  const uploadsIndex = value.indexOf("/uploads/");
+  if (uploadsIndex !== -1) {
+    const key = value.slice(uploadsIndex + 1);
+    return `/objects/${key}`;
+  }
+
+  return value;
+};
+
 export default function CustomerSupportSettings() {
   const { toast } = useToast();
   const { selectedOperation, operations } = useCurrentOperation();
@@ -365,9 +419,7 @@ export default function CustomerSupportSettings() {
       const processedConfig = {
         ...designConfig, // Start with current state to preserve defaults
         ...serverData,
-        logo: serverData?.logo?.includes?.('storage.googleapis.com') 
-          ? serverData.logo.replace(/.*\/\.private\//, '/objects/') 
-          : serverData?.logo || designConfig.logo,
+        logo: normalizeStorageUrl(serverData?.logo) ?? designConfig.logo,
         // Preserve all new fields with defaults if not present
         logoAlignment: serverData?.logoAlignment || designConfig.logoAlignment || "center",
         secondaryTextColor: serverData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
@@ -439,10 +491,8 @@ export default function CustomerSupportSettings() {
           }
           
           // Convert the upload URL to our object serving endpoint
-          const urlPath = new URL(uploadResponse.uploadURL).pathname;
-          const bucketName = uploadResponse.uploadURL.split('/')[3];
-          const objectPath = urlPath.replace(`/${bucketName}/`, '');
-          logoUrl = `/objects/${objectPath.replace('.private/', '')}`;
+          const normalizedLogo = normalizeStorageUrl(uploadResponse.uploadURL);
+          logoUrl = normalizedLogo ?? uploadResponse.uploadURL;
           console.log('✅ Upload concluído:', logoUrl);
         } catch (error) {
           console.error('❌ Erro detalhado no upload:', error);

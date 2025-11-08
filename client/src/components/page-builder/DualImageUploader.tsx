@@ -4,33 +4,49 @@ import { ImageIcon, X, Upload, Monitor, Smartphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-// Helper function to convert GCS URL to local object path for display
-function convertGcsUrlToObjectPath(gcsUrl: string): string {
-  if (!gcsUrl.startsWith('https://storage.googleapis.com/')) {
-    return gcsUrl;
+// Helper function to convert storage URLs to local object path for display
+function convertStorageUrlToObjectPath(storageUrl: string): string {
+  if (!storageUrl) {
+    return storageUrl;
+  }
+
+  if (storageUrl.startsWith('/objects/')) {
+    return storageUrl;
+  }
+
+  if (storageUrl.startsWith('/.private/uploads/')) {
+    const legacyId = storageUrl.split('/.private/uploads/')[1];
+    if (legacyId) {
+      return `/objects/uploads/${legacyId}`;
+    }
   }
   
   try {
-    const url = new URL(gcsUrl);
-    const pathParts = url.pathname.split('/');
+    const url = new URL(storageUrl);
+    const host = url.hostname;
+    const pathParts = url.pathname.split('/').filter(Boolean);
     
-    // Extract bucket and object path
-    if (pathParts.length >= 3) {
-      const bucketName = pathParts[1];
-      const objectPath = pathParts.slice(2).join('/');
-      
-      // Check if it's in the private directory structure
+    if (host.includes('storage.googleapis.com')) {
+      const objectPath = pathParts.slice(1).join('/');
       if (objectPath.includes('.private/uploads/')) {
         const objectId = objectPath.split('.private/uploads/')[1];
-        return `/objects/uploads/${objectId}`;
+        if (objectId) {
+          return `/objects/uploads/${objectId}`;
+        }
       }
+      return storageUrl;
     }
-    
-    return gcsUrl; // Return original if we can't convert
+
+    if (host.includes('.r2.cloudflarestorage.com') && pathParts.length >= 2) {
+      const key = pathParts.slice(1).join('/');
+      return `/objects/${key}`;
+    }
+
   } catch (error) {
-    console.error('Error converting GCS URL:', error);
-    return gcsUrl;
+    console.error('Error converting storage URL:', error);
   }
+  
+  return storageUrl; // Return original if we can't convert
 }
 
 interface DualImageUploaderProps {
@@ -112,8 +128,7 @@ export function DualImageUploader({
       }
 
       const uploadUrl = data.uploadURL;
-      // Convert the GCS URL to the local object path that can be served by our backend
-      const convertedUrl = convertGcsUrlToObjectPath(uploadUrl);
+      const convertedUrl = convertStorageUrlToObjectPath(uploadUrl);
       
       // Call onImageUpload with the converted URL for the specific type
       if (type === 'desktop') {
@@ -161,8 +176,8 @@ export function DualImageUploader({
   };
 
   // Convert URLs for display if needed
-  const displayDesktopUrl = currentDesktopUrl ? convertGcsUrlToObjectPath(currentDesktopUrl) : '';
-  const displayMobileUrl = currentMobileUrl ? convertGcsUrlToObjectPath(currentMobileUrl) : '';
+  const displayDesktopUrl = currentDesktopUrl ? convertStorageUrlToObjectPath(currentDesktopUrl) : '';
+  const displayMobileUrl = currentMobileUrl ? convertStorageUrlToObjectPath(currentMobileUrl) : '';
 
   const ImageUploadButton = ({ 
     type, 

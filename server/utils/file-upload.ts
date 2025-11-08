@@ -1,19 +1,13 @@
-import { Client } from "@replit/object-storage";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { nanoid } from "nanoid";
-
-// Lazy initialization - only create client when needed
-let clientInstance: Client | null = null;
-const getClient = (): Client => {
-  if (!clientInstance) {
-    clientInstance = new Client();
-  }
-  return clientInstance;
-};
+import { getS3Client, getStorageConfig } from "../objectStorage";
 
 export interface UploadedFile {
   url: string;
   filename: string;
   size: number;
+  contentType?: string;
+  publicUrl?: string;
 }
 
 /**
@@ -25,29 +19,35 @@ export async function uploadFileToStorage(
   prefix: string = "refund-attachments"
 ): Promise<UploadedFile> {
   try {
-    // Generate unique filename
+    const config = getStorageConfig();
+    const client = getS3Client();
+
     const fileExtension = file.originalname.split(".").pop();
-    const uniqueFilename = `${prefix}/${nanoid()}.${fileExtension}`;
-    
-    // Full path in private directory
-    const privateDir = process.env.PRIVATE_OBJECT_DIR || "/.private";
-    const fullPath = `${privateDir}/${uniqueFilename}`;
-    
-    console.log(`📤 Uploading file to: ${fullPath}`);
-    
-    // Upload to object storage
-    const client = getClient();
-    await client.uploadFromBytes(fullPath, file.buffer);
-    
-    // Generate URL (object storage will handle access control)
-    const url = fullPath;
-    
-    console.log(`✅ File uploaded successfully: ${uniqueFilename}`);
-    
+    const sanitizedExtension = fileExtension ? fileExtension.toLowerCase() : null;
+    const uniqueKey = `${prefix}/${nanoid()}${sanitizedExtension ? `.${sanitizedExtension}` : ""}`;
+
+    console.log(`📤 Uploading file to R2: ${uniqueKey}`);
+
+    await client.send(
+      new PutObjectCommand({
+        Bucket: config.privateBucket,
+        Key: uniqueKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      })
+    );
+
+    const url = `/objects/${uniqueKey}`;
+    console.log(`✅ File uploaded successfully to R2: ${uniqueKey}`);
+
     return {
       url,
       filename: file.originalname,
       size: file.size,
+      contentType: file.mimetype,
+      publicUrl: config.publicBaseUrl
+        ? `${config.publicBaseUrl}/${uniqueKey}`
+        : undefined,
     };
   } catch (error) {
     console.error("❌ Error uploading file to object storage:", error);

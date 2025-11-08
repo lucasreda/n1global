@@ -1,10 +1,17 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { Client } from '@replit/object-storage';
 import { nanoid } from 'nanoid';
 import { authenticateToken } from '../auth-middleware';
+import {
+  getS3Client,
+  getStorageConfig,
+  ObjectNotFoundError,
+  ObjectStorageService,
+} from '../objectStorage';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 
 const router = express.Router();
+const objectStorageService = new ObjectStorageService();
 
 /**
  * Serve images from Object Storage
@@ -12,41 +19,19 @@ const router = express.Router();
 router.get('/api/storage/public/page-builder/:filename', async (req: Request, res: Response) => {
   try {
     const { filename } = req.params;
-    const objectPath = `public/page-builder/${filename}`;
+    const objectKey = `public/page-builder/${filename}`;
     
-    console.log('🖼️ Attempting to serve image:', objectPath);
-    
-    // Initialize client for each request
-    const client = new Client();
-    
-    // Download the file from Object Storage using the stream method
-    const readableStream = await client.downloadAsStream(objectPath);
-    
-    // Determine content type based on file extension
-    const ext = filename.split('.').pop()?.toLowerCase();
-    const contentTypes: { [key: string]: string } = {
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif',
-      'webp': 'image/webp',
-      'svg': 'image/svg+xml'
-    };
-    
-    const contentType = contentTypes[ext || ''] || 'application/octet-stream';
-    
-    // Send the file with appropriate headers
-    res.set({
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=31536000',
-    });
-    
-    // Stream the file to the response
-    readableStream.pipe(res);
+    console.log('🖼️ Attempting to serve image:', objectKey);
+
+    const objectRef = await objectStorageService.getObjectEntityFile(`/objects/${objectKey}`);
+    await objectStorageService.downloadObject(objectRef, res, 31536000);
     
   } catch (error) {
     console.error('❌ Error serving image:', error);
-    res.status(404).json({ error: 'Image not found' });
+    if (error instanceof ObjectNotFoundError) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+    res.status(500).json({ error: 'Failed to load image' });
   }
 });
 
@@ -75,23 +60,30 @@ router.post('/api/upload', authenticateToken, upload.single('file'), async (req:
     if (!file) {
       return res.status(400).json({ error: 'No file provided' });
     }
-    
-    // Initialize Replit Object Storage client (lazy)
-    const client = new Client();
+
+    const s3 = getS3Client();
+    const config = getStorageConfig();
     
     // Generate a unique filename  
     const fileExt = file.originalname.split('.').pop() || 'png';
     const fileName = `${nanoid()}.${fileExt}`;
-    const objectPath = `public/page-builder/${fileName}`;
+    const objectKey = `public/page-builder/${fileName}`;
     
-    // Upload to Object Storage
-    await client.uploadFromBytes(objectPath, file.buffer);
-    
-    // Construct the public URL for the uploaded file
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
-      `https://${process.env.REPLIT_DEV_DOMAIN}` : 
-      'http://localhost:5000';
-    const publicUrl = `${baseUrl}/api/storage/public/page-builder/${fileName}`;
+    await s3.send(new PutObjectCommand({
+      Bucket: config.privateBucket,
+      Key: objectKey,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    }));
+
+    const baseUrl = process.env.R2_PUBLIC_BASE_URL
+      ? `${process.env.R2_PUBLIC_BASE_URL.replace(/\/+$/, '')}/${objectKey}`
+      : `${req.protocol}://${req.get('host')}/api/storage/public/page-builder/${fileName}`;
+
+    const publicUrl = process.env.R2_PUBLIC_BASE_URL
+      ? baseUrl
+      : `${req.protocol}://${req.get('host')}/api/storage/public/page-builder/${fileName}`;
+
     console.log(`✅ Upload successful - URL: ${publicUrl}`);
     
     // Return the URL
@@ -120,8 +112,8 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       return res.status(400).json({ error: 'No files provided' });
     }
     
-    // Initialize Replit Object Storage client (lazy)
-    const client = new Client();
+    const s3 = getS3Client();
+    const config = getStorageConfig();
     const urls: { desktop?: string; mobile?: string } = {};
     
     // Upload desktop version if provided
@@ -129,14 +121,18 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       const desktopFile = files.desktop[0];
       const fileExt = desktopFile.originalname.split('.').pop() || 'png';
       const fileName = `${nanoid()}_desktop.${fileExt}`;
-      const objectPath = `public/page-builder/${fileName}`;
+      const objectKey = `public/page-builder/${fileName}`;
       
-      await client.uploadFromBytes(objectPath, desktopFile.buffer);
+      await s3.send(new PutObjectCommand({
+        Bucket: config.privateBucket,
+        Key: objectKey,
+        Body: desktopFile.buffer,
+        ContentType: desktopFile.mimetype,
+      }));
       
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
-        `https://${process.env.REPLIT_DEV_DOMAIN}` : 
-        'http://localhost:5000';
-      urls.desktop = `${baseUrl}/api/storage/public/page-builder/${fileName}`;
+      urls.desktop = process.env.R2_PUBLIC_BASE_URL
+        ? `${process.env.R2_PUBLIC_BASE_URL.replace(/\/+$/, '')}/${objectKey}`
+        : `${req.protocol}://${req.get('host')}/api/storage/public/page-builder/${fileName}`;
     }
     
     // Upload mobile version if provided
@@ -144,14 +140,18 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       const mobileFile = files.mobile[0];
       const fileExt = mobileFile.originalname.split('.').pop() || 'png';
       const fileName = `${nanoid()}_mobile.${fileExt}`;
-      const objectPath = `public/page-builder/${fileName}`;
+      const objectKey = `public/page-builder/${fileName}`;
       
-      await client.uploadFromBytes(objectPath, mobileFile.buffer);
+      await s3.send(new PutObjectCommand({
+        Bucket: config.privateBucket,
+        Key: objectKey,
+        Body: mobileFile.buffer,
+        ContentType: mobileFile.mimetype,
+      }));
       
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
-        `https://${process.env.REPLIT_DEV_DOMAIN}` : 
-        'http://localhost:5000';
-      urls.mobile = `${baseUrl}/api/storage/public/page-builder/${fileName}`;
+      urls.mobile = process.env.R2_PUBLIC_BASE_URL
+        ? `${process.env.R2_PUBLIC_BASE_URL.replace(/\/+$/, '')}/${objectKey}`
+        : `${req.protocol}://${req.get('host')}/api/storage/public/page-builder/${fileName}`;
     }
     
     // Return the URLs
