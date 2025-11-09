@@ -1,7 +1,7 @@
-import pkg from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
+import { neonConfig, Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import * as schema from "@shared/schema";
-import dns from "dns";
+import ws from "ws";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -9,19 +9,19 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const { Pool } = pkg;
-
-// Forçar resolução DNS para IPv4 apenas (resolve problema de IPv6 no Railway)
-// Requer NODE_OPTIONS="--dns-result-order=ipv4first" nas variáveis de ambiente
-dns.setDefaultResultOrder('ipv4first');
+// Configurar WebSocket para ambientes Node.js (Railway)
+// O driver serverless do Neon usa WebSocket (porta 443) ao invés de TCP direto (porta 5432)
+// Isso resolve o problema de bloqueio de porta 5432 no Railway
+if (process.env.NODE_ENV === "production") {
+  neonConfig.webSocketConstructor = ws;
+}
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
-  // Configurações para evitar timeouts em produção
-  connectionTimeoutMillis: 10000, // 10s timeout (padrão é 0 = infinito)
-  idleTimeoutMillis: 30000, // 30s idle
-  max: 20, // máximo de conexões no pool
+  // Configurações para evitar timeouts
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 20,
 });
 
 export const db = drizzle({ client: pool, schema });
