@@ -1,7 +1,6 @@
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "@shared/schema";
-import ws from "ws";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -9,19 +8,17 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configurar WebSocket para ambientes Node.js (Railway)
-// O driver serverless do Neon usa WebSocket (porta 443) ao invés de TCP direto (porta 5432)
-// Isso resolve o problema de bloqueio de porta 5432 no Railway
-if (process.env.NODE_ENV === "production") {
-  neonConfig.webSocketConstructor = ws;
-}
+// Usar driver HTTP do Neon (fetch-based)
+// Funciona em qualquer ambiente, incluindo Railway com restrições de rede
+// Usa fetch() nativo (porta 443 HTTPS) ao invés de TCP (5432) ou WebSocket
+const sql = neon(process.env.DATABASE_URL);
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Configurações para evitar timeouts
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  max: 20,
-});
+export const db = drizzle(sql, { schema });
 
-export const db = drizzle({ client: pool, schema });
+// Manter compatibilidade com código que usa pool.query()
+export const pool = {
+  query: async (text: string, params?: any[]) => {
+    const result = await sql(text, params);
+    return { rows: result };
+  },
+};
