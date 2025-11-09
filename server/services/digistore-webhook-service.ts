@@ -197,7 +197,7 @@ export class DigistoreWebhookService {
         .where(eq(orders.digistoreOrderId, event.order_id))
         .limit(1);
 
-      const shippingAddress = event.shipping_address || event.billing_address;
+      const shippingAddress = event.shipping_address || event.billing_address || {};
 
       if (existingOrder) {
         // Atualizar pedido existente
@@ -223,14 +223,16 @@ export class DigistoreWebhookService {
           digistoreTransactionId: event.transaction_id,
           
           // Dados do cliente
-          customerName: event.buyer_name,
-          customerEmail: event.buyer_email,
+          customerName: event.buyer_name || 'N/A',
+          customerEmail: event.buyer_email || '',
           customerPhone: shippingAddress.phone || null,
-          customerAddress: shippingAddress.street + (shippingAddress.street2 ? `, ${shippingAddress.street2}` : ''),
-          customerCity: shippingAddress.city,
+          customerAddress: shippingAddress.street 
+            ? shippingAddress.street + (shippingAddress.street2 ? `, ${shippingAddress.street2}` : '')
+            : null,
+          customerCity: shippingAddress.city || null,
           customerState: shippingAddress.state || null,
-          customerZip: shippingAddress.zipcode,
-          customerCountry: shippingAddress.country,
+          customerZip: shippingAddress.zipcode || null,
+          customerCountry: shippingAddress.country || null,
           
           // Status
           status: mapDigistoreStatus(event.payment_status),
@@ -238,7 +240,7 @@ export class DigistoreWebhookService {
           
           // Financeiro
           total: event.amount?.toString() || '0',
-          currency: event.currency,
+          currency: event.currency || 'EUR',
           
           // Provider
           provider: 'digistore24',
