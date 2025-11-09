@@ -307,7 +307,7 @@ export function DigistoreIntegration() {
           <CardContent className="space-y-4">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <p className="text-sm text-gray-300">
-                ℹ️ A Digistore24 envia pedidos automaticamente via webhook IPN quando ocorrem eventos (pagamento, reembolso, chargeback).
+                ℹ️ A Digistore24 envia pedidos automaticamente via webhook IPN. Você também pode sincronizar manualmente para buscar entregas pendentes.
               </p>
               <p className="text-sm text-gray-300 mt-2">
                 <strong>URL do Webhook:</strong><br />
@@ -315,17 +315,19 @@ export function DigistoreIntegration() {
                   https://www.n1global.app/api/integrations/digistore/webhook
                 </code>
               </p>
-              <p className="text-sm text-gray-300 mt-2">
-                Configure esta URL no painel da Digistore24 para receber pedidos em tempo real.
-              </p>
             </div>
             <Button
-              disabled
-              className="bg-gray-600 text-gray-400 cursor-not-allowed"
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid="button-sync-data"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Sincronização Manual Não Disponível
+              {syncMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Sincronizar Entregas Pendentes
             </Button>
           </CardContent>
         </Card>

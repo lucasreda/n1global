@@ -95,10 +95,8 @@ export class DigistoreService {
   }
 
   /**
-   * Lista pedidos da Digistore24 com filtros opcionais
-   * NOTA: A API da Digistore24 funciona APENAS via webhooks IPN.
-   * Não há endpoint REST para buscar pedidos.
-   * Os pedidos são recebidos automaticamente via webhook quando ocorrem eventos.
+   * Lista entregas pendentes da Digistore24
+   * Endpoint: GET /api/deliveries
    */
   async listOrders(params?: {
     limit?: number;
@@ -106,13 +104,33 @@ export class DigistoreService {
     end_date?: string; // ISO 8601 format
     payment_status?: string;
   }): Promise<DigistoreOrder[]> {
-    console.log(`ℹ️ Digistore24: Sincronização manual não disponível`);
-    console.log(`ℹ️ Os pedidos são recebidos automaticamente via webhook IPN`);
-    console.log(`ℹ️ Configure o webhook no painel da Digistore24: https://www.n1global.app/api/integrations/digistore/webhook`);
-    
-    // A API da Digistore24 não possui endpoint REST para listar pedidos
-    // Os pedidos chegam automaticamente via webhooks IPN
-    return [];
+    try {
+      const url = `${this.baseUrl}/deliveries`;
+      console.log(`📦 Buscando entregas pendentes Digistore24`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-DS-API-KEY': this.credentials.apiKey,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(60000), // 60 segundos de timeout
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Erro ao buscar entregas: ${response.status} - ${errorText}`);
+        throw new Error(`Erro ao buscar entregas: HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ Entregas pendentes recuperadas: ${Array.isArray(data) ? data.length : 0}`);
+      
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('❌ Erro ao listar entregas Digistore24:', error);
+      throw error;
+    }
   }
 
   /**
@@ -157,6 +175,7 @@ export class DigistoreService {
   /**
    * Atualiza o status de entrega de um pedido
    * Envia informações de rastreamento de volta para a Digistore24
+   * Endpoint: PUT /api/deliveries/{order_id}
    */
   async updateOrderStatus(
     orderId: string,
@@ -164,11 +183,11 @@ export class DigistoreService {
     trackingInfo?: DigistoreTrackingInfo
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const url = `${this.baseUrl}/orders/${orderId}/fulfillment`;
-      console.log(`📤 Atualizando status do pedido Digistore24: ${orderId}`);
+      const url = `${this.baseUrl}/deliveries/${orderId}`;
+      console.log(`📤 Atualizando status Digistore24: ${orderId} -> ${status}`);
 
       const payload: any = {
-        status,
+        status, // 'pending', 'processing', 'shipped', 'delivered', 'cancelled'
       };
 
       if (trackingInfo) {
@@ -182,7 +201,7 @@ export class DigistoreService {
       }
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: 'PUT', // Mudou de POST para PUT
         headers: {
           'X-DS-API-KEY': this.credentials.apiKey,
           'Accept': 'application/json',

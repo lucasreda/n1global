@@ -85,16 +85,74 @@ async function pollNewOrders() {
 
         console.log(`📦 [DIGISTORE POLLING] Encontrados ${digistoreOrders.length} pedidos novos/modificados para operação ${integration.operationId}`);
 
-        // TODO: Processar pedidos quando sync service Digistore24 estiver pronto
-        // Por enquanto, apenas atualizar tracking
+        // Importar schema
+        const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
+        const { and } = await import('drizzle-orm');
+
+        // Processar e salvar pedidos na staging table
+        let created = 0;
+        let updated = 0;
+
+        for (const order of digistoreOrders) {
+          try {
+            // Verificar se já existe
+            const [existing] = await db
+              .select()
+              .from(digistoreOrdersTable)
+              .where(
+                and(
+                  eq(digistoreOrdersTable.integrationId, integration.id),
+                  eq(digistoreOrdersTable.orderId, order.order_id)
+                )
+              )
+              .limit(1);
+
+            const orderData = {
+              integrationId: integration.id,
+              orderId: order.order_id,
+              transactionId: order.transaction_id,
+              status: order.payment_status,
+              tracking: null,
+              value: order.amount?.toString() || '0',
+              recipient: {
+                name: order.buyer_name,
+                email: order.buyer_email,
+                phone: order.shipping_address?.phone || order.billing_address?.phone
+              },
+              items: [], // Digistore24 pode não fornecer items detalhados
+              rawData: order
+            };
+
+            if (existing) {
+              await db.update(digistoreOrdersTable)
+                .set({
+                  ...orderData,
+                  processedToOrders: false,
+                  processedAt: null,
+                  updatedAt: new Date()
+                })
+                .where(eq(digistoreOrdersTable.id, existing.id));
+              updated++;
+            } else {
+              await db.insert(digistoreOrdersTable).values({
+                ...orderData,
+                processedToOrders: false
+              });
+              created++;
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao processar pedido ${order.order_id}:`, error);
+          }
+        }
+
+        console.log(`✅ [DIGISTORE POLLING] ${created} novos, ${updated} atualizados para operação ${integration.operationId}`);
+
         if (digistoreOrders.length > 0) {
           lastSyncTracking.set(integration.operationId, {
             lastSyncAt: new Date(),
             lastProcessedOrderId: digistoreOrders[0].order_id
           });
         }
-
-        console.log(`✅ [DIGISTORE POLLING] Processados ${digistoreOrders.length} pedidos para operação ${integration.operationId}`);
       } catch (error) {
         console.error(`❌ Erro no polling Digistore24 para operação ${integration.operationId}:`, error);
       }

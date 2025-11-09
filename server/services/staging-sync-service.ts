@@ -1056,6 +1056,98 @@ async function processElogyOrders(
 }
 
 /**
+ * Process Digistore24 orders from staging table
+ */
+async function processDigistoreOrders(
+  userId: string,
+  batchSize: number = 100
+): Promise<ProcessBatchResult> {
+  const { digistoreOrders, digistoreIntegrations } = await import('@shared/schema');
+  
+  let totalProcessed = 0;
+  let totalLinked = 0;
+  let totalSkipped = 0;
+  
+  // Buscar pedidos não processados do usuário
+  const unprocessedOrders = await db
+    .select({
+      order: digistoreOrders,
+      integration: digistoreIntegrations,
+    })
+    .from(digistoreOrders)
+    .innerJoin(
+      digistoreIntegrations,
+      eq(digistoreOrders.integrationId, digistoreIntegrations.id)
+    )
+    .innerJoin(
+      operations,
+      eq(digistoreIntegrations.operationId, operations.id)
+    )
+    .where(
+      and(
+        eq(digistoreOrders.processedToOrders, false),
+        eq(operations.userId, userId)
+      )
+    )
+    .limit(batchSize);
+
+  console.log(`📦 Processando ${unprocessedOrders.length} pedidos Digistore24 não processados`);
+
+  for (const { order, integration } of unprocessedOrders) {
+    try {
+      totalProcessed++;
+      const operationId = integration.operationId;
+      const recipient = order.recipient as any;
+      
+      // Buscar pedido existente usando email ou phone
+      const matchedOrder = await findShopifyOrderIntelligent(
+        order.orderId,
+        recipient?.email,
+        recipient?.phone,
+        operationId,
+        recipient?.name,
+        order.value
+      );
+
+      if (matchedOrder) {
+        // Vincular pedido
+        await db.update(digistoreOrders)
+          .set({
+            processedToOrders: true,
+            linkedOrderId: matchedOrder.id,
+            processedAt: new Date()
+          })
+          .where(eq(digistoreOrders.id, order.id));
+        
+        totalLinked++;
+        console.log(`✅ Pedido Digistore24 ${order.orderId} vinculado a ${matchedOrder.id}`);
+      } else {
+        // Marcar como processado mesmo sem match
+        await db.update(digistoreOrders)
+          .set({
+            processedToOrders: true,
+            processedAt: new Date()
+          })
+          .where(eq(digistoreOrders.id, order.id));
+        
+        totalSkipped++;
+        console.log(`⚠️ Pedido Digistore24 ${order.orderId} não encontrado no Shopify`);
+      }
+    } catch (error) {
+      console.error(`❌ Erro ao processar pedido Digistore24 ${order.orderId}:`, error);
+      totalSkipped++;
+    }
+  }
+
+  return {
+    processed: totalProcessed,
+    created: 0,
+    updated: totalLinked,
+    skipped: totalSkipped
+  };
+}
+
+/**
  * Count unprocessed orders for a user across all staging tables
  */
 async function countUnprocessedOrders(userId: string): Promise<number> {
@@ -1353,18 +1445,20 @@ export async function performStagingSync(userId: string): Promise<void> {
     
     // Process all staging tables in parallel for speed
     // Nota: Cada função de processamento já atualiza o progresso individualmente
-    console.log(`🔄 [STAGING SYNC] Iniciando processamento paralelo de FHB, EF e eLogy...`);
+    console.log(`🔄 [STAGING SYNC] Iniciando processamento paralelo de FHB, EF, eLogy e Digistore24...`);
     const startTime = Date.now();
-    const [fhbResult, efResult, elogyResult] = await Promise.all([
+    const [fhbResult, efResult, elogyResult, digistoreResult] = await Promise.all([
       processFHBOrders(userId, accountOpsCache),
       processEuropeanFulfillmentOrders(userId, accountOpsCache),
-      processElogyOrders(userId, accountOpsCache)
+      processElogyOrders(userId, accountOpsCache),
+      processDigistoreOrders(userId)
     ]);
     const processingTime = Date.now() - startTime;
     console.log(`✅ [STAGING SYNC] Processamento paralelo concluído em ${processingTime}ms:`, {
       fhb: fhbResult,
       ef: efResult,
-      elogy: elogyResult
+      elogy: elogyResult,
+      digistore: digistoreResult
     });
     
     // Atualizar progresso imediatamente após processamento iniciar

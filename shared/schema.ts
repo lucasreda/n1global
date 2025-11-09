@@ -474,6 +474,41 @@ export const digistoreIntegrations = pgTable("digistore_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Digistore24 Orders Staging Table - raw orders before processing to operations
+export const digistoreOrders = pgTable("digistore_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").references(() => digistoreIntegrations.id, { onDelete: "set null" }),
+  
+  // Digistore24 order identifiers
+  orderId: text("order_id").notNull(), // Digistore24 order ID
+  transactionId: text("transaction_id").notNull(), // Transaction ID
+  
+  // Order data
+  status: text("status").notNull(), // Digistore24 delivery status
+  tracking: text("tracking"), // Tracking number
+  value: decimal("value", { precision: 10, scale: 2 }), // Order value
+  
+  // Structured data
+  recipient: jsonb("recipient"), // Customer information
+  items: jsonb("items"), // Order items
+  rawData: jsonb("raw_data").notNull(), // Complete Digistore24 order object
+  
+  // Processing tracking
+  processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  linkedOrderId: text("linked_order_id"), // ID of the linked order in orders table (null if not linked)
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicates
+  uniqueDigistoreOrder: unique().on(table.integrationId, table.orderId),
+  // Index for unprocessed orders
+  unprocessedIdx: index("digistore_orders_unprocessed_idx").on(table.processedToOrders),
+  // Index for order ID lookup
+  orderIdIdx: index("digistore_orders_order_id_idx").on(table.orderId),
+}));
+
 // Warehouse Providers - Catalog of available warehouse providers
 export const warehouseProviders = pgTable("warehouse_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

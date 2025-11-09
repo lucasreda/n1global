@@ -153,31 +153,68 @@ export class DigistoreWebhookService {
         }
       }
 
-      // Buscar operação
-      const [operation] = await db
+      // Buscar integração
+      const [integration] = await db
         .select()
-        .from(operations)
-        .where(eq(operations.id, targetOperationId))
+        .from(digistoreIntegrations)
+        .where(eq(digistoreIntegrations.operationId, targetOperationId))
         .limit(1);
 
-      if (!operation) {
-        console.error(`❌ Operação não encontrada: ${targetOperationId}`);
-        return { success: false, error: 'Operação não encontrada' };
+      if (!integration) {
+        console.warn('⚠️ Integração Digistore24 não encontrada');
+        return { success: false, error: 'Integração não encontrada' };
       }
 
-      // Processar baseado no tipo de evento
-      switch (event.event) {
-        case 'on_payment':
-          await this.processPaymentEvent(event, operation);
-          break;
-        case 'on_refund':
-          await this.processRefundEvent(event, operation);
-          break;
-        case 'on_chargeback':
-          await this.processChargebackEvent(event, operation);
-          break;
-        default:
-          console.log(`ℹ️ Evento Digistore24 não processado: ${event.event}`);
+      // Importar schema
+      const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
+      const { and } = await import('drizzle-orm');
+
+      // Salvar/atualizar na staging table
+      const [existing] = await db
+        .select()
+        .from(digistoreOrdersTable)
+        .where(
+          and(
+            eq(digistoreOrdersTable.integrationId, integration.id),
+            eq(digistoreOrdersTable.orderId, event.order_id)
+          )
+        )
+        .limit(1);
+
+      const orderData = {
+        integrationId: integration.id,
+        orderId: event.order_id,
+        transactionId: event.transaction_id,
+        status: event.payment_status,
+        tracking: null,
+        value: event.amount?.toString() || '0',
+        recipient: {
+          name: event.buyer_name,
+          email: event.buyer_email,
+          phone: event.shipping_address?.phone || event.billing_address?.phone
+        },
+        items: [],
+        rawData: event
+      };
+
+      if (existing) {
+        await db.update(digistoreOrdersTable)
+          .set({
+            ...orderData,
+            processedToOrders: false,
+            processedAt: null,
+            updatedAt: new Date()
+          })
+          .where(eq(digistoreOrdersTable.id, existing.id));
+        
+        console.log(`✅ Pedido Digistore24 atualizado: ${event.order_id}`);
+      } else {
+        await db.insert(digistoreOrdersTable).values({
+          ...orderData,
+          processedToOrders: false
+        });
+        
+        console.log(`✅ Pedido Digistore24 criado: ${event.order_id}`);
       }
 
       return { success: true };

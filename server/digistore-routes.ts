@@ -234,15 +234,64 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const digistoreOrders = await digistoreService.listOrders({
-      limit: 100,
-      start_date: thirtyDaysAgo.toISOString(),
-    });
+    const deliveries = await digistoreService.listOrders();
 
-    console.log(`📦 Encontrados ${digistoreOrders.length} pedidos Digistore24`);
+    console.log(`📦 ${deliveries.length} entregas pendentes encontradas`);
 
-    // TODO: Processar e salvar pedidos no banco de dados
-    // Por enquanto, apenas retornar contagem
+    // Importar schema
+    const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
+    const { and } = await import('drizzle-orm');
+
+    // Salvar na staging table
+    let created = 0;
+    let updated = 0;
+
+    for (const order of deliveries) {
+      const [existing] = await db
+        .select()
+        .from(digistoreOrdersTable)
+        .where(
+          and(
+            eq(digistoreOrdersTable.integrationId, integration.id),
+            eq(digistoreOrdersTable.orderId, order.order_id)
+          )
+        )
+        .limit(1);
+
+      const orderData = {
+        integrationId: integration.id,
+        orderId: order.order_id,
+        transactionId: order.transaction_id,
+        status: order.payment_status,
+        tracking: null,
+        value: order.amount?.toString() || '0',
+        recipient: {
+          name: order.buyer_name,
+          email: order.buyer_email,
+          phone: order.shipping_address?.phone || order.billing_address?.phone
+        },
+        items: [],
+        rawData: order
+      };
+
+      if (existing) {
+        await db.update(digistoreOrdersTable)
+          .set({
+            ...orderData,
+            processedToOrders: false,
+            processedAt: null,
+            updatedAt: new Date()
+          })
+          .where(eq(digistoreOrdersTable.id, existing.id));
+        updated++;
+      } else {
+        await db.insert(digistoreOrdersTable).values({
+          ...orderData,
+          processedToOrders: false
+        });
+        created++;
+      }
+    }
 
     // Atualizar lastSyncAt
     await db
@@ -255,8 +304,10 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
 
     res.json({
       success: true,
-      message: `Sincronização concluída. ${digistoreOrders.length} pedidos encontrados.`,
-      ordersCount: digistoreOrders.length
+      message: `Sincronização concluída. ${created} novos, ${updated} atualizados.`,
+      ordersCount: deliveries.length,
+      created,
+      updated
     });
   } catch (error) {
     console.error("❌ Erro na sincronização Digistore24:", error);
