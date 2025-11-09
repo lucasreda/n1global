@@ -7,16 +7,44 @@ import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import { DigistoreService } from '../digistore-service';
 
-// Helper function to map Digistore24 delivery status to our order status
-function mapDigistoreStatus(deliveryType: string): string {
-  switch (deliveryType) {
-    case 'request': return 'pending';
-    case 'in_progress': return 'confirmed';
-    case 'delivery': return 'shipped';
-    case 'partial_delivery': return 'shipped';
-    case 'return': return 'returned';
-    case 'cancel': return 'cancelled';
-    default: return 'pending';
+// Helper function to map Digistore24 payment/delivery status to our order status
+function mapDigistoreStatus(status: string): string {
+  if (!status) return 'pending';
+  
+  const statusLower = status.toLowerCase();
+  
+  switch (statusLower) {
+    // Payment statuses
+    case 'completed':
+    case 'paid':
+      return 'confirmed';
+    case 'pending':
+    case 'processing':
+      return 'pending';
+    case 'refunded':
+      return 'refunded';
+    case 'cancelled':
+    case 'canceled':
+    case 'failed':
+      return 'cancelled';
+    
+    // Delivery statuses
+    case 'request':
+      return 'pending';
+    case 'in_progress':
+      return 'confirmed';
+    case 'delivery':
+    case 'shipped':
+      return 'shipped';
+    case 'partial_delivery':
+      return 'shipped';
+    case 'return':
+      return 'returned';
+    case 'cancel':
+      return 'cancelled';
+    
+    default:
+      return 'pending';
   }
 }
 
