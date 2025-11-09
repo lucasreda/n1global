@@ -222,6 +222,21 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
       return res.status(400).json({ error: "Operation ID é obrigatório" });
     }
 
+    const timestamp = Date.now();
+    const customOrderId =
+      typeof req.query.customOrderId === "string"
+        ? req.query.customOrderId.trim()
+        : "";
+    const orderId = customOrderId.length > 0 ? customOrderId : `TEST-${timestamp}`;
+    const orderSlug =
+      orderId.replace(/[^a-zA-Z0-9_-]/g, "-") || `TEST${timestamp}`;
+    const paymentId =
+      customOrderId.length > 0
+        ? `PAYID-${orderSlug}`
+        : `PAYID-TEST-${timestamp}`;
+    const transactionId =
+      customOrderId.length > 0 ? `${orderSlug}-${timestamp}` : `${timestamp}`;
+
     console.log(`🔄 Iniciando sincronização manual Digistore24 para operação: ${operationId}`);
 
     // Buscar integração
