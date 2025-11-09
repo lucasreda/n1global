@@ -266,43 +266,54 @@ export class DigistoreWebhookService {
         // Criar novo pedido
         const newOrderId = `DS-${event.order_id}`;
         
+        console.log(`🔍 [DEBUG] Construindo pedido ${newOrderId}...`);
+        console.log(`🔍 [DEBUG] customerName: "${customerName}"`);
+        console.log(`🔍 [DEBUG] email: "${event.email}"`);
+        console.log(`🔍 [DEBUG] payment_status: "${event.payment_status}"`);
+        console.log(`🔍 [DEBUG] billing_status: "${event.billing_status}"`);
+        console.log(`🔍 [DEBUG] amount: ${typeof event.amount} = ${event.amount}`);
+        
         // Garantir que campos obrigatórios nunca sejam null/undefined
         const safeOrderData = {
           id: newOrderId,
           storeId: operation.storeId,
           operationId: targetOperationId,
-          dataSource: 'digistore24',
-          digistoreOrderId: event.order_id,
-          digistoreTransactionId: event.transaction_id,
+          dataSource: 'digistore24' as const,
+          digistoreOrderId: event.order_id || null,
+          digistoreTransactionId: event.transaction_id || null,
           
           // Dados do cliente (usando campos flat)
-          customerName: customerName,
+          customerName: customerName || 'Cliente Digistore24',
           customerEmail: event.email || '',
           customerPhone: event.address_phone_no || event.billing_phone_no || null,
-          customerAddress: fullAddress,
+          customerAddress: fullAddress || null,
           customerCity: event.address_city || event.billing_city || null,
           customerState: event.address_state || event.billing_state || null,
           customerZip: event.address_zipcode || event.billing_zipcode || null,
           customerCountry: event.address_country || event.billing_country || null,
           
-          // Status
-          status: mapDigistoreStatus(event.payment_status || event.billing_status || 'pending'),
+          // Status (garantir que nunca seja null/undefined)
+          status: mapDigistoreStatus(event.payment_status || event.billing_status || 'pending') || 'pending',
           paymentStatus: event.payment_status || event.billing_status || 'pending',
           
-          // Financeiro
-          total: typeof event.amount === 'number' ? event.amount.toString() : (event.amount || '0'),
+          // Financeiro (garantir que nunca seja null/undefined)
+          total: typeof event.amount === 'number' ? event.amount.toString() : (event.amount?.toString() || '0'),
           currency: event.currency || 'EUR',
           
           // Provider
-          provider: 'digistore24',
+          provider: 'digistore24' as const,
           
           // Metadata
-          providerData: event,
+          providerData: event as any,
           orderDate: event.created_at ? new Date(event.created_at) : new Date(),
           
-          needsSync: false, // Já está sincronizado
+          needsSync: false,
           carrierImported: false,
         };
+        
+        console.log(`🔍 [DEBUG] safeOrderData.status: "${safeOrderData.status}"`);
+        console.log(`🔍 [DEBUG] safeOrderData.total: "${safeOrderData.total}"`);
+        console.log(`🔍 [DEBUG] Inserindo no banco...`);
         
         await db.insert(orders).values(safeOrderData);
         
