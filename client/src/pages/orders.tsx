@@ -49,23 +49,15 @@ const getPlatformIcon = (order: any) => {
   
   if (order.dataSource === 'digistore24' || order.digistoreOrderId || order.id?.startsWith('DS-')) {
     return (
-      <svg 
-        width="12" 
-        height="12" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        className="inline-block mr-1.5 flex-shrink-0"
-      >
-        <rect width="24" height="24" rx="5" fill="#2563EB"/>
-        <path 
-          d="M7.8 6.6C7.05 6.6 6.36 7.29 6.36 8.04V15.96C6.36 16.71 7.05 17.4 7.8 17.4H10.2C10.95 17.4 11.64 16.71 11.64 15.96V13.8L15 17.4C15.75 17.4 16.44 16.71 16.44 15.96V13.8C16.44 13.05 15.75 12.36 15 12.36L11.64 8.76V8.04C11.64 7.29 10.95 6.6 10.2 6.6H7.8Z" 
-          fill="white"
-        />
-        <path 
-          d="M13.8 6.6C13.05 6.6 12.36 7.29 12.36 8.04V10.2L15.72 13.8C16.47 13.8 17.16 13.11 17.16 12.36V8.04C17.16 7.29 16.47 6.6 15.72 6.6H13.8Z" 
-          fill="white"
-        />
-      </svg>
+      <img
+        src="/digistore-logo.png"
+        alt="Digistore24"
+        className="w-3 h-3 inline-block mr-1.5 rounded flex-shrink-0"
+        decoding="async"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
     );
   }
   

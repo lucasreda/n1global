@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+
+ 404 Page Not Found
+ The page you requested was not found.
+-->
+<head>
+<title>404 Page Not Found</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel='icon' type='image/png' href='/webinc/images/brand/digistore/favicons/favicon.png' sizes='64x64' />
+<link rel='apple-touch-icon' sizes='180x180' href='/webinc/images/brand/digistore/favicons/favicon.png' />
+
+<style type="text/css">
+
+::selection{ background-color: #E13300; color: white; }
+::moz-selection{ background-color: #E13300; color: white; }
+::webkit-selection{ background-color: #E13300; color: white; }
+
+body {
+    background-color: #fff;
+    margin: 40px;
+    font: 13px/20px normal Helvetica, Arial, sans-serif;
+    color: #4F5155;
+}
+
+a {
+    color: #003399;
+    background-color: transparent;
+    font-weight: normal;
+}
+
+h1 {
+    color: #444;
+    background-color: transparent;
+    border-bottom: 1px solid #D0D0D0;
+    font-size: 19px;
+    font-weight: normal;
+    margin: 0 0 14px 0;
+    padding: 14px 15px 10px 15px;
+}
+
+code {
+    font-family: Consolas, Monaco, Courier New, Courier, monospace;
+    font-size: 12px;
+    background-color: #f9f9f9;
+    border: 1px solid #D0D0D0;
+    color: #002166;
+    display: block;
+    margin: 14px 0 14px 0;
+    padding: 12px 10px 12px 10px;
+}
+
+#container {
+    margin: 10px;
+    border: 1px solid #D0D0D0;
+    -webkit-box-shadow: 0 0 8px #D0D0D0;
+}
+
+p {
+    margin: 12px 15px 12px 15px;
+}
+</style>
+</head>
+<body>
+    <script src="https://www.digistore24.com/pb/webinc/dfbbd76f/frontend/dependencies/elastic-apm-rum.umd.min.js" nonce="hZ3slxwrSvMo1y2E" crossorigin></script>
+                <script nonce="hZ3slxwrSvMo1y2E">
+                    var apm = elasticApm.init({
+                        serviceName: "ds24-legacy-frontend",
+                        serverUrl: "https:\/\/88426f751da24877a92980575e4edd90.apm.northamerica-northeast1.gcp.elastic-cloud.com:443",
+                        environment: "prod-ds",
+                        serviceVersion: "northamerica-northeast1-docker.pkg.dev\/ds-base\/docker\/ds\/main:sha-dfbbd76fd058da192cfe5cd3dc8b8470d859cf30",
+                        disableInstrumentations: ["eventtarget"]
+                    });
+                    
+                    apm.addLabels({ gui_view_string: "home" });
+                    apm.addLabels({ "user_agent.device.width": window.innerWidth });
+                    apm.addFilter(function (payload) {
+                        var includeList = ["unzer", "digistore24", "stripe"];
+                        var excludeList = ["https://", "safari-extension", "chrome-extension"];
+                        if (payload.errors) {
+                            payload.errors = payload.errors.filter(function(error) {
+                                if (includeList.filter(function(subject) { return error.culprit.indexOf(subject) > -1 }).length > 0) {
+                                    return true;
+                                }
+                                if (excludeList.filter(function(subject) { return error.culprit.indexOf(subject) > -1 }).length > 0) {
+                                    return false;
+                                }
+                                return true;
+                            });
+                        }
+                        return payload;
+                    });
+                </script>    <div id="container">
+        <h1>404 Page Not Found</h1>
+        <p>The page you requested was not found.</p>    </div>
+</body>
+</html>
