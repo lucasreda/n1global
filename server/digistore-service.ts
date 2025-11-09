@@ -96,6 +96,9 @@ export class DigistoreService {
 
   /**
    * Lista pedidos da Digistore24 com filtros opcionais
+   * NOTA: A API da Digistore24 funciona APENAS via webhooks IPN.
+   * Não há endpoint REST para buscar pedidos.
+   * Os pedidos são recebidos automaticamente via webhook quando ocorrem eventos.
    */
   async listOrders(params?: {
     limit?: number;
@@ -103,49 +106,13 @@ export class DigistoreService {
     end_date?: string; // ISO 8601 format
     payment_status?: string;
   }): Promise<DigistoreOrder[]> {
-    try {
-      const queryParams = new URLSearchParams();
-      
-      if (params?.limit) {
-        queryParams.append('limit', params.limit.toString());
-      }
-      if (params?.start_date) {
-        queryParams.append('start_date', params.start_date);
-      }
-      if (params?.end_date) {
-        queryParams.append('end_date', params.end_date);
-      }
-      if (params?.payment_status) {
-        queryParams.append('payment_status', params.payment_status);
-      }
-
-      const url = `${this.baseUrl}/orders?${queryParams.toString()}`;
-      console.log(`📦 Buscando pedidos Digistore24: ${url}`);
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'X-DS-API-KEY': this.credentials.apiKey,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(60000), // 60 segundos de timeout
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Erro ao buscar pedidos Digistore24: ${response.status} - ${errorText}`);
-        throw new Error(`Erro ao buscar pedidos: HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(`✅ Pedidos Digistore24 recuperados: ${Array.isArray(data) ? data.length : 0}`);
-      
-      return Array.isArray(data) ? data : [];
-    } catch (error) {
-      console.error('❌ Erro ao listar pedidos Digistore24:', error);
-      throw error;
-    }
+    console.log(`ℹ️ Digistore24: Sincronização manual não disponível`);
+    console.log(`ℹ️ Os pedidos são recebidos automaticamente via webhook IPN`);
+    console.log(`ℹ️ Configure o webhook no painel da Digistore24: https://www.n1global.app/api/integrations/digistore/webhook`);
+    
+    // A API da Digistore24 não possui endpoint REST para listar pedidos
+    // Os pedidos chegam automaticamente via webhooks IPN
+    return [];
   }
 
   /**

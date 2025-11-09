@@ -298,25 +298,34 @@ export function DigistoreIntegration() {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
               <RefreshCw className="text-blue-400" size={20} />
-              Sincronização de Dados
+              Sincronização Automática via Webhook
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Sincronize pedidos do Digistore24
+              Os pedidos são recebidos automaticamente via webhook IPN
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p className="text-sm text-gray-300">
+                ℹ️ A Digistore24 envia pedidos automaticamente via webhook IPN quando ocorrem eventos (pagamento, reembolso, chargeback).
+              </p>
+              <p className="text-sm text-gray-300 mt-2">
+                <strong>URL do Webhook:</strong><br />
+                <code className="text-xs bg-black/30 px-2 py-1 rounded">
+                  https://www.n1global.app/api/integrations/digistore/webhook
+                </code>
+              </p>
+              <p className="text-sm text-gray-300 mt-2">
+                Configure esta URL no painel da Digistore24 para receber pedidos em tempo real.
+              </p>
+            </div>
             <Button
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled
+              className="bg-gray-600 text-gray-400 cursor-not-allowed"
               data-testid="button-sync-data"
             >
-              {syncMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Sincronizar Agora
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Sincronização Manual Não Disponível
             </Button>
           </CardContent>
         </Card>
