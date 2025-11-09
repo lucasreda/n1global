@@ -59,42 +59,52 @@ async function pollNewOrders() {
           apiKey: integration.apiKey
         });
 
-        // Parâmetros para buscar apenas pedidos novos
+        // Parâmetros para buscar entregas pendentes
         const params: any = {
-          limit: 50 // Pequeno lote para polling
+          type: 'request,in_progress', // Apenas entregas pendentes
         };
 
-        // Se temos lastSyncAt, usar start_date
+        // Se temos lastSyncAt, usar from
         if (tracking.lastSyncAt) {
-          params.start_date = tracking.lastSyncAt.toISOString();
+          const fromDate = new Date(tracking.lastSyncAt);
+          params.from = fromDate.toISOString().split('T')[0]; // YYYY-MM-DD
         } else {
           // Se não temos tracking, buscar últimos 7 dias
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          params.start_date = sevenDaysAgo.toISOString();
+          params.from = sevenDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD
         }
 
-        console.log(`🔍 [DIGISTORE POLLING] Buscando novos pedidos para operação ${integration.operationId}...`);
+        console.log(`🔍 [DIGISTORE POLLING] Buscando entregas pendentes para operação ${integration.operationId}...`);
 
-        const digistoreOrders = await digistoreService.listOrders(params);
+        const deliveries = await digistoreService.listOrders(params);
 
-        if (!digistoreOrders || digistoreOrders.length === 0) {
-          console.log(`ℹ️ Nenhum pedido novo encontrado para operação ${integration.operationId}`);
+        if (!deliveries || deliveries.length === 0) {
+          console.log(`ℹ️ Nenhuma entrega pendente para operação ${integration.operationId}`);
           continue;
         }
 
-        console.log(`📦 [DIGISTORE POLLING] Encontrados ${digistoreOrders.length} pedidos novos/modificados para operação ${integration.operationId}`);
+        console.log(`📦 [DIGISTORE POLLING] Encontradas ${deliveries.length} entregas pendentes para operação ${integration.operationId}`);
 
         // Importar schema
         const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
         const { and } = await import('drizzle-orm');
 
-        // Processar e salvar pedidos na staging table
+        // Processar e salvar entregas na staging table
         let created = 0;
         let updated = 0;
 
-        for (const order of digistoreOrders) {
+        for (const delivery of deliveries) {
           try {
+            // Usar delivery_id como identificador principal
+            const deliveryId = delivery.id?.toString() || delivery.delivery_id?.toString();
+            const purchaseId = delivery.purchase_id;
+
+            if (!deliveryId || !purchaseId) {
+              console.warn(`⚠️ Entrega sem ID válido, pulando:`, delivery);
+              continue;
+            }
+
             // Verificar se já existe
             const [existing] = await db
               .select()
@@ -102,25 +112,29 @@ async function pollNewOrders() {
               .where(
                 and(
                   eq(digistoreOrdersTable.integrationId, integration.id),
-                  eq(digistoreOrdersTable.orderId, order.order_id)
+                  eq(digistoreOrdersTable.orderId, deliveryId)
                 )
               )
               .limit(1);
 
+            // Extrair dados do endereço de entrega
+            const deliveryAddress = delivery.delivery_address || {};
+            const recipientName = `${deliveryAddress.first_name || ''} ${deliveryAddress.last_name || ''}`.trim();
+
             const orderData = {
               integrationId: integration.id,
-              orderId: order.order_id,
-              transactionId: order.transaction_id,
-              status: order.payment_status,
-              tracking: null,
-              value: order.amount?.toString() || '0',
+              orderId: deliveryId, // delivery_id
+              transactionId: purchaseId, // purchase_id
+              status: delivery.delivery_type || 'request',
+              tracking: delivery.tracking?.[0]?.tracking_id || null,
+              value: '0', // Digistore24 não retorna valor em listDeliveries
               recipient: {
-                name: order.buyer_name,
-                email: order.buyer_email,
-                phone: order.shipping_address?.phone || order.billing_address?.phone
+                name: recipientName || 'N/A',
+                email: deliveryAddress.email || '',
+                phone: deliveryAddress.phone_no || ''
               },
-              items: [], // Digistore24 pode não fornecer items detalhados
-              rawData: order
+              items: [],
+              rawData: delivery
             };
 
             if (existing) {
@@ -141,16 +155,16 @@ async function pollNewOrders() {
               created++;
             }
           } catch (error) {
-            console.error(`❌ Erro ao processar pedido ${order.order_id}:`, error);
+            console.error(`❌ Erro ao processar entrega:`, error);
           }
         }
 
         console.log(`✅ [DIGISTORE POLLING] ${created} novos, ${updated} atualizados para operação ${integration.operationId}`);
 
-        if (digistoreOrders.length > 0) {
+        if (deliveries.length > 0) {
           lastSyncTracking.set(integration.operationId, {
             lastSyncAt: new Date(),
-            lastProcessedOrderId: digistoreOrders[0].order_id
+            lastProcessedOrderId: deliveries[0].id?.toString() || deliveries[0].delivery_id?.toString() || null
           });
         }
       } catch (error) {

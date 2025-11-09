@@ -6,6 +6,7 @@ import { DigistoreService } from '../digistore-service';
 export class DigistoreFulfillmentService {
   /**
    * Atualiza status de entrega na Digistore24 quando pedido é enviado
+   * Usa delivery_id (armazenado em orderId) para atualizar via PUT /updateDelivery
    */
   async updateDeliveryStatus(
     orderId: string,
@@ -34,7 +35,9 @@ export class DigistoreFulfillmentService {
         return { success: true }; // Não é erro, apenas não é Digistore24
       }
 
-      console.log(`📤 Atualizando Digistore24: ${stagingOrder.order.orderId} -> ${status}`);
+      // orderId na staging table é o delivery_id da Digistore24
+      const deliveryId = stagingOrder.order.orderId;
+      console.log(`📤 Atualizando entrega Digistore24: delivery_id=${deliveryId} -> ${status}`);
 
       const digistoreService = new DigistoreService({
         apiKey: stagingOrder.integration.apiKey
@@ -46,8 +49,9 @@ export class DigistoreFulfillmentService {
         carrier: carrier
       } : undefined;
 
+      // Usar delivery_id para atualizar
       const result = await digistoreService.updateOrderStatus(
-        stagingOrder.order.orderId,
+        deliveryId,
         status,
         trackingInfo
       );
@@ -56,11 +60,13 @@ export class DigistoreFulfillmentService {
         // Atualizar tracking na staging table
         await db.update(digistoreOrders)
           .set({
-            tracking: trackingNumber,
+            tracking: trackingNumber || null,
             status: status,
             updatedAt: new Date()
           })
           .where(eq(digistoreOrders.id, stagingOrder.order.id));
+        
+        console.log(`✅ Staging table atualizada para delivery_id=${deliveryId}`);
       }
 
       return result;

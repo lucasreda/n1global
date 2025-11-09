@@ -227,14 +227,17 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
       });
     }
 
-    // Criar serviço e buscar pedidos
+    // Criar serviço e buscar entregas pendentes
     const digistoreService = new DigistoreService({ apiKey: integration.apiKey });
     
-    // Buscar pedidos dos últimos 30 dias
+    // Buscar entregas dos últimos 30 dias
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const deliveries = await digistoreService.listOrders();
+    const deliveries = await digistoreService.listOrders({
+      from: thirtyDaysAgo.toISOString().split('T')[0], // YYYY-MM-DD
+      type: 'request,in_progress' // Apenas entregas pendentes
+    });
 
     console.log(`📦 ${deliveries.length} entregas pendentes encontradas`);
 
@@ -246,32 +249,45 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
     let created = 0;
     let updated = 0;
 
-    for (const order of deliveries) {
+    for (const delivery of deliveries) {
+      // Usar delivery_id como identificador principal
+      const deliveryId = delivery.id?.toString() || delivery.delivery_id?.toString();
+      const purchaseId = delivery.purchase_id;
+
+      if (!deliveryId || !purchaseId) {
+        console.warn(`⚠️ Entrega sem ID válido, pulando:`, delivery);
+        continue;
+      }
+
       const [existing] = await db
         .select()
         .from(digistoreOrdersTable)
         .where(
           and(
             eq(digistoreOrdersTable.integrationId, integration.id),
-            eq(digistoreOrdersTable.orderId, order.order_id)
+            eq(digistoreOrdersTable.orderId, deliveryId)
           )
         )
         .limit(1);
 
+      // Extrair dados do endereço de entrega
+      const deliveryAddress = delivery.delivery_address || {};
+      const recipientName = `${deliveryAddress.first_name || ''} ${deliveryAddress.last_name || ''}`.trim();
+
       const orderData = {
         integrationId: integration.id,
-        orderId: order.order_id,
-        transactionId: order.transaction_id,
-        status: order.payment_status,
-        tracking: null,
-        value: order.amount?.toString() || '0',
+        orderId: deliveryId, // delivery_id
+        transactionId: purchaseId, // purchase_id
+        status: delivery.delivery_type || 'request',
+        tracking: delivery.tracking?.[0]?.tracking_id || null,
+        value: '0', // Digistore24 não retorna valor em listDeliveries
         recipient: {
-          name: order.buyer_name,
-          email: order.buyer_email,
-          phone: order.shipping_address?.phone || order.billing_address?.phone
+          name: recipientName || 'N/A',
+          email: deliveryAddress.email || '',
+          phone: deliveryAddress.phone_no || ''
         },
         items: [],
-        rawData: order
+        rawData: delivery
       };
 
       if (existing) {
