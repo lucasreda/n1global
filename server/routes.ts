@@ -106,6 +106,19 @@ const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) 
   next();
 };
 
+// Helper function to map Digistore24 delivery status to our order status
+function mapDigistoreStatus(deliveryType: string): string {
+  switch (deliveryType) {
+    case 'request': return 'pending';
+    case 'in_progress': return 'confirmed';
+    case 'delivery': return 'shipped';
+    case 'partial_delivery': return 'shipped';
+    case 'return': return 'returned';
+    case 'cancel': return 'cancelled';
+    default: return 'pending';
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // IMPORTANT: Register user profile routes FIRST to avoid Vite interception
   // Get user profile (same as GET /api/user but with explicit route)
@@ -3363,7 +3376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentProgress.message = 'Importando entregas do Digistore24...';
             currentProgress.version++;
             
-            // Buscar integração
+            // Buscar integração e operação
             const [digistoreIntegration] = await db
               .select()
               .from(digistoreIntegrations)
@@ -3373,94 +3386,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (!digistoreIntegration) {
               console.error(`❌ [DIGISTORE SYNC] Integração não encontrada`);
             } else {
-              const { DigistoreService } = await import("./digistore-service");
-              const digistoreService = new DigistoreService({
-                apiKey: digistoreIntegration.apiKey
-              });
+              // Buscar operação para pegar storeId
+              const [operation] = await db
+                .select()
+                .from(operations)
+                .where(eq(operations.id, operationId))
+                .limit(1);
               
-              // Buscar entregas dos últimos 90 dias
-              const ninetyDaysAgo = new Date();
-              ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-              
-              const deliveries = await digistoreService.listOrders({
-                from: ninetyDaysAgo.toISOString().split('T')[0],
-                type: 'request,in_progress,delivery'
-              });
-              
-              console.log(`📦 [DIGISTORE SYNC] ${deliveries.length} entregas encontradas`);
-              
-              // Salvar na staging table
-              const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
-              const { and } = await import('drizzle-orm');
-              
-              let created = 0;
-              let updated = 0;
-              
-              for (const delivery of deliveries) {
-                const deliveryId = delivery.id?.toString() || delivery.delivery_id?.toString();
-                const purchaseId = delivery.purchase_id;
+              if (!operation) {
+                console.error(`❌ [DIGISTORE SYNC] Operação não encontrada`);
+              } else {
+                const { DigistoreService } = await import("./digistore-service");
+                const digistoreService = new DigistoreService({
+                  apiKey: digistoreIntegration.apiKey
+                });
                 
-                if (!deliveryId || !purchaseId) continue;
+                // Buscar entregas dos últimos 90 dias
+                const ninetyDaysAgo = new Date();
+                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
                 
-                const [existing] = await db
-                  .select()
-                  .from(digistoreOrdersTable)
-                  .where(
-                    and(
-                      eq(digistoreOrdersTable.integrationId, digistoreIntegration.id),
-                      eq(digistoreOrdersTable.orderId, deliveryId)
-                    )
-                  )
-                  .limit(1);
+                const deliveries = await digistoreService.listOrders({
+                  from: ninetyDaysAgo.toISOString().split('T')[0],
+                  type: 'request,in_progress,delivery'
+                });
                 
-                const deliveryAddress = delivery.delivery_address || {};
-                const recipientName = `${deliveryAddress.first_name || ''} ${deliveryAddress.last_name || ''}`.trim();
+                console.log(`📦 [DIGISTORE SYNC] ${deliveries.length} entregas encontradas`);
                 
-                const orderData = {
-                  integrationId: digistoreIntegration.id,
-                  orderId: deliveryId,
-                  transactionId: purchaseId,
-                  status: delivery.delivery_type || 'request',
-                  tracking: delivery.tracking?.[0]?.tracking_id || null,
-                  value: '0',
-                  recipient: {
-                    name: recipientName || 'N/A',
-                    email: deliveryAddress.email || '',
-                    phone: deliveryAddress.phone_no || ''
-                  },
-                  items: [],
-                  rawData: delivery
-                };
+                let created = 0;
+                let updated = 0;
                 
-                if (existing) {
-                  await db.update(digistoreOrdersTable)
-                    .set({
-                      ...orderData,
-                      processedToOrders: false,
-                      processedAt: null,
-                      updatedAt: new Date()
-                    })
-                    .where(eq(digistoreOrdersTable.id, existing.id));
-                  updated++;
-                } else {
-                  await db.insert(digistoreOrdersTable).values({
-                    ...orderData,
-                    processedToOrders: false
-                  });
-                  created++;
+                // Criar pedidos diretamente na tabela orders
+                for (const delivery of deliveries) {
+                  const deliveryId = delivery.id?.toString() || delivery.delivery_id?.toString();
+                  const purchaseId = delivery.purchase_id;
+                  
+                  if (!deliveryId || !purchaseId) {
+                    console.warn(`⚠️ [DIGISTORE SYNC] Entrega sem ID válido, pulando:`, delivery);
+                    continue;
+                  }
+                  
+                  // Verificar se já existe
+                  const [existingOrder] = await db
+                    .select()
+                    .from(orders)
+                    .where(eq(orders.digistoreOrderId, deliveryId))
+                    .limit(1);
+                  
+                  const deliveryAddress = delivery.delivery_address || {};
+                  const recipientName = `${deliveryAddress.first_name || ''} ${deliveryAddress.last_name || ''}`.trim();
+                  
+                  if (existingOrder) {
+                    // Atualizar pedido existente
+                    await db.update(orders)
+                      .set({
+                        status: mapDigistoreStatus(delivery.delivery_type),
+                        trackingNumber: delivery.tracking?.[0]?.tracking_id || null,
+                        providerData: delivery,
+                        updatedAt: new Date()
+                      })
+                      .where(eq(orders.id, existingOrder.id));
+                    updated++;
+                    console.log(`✅ [DIGISTORE SYNC] Pedido ${existingOrder.id} atualizado`);
+                  } else {
+                    // Criar novo pedido
+                    const newOrderId = `DS-${deliveryId}`;
+                    await db.insert(orders).values({
+                      id: newOrderId,
+                      storeId: operation.storeId,
+                      operationId: operationId,
+                      dataSource: 'digistore24',
+                      digistoreOrderId: deliveryId,
+                      digistoreTransactionId: purchaseId,
+                      
+                      // Dados do cliente
+                      customerName: recipientName || 'N/A',
+                      customerEmail: deliveryAddress.email || '',
+                      customerPhone: deliveryAddress.phone_no || '',
+                      customerAddress: `${deliveryAddress.street || ''} ${deliveryAddress.street_number || ''}`.trim(),
+                      customerCity: deliveryAddress.city || '',
+                      customerState: deliveryAddress.state || '',
+                      customerCountry: deliveryAddress.country || '',
+                      customerZip: deliveryAddress.zipcode || '',
+                      
+                      // Status
+                      status: mapDigistoreStatus(delivery.delivery_type),
+                      paymentStatus: 'paid', // Digistore24 só envia pedidos pagos
+                      
+                      // Financeiro
+                      total: '0', // Digistore24 não retorna valor em listDeliveries
+                      currency: 'EUR',
+                      
+                      // Provider
+                      provider: 'digistore24',
+                      trackingNumber: delivery.tracking?.[0]?.tracking_id || null,
+                      
+                      // Metadata
+                      providerData: delivery,
+                      orderDate: new Date(delivery.purchase_created_at || Date.now()),
+                      
+                      needsSync: false, // Já está sincronizado
+                      carrierImported: false,
+                    });
+                    created++;
+                    console.log(`✅ [DIGISTORE SYNC] Pedido ${newOrderId} criado`);
+                  }
                 }
+                
+                console.log(`✅ [DIGISTORE SYNC] ${created} novos, ${updated} atualizados`);
+                
+                // Atualizar lastSyncAt na integração
+                await db
+                  .update(digistoreIntegrations)
+                  .set({
+                    lastSyncAt: new Date(),
+                    syncErrors: null,
+                  })
+                  .where(eq(digistoreIntegrations.id, digistoreIntegration.id));
               }
-              
-              console.log(`✅ [DIGISTORE SYNC] ${created} novos, ${updated} atualizados`);
-              
-              // Atualizar lastSyncAt na integração
-              await db
-                .update(digistoreIntegrations)
-                .set({
-                  lastSyncAt: new Date(),
-                  syncErrors: null,
-                })
-                .where(eq(digistoreIntegrations.id, digistoreIntegration.id));
             }
           } else if (hasDigistore) {
             console.log(`⏭️ [DIGISTORE SYNC] Pulando - sem operationId`);

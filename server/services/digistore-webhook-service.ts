@@ -7,6 +7,19 @@ import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import { DigistoreService } from '../digistore-service';
 
+// Helper function to map Digistore24 delivery status to our order status
+function mapDigistoreStatus(deliveryType: string): string {
+  switch (deliveryType) {
+    case 'request': return 'pending';
+    case 'in_progress': return 'confirmed';
+    case 'delivery': return 'shipped';
+    case 'partial_delivery': return 'shipped';
+    case 'return': return 'returned';
+    case 'cancel': return 'cancelled';
+    default: return 'pending';
+  }
+}
+
 export interface DigistoreIPNEvent {
   event: string; // 'on_payment', 'on_refund', 'on_chargeback', etc
   order_id: string;
@@ -165,56 +178,80 @@ export class DigistoreWebhookService {
         return { success: false, error: 'Integração não encontrada' };
       }
 
-      // Importar schema
-      const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
-      const { and } = await import('drizzle-orm');
-
-      // Salvar/atualizar na staging table
-      const [existing] = await db
+      // Buscar operação para pegar storeId
+      const [operation] = await db
         .select()
-        .from(digistoreOrdersTable)
-        .where(
-          and(
-            eq(digistoreOrdersTable.integrationId, integration.id),
-            eq(digistoreOrdersTable.orderId, event.order_id)
-          )
-        )
+        .from(operations)
+        .where(eq(operations.id, targetOperationId))
         .limit(1);
 
-      const orderData = {
-        integrationId: integration.id,
-        orderId: event.order_id,
-        transactionId: event.transaction_id,
-        status: event.payment_status,
-        tracking: null,
-        value: event.amount?.toString() || '0',
-        recipient: {
-          name: event.buyer_name,
-          email: event.buyer_email,
-          phone: event.shipping_address?.phone || event.billing_address?.phone
-        },
-        items: [],
-        rawData: event
-      };
+      if (!operation) {
+        console.warn('⚠️ Operação não encontrada');
+        return { success: false, error: 'Operação não encontrada' };
+      }
 
-      if (existing) {
-        await db.update(digistoreOrdersTable)
+      // Verificar se pedido já existe
+      const [existingOrder] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.digistoreOrderId, event.order_id))
+        .limit(1);
+
+      const shippingAddress = event.shipping_address || event.billing_address;
+
+      if (existingOrder) {
+        // Atualizar pedido existente
+        await db.update(orders)
           .set({
-            ...orderData,
-            processedToOrders: false,
-            processedAt: null,
+            status: mapDigistoreStatus(event.payment_status),
+            paymentStatus: event.payment_status,
+            providerData: event,
             updatedAt: new Date()
           })
-          .where(eq(digistoreOrdersTable.id, existing.id));
+          .where(eq(orders.id, existingOrder.id));
         
         console.log(`✅ Pedido Digistore24 atualizado: ${event.order_id}`);
       } else {
-        await db.insert(digistoreOrdersTable).values({
-          ...orderData,
-          processedToOrders: false
+        // Criar novo pedido
+        const newOrderId = `DS-${event.order_id}`;
+        await db.insert(orders).values({
+          id: newOrderId,
+          storeId: operation.storeId,
+          operationId: targetOperationId,
+          dataSource: 'digistore24',
+          digistoreOrderId: event.order_id,
+          digistoreTransactionId: event.transaction_id,
+          
+          // Dados do cliente
+          customerName: event.buyer_name,
+          customerEmail: event.buyer_email,
+          customerPhone: shippingAddress.phone || null,
+          customerAddress: shippingAddress.street + (shippingAddress.street2 ? `, ${shippingAddress.street2}` : ''),
+          customerCity: shippingAddress.city,
+          customerState: shippingAddress.state || null,
+          customerZip: shippingAddress.zipcode,
+          customerCountry: shippingAddress.country,
+          
+          // Status
+          status: mapDigistoreStatus(event.payment_status),
+          paymentStatus: event.payment_status,
+          
+          // Financeiro
+          total: event.amount?.toString() || '0',
+          currency: event.currency,
+          
+          // Provider
+          provider: 'digistore24',
+          
+          // Metadata
+          providerData: event,
+          orderDate: new Date(event.created_at || Date.now()),
+          
+          needsSync: false, // Já está sincronizado
+          carrierImported: false,
         });
         
-        console.log(`✅ Pedido Digistore24 criado: ${event.order_id}`);
+        console.log(`✅ Pedido Digistore24 criado: ${newOrderId}`);
       }
 
       return { success: true };

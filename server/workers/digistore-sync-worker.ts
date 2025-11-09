@@ -2,9 +2,22 @@
 // Polling adaptativo: 5 minutos (horário comercial 8h-20h UTC), 15 minutos (fora do horário)
 
 import { db } from '../db';
-import { digistoreIntegrations, operations } from '@shared/schema';
+import { digistoreIntegrations, operations, orders } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { DigistoreService } from '../digistore-service';
+
+// Helper function to map Digistore24 delivery status to our order status
+function mapDigistoreStatus(deliveryType: string): string {
+  switch (deliveryType) {
+    case 'request': return 'pending';
+    case 'in_progress': return 'confirmed';
+    case 'delivery': return 'shipped';
+    case 'partial_delivery': return 'shipped';
+    case 'return': return 'returned';
+    case 'cancel': return 'cancelled';
+    default: return 'pending';
+  }
+}
 
 // Tracking de última sincronização por operação
 const lastSyncTracking = new Map<string, {
@@ -86,11 +99,19 @@ async function pollNewOrders() {
 
         console.log(`📦 [DIGISTORE POLLING] Encontradas ${deliveries.length} entregas pendentes para operação ${integration.operationId}`);
 
-        // Importar schema
-        const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
-        const { and } = await import('drizzle-orm');
+        // Buscar operação para pegar storeId
+        const [operation] = await db
+          .select()
+          .from(operations)
+          .where(eq(operations.id, integration.operationId))
+          .limit(1);
 
-        // Processar e salvar entregas na staging table
+        if (!operation) {
+          console.error(`❌ [DIGISTORE POLLING] Operação não encontrada: ${integration.operationId}`);
+          continue;
+        }
+
+        // Criar pedidos diretamente na tabela orders
         let created = 0;
         let updated = 0;
 
@@ -101,58 +122,75 @@ async function pollNewOrders() {
             const purchaseId = delivery.purchase_id;
 
             if (!deliveryId || !purchaseId) {
-              console.warn(`⚠️ Entrega sem ID válido, pulando:`, delivery);
+              console.warn(`⚠️ [DIGISTORE POLLING] Entrega sem ID válido, pulando:`, delivery);
               continue;
             }
 
             // Verificar se já existe
-            const [existing] = await db
+            const [existingOrder] = await db
               .select()
-              .from(digistoreOrdersTable)
-              .where(
-                and(
-                  eq(digistoreOrdersTable.integrationId, integration.id),
-                  eq(digistoreOrdersTable.orderId, deliveryId)
-                )
-              )
+              .from(orders)
+              .where(eq(orders.digistoreOrderId, deliveryId))
               .limit(1);
 
             // Extrair dados do endereço de entrega
             const deliveryAddress = delivery.delivery_address || {};
             const recipientName = `${deliveryAddress.first_name || ''} ${deliveryAddress.last_name || ''}`.trim();
 
-            const orderData = {
-              integrationId: integration.id,
-              orderId: deliveryId, // delivery_id
-              transactionId: purchaseId, // purchase_id
-              status: delivery.delivery_type || 'request',
-              tracking: delivery.tracking?.[0]?.tracking_id || null,
-              value: '0', // Digistore24 não retorna valor em listDeliveries
-              recipient: {
-                name: recipientName || 'N/A',
-                email: deliveryAddress.email || '',
-                phone: deliveryAddress.phone_no || ''
-              },
-              items: [],
-              rawData: delivery
-            };
-
-            if (existing) {
-              await db.update(digistoreOrdersTable)
+            if (existingOrder) {
+              // Atualizar pedido existente
+              await db.update(orders)
                 .set({
-                  ...orderData,
-                  processedToOrders: false,
-                  processedAt: null,
+                  status: mapDigistoreStatus(delivery.delivery_type),
+                  trackingNumber: delivery.tracking?.[0]?.tracking_id || null,
+                  providerData: delivery,
                   updatedAt: new Date()
                 })
-                .where(eq(digistoreOrdersTable.id, existing.id));
+                .where(eq(orders.id, existingOrder.id));
               updated++;
+              console.log(`✅ [DIGISTORE POLLING] Pedido ${existingOrder.id} atualizado`);
             } else {
-              await db.insert(digistoreOrdersTable).values({
-                ...orderData,
-                processedToOrders: false
+              // Criar novo pedido
+              const newOrderId = `DS-${deliveryId}`;
+              await db.insert(orders).values({
+                id: newOrderId,
+                storeId: operation.storeId,
+                operationId: integration.operationId,
+                dataSource: 'digistore24',
+                digistoreOrderId: deliveryId,
+                digistoreTransactionId: purchaseId,
+                
+                // Dados do cliente
+                customerName: recipientName || 'N/A',
+                customerEmail: deliveryAddress.email || '',
+                customerPhone: deliveryAddress.phone_no || '',
+                customerAddress: `${deliveryAddress.street || ''} ${deliveryAddress.street_number || ''}`.trim(),
+                customerCity: deliveryAddress.city || '',
+                customerState: deliveryAddress.state || '',
+                customerCountry: deliveryAddress.country || '',
+                customerZip: deliveryAddress.zipcode || '',
+                
+                // Status
+                status: mapDigistoreStatus(delivery.delivery_type),
+                paymentStatus: 'paid', // Digistore24 só envia pedidos pagos
+                
+                // Financeiro
+                total: '0', // Digistore24 não retorna valor em listDeliveries
+                currency: 'EUR',
+                
+                // Provider
+                provider: 'digistore24',
+                trackingNumber: delivery.tracking?.[0]?.tracking_id || null,
+                
+                // Metadata
+                providerData: delivery,
+                orderDate: new Date(delivery.purchase_created_at || Date.now()),
+                
+                needsSync: false, // Já está sincronizado
+                carrierImported: false,
               });
               created++;
+              console.log(`✅ [DIGISTORE POLLING] Pedido ${newOrderId} criado`);
             }
           } catch (error) {
             console.error(`❌ Erro ao processar entrega:`, error);

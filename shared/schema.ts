@@ -90,6 +90,11 @@ export const orders = pgTable("orders", {
   carrierOrderId: text("carrier_order_id"), // ID from carrier when matched
   carrierConfirmation: text("carrier_confirmation"), // Original confirmation status from carrier API ('confirmed', 'canceled', etc)
   
+  // E-commerce platform identifiers
+  cartpandaOrderId: text("cartpanda_order_id"), // ID original do CartPanda
+  digistoreOrderId: text("digistore_order_id"), // delivery_id da Digistore24
+  digistoreTransactionId: text("digistore_transaction_id"), // transaction_id da Digistore24
+  
   // Customer information
   customerId: text("customer_id"),
   customerName: text("customer_name"),

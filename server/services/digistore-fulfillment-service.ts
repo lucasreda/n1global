@@ -1,12 +1,12 @@
 import { db } from '../db';
-import { orders, digistoreOrders, digistoreIntegrations } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { orders, digistoreIntegrations } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
 import { DigistoreService } from '../digistore-service';
 
 export class DigistoreFulfillmentService {
   /**
    * Atualiza status de entrega na Digistore24 quando pedido é enviado
-   * Usa delivery_id (armazenado em orderId) para atualizar via PUT /updateDelivery
+   * Busca pedido diretamente na tabela orders pelo digistoreOrderId
    */
   async updateDeliveryStatus(
     orderId: string,
@@ -16,31 +16,41 @@ export class DigistoreFulfillmentService {
     carrier?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      // Buscar pedido vinculado na staging table
-      const [stagingOrder] = await db
-        .select({
-          order: digistoreOrders,
-          integration: digistoreIntegrations,
-        })
-        .from(digistoreOrders)
-        .innerJoin(
-          digistoreIntegrations,
-          eq(digistoreOrders.integrationId, digistoreIntegrations.id)
+      // Buscar pedido diretamente na tabela orders
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.id, orderId),
+            eq(orders.dataSource, 'digistore24')
+          )
         )
-        .where(eq(digistoreOrders.linkedOrderId, orderId))
         .limit(1);
 
-      if (!stagingOrder) {
+      if (!order || !order.digistoreOrderId) {
         console.log(`ℹ️ Pedido ${orderId} não é da Digistore24`);
         return { success: true }; // Não é erro, apenas não é Digistore24
       }
 
-      // orderId na staging table é o delivery_id da Digistore24
-      const deliveryId = stagingOrder.order.orderId;
+      // Buscar integração
+      const [integration] = await db
+        .select()
+        .from(digistoreIntegrations)
+        .where(eq(digistoreIntegrations.operationId, order.operationId!))
+        .limit(1);
+
+      if (!integration) {
+        console.error(`❌ Integração Digistore24 não encontrada para operação ${order.operationId}`);
+        return { success: false, error: 'Integração não encontrada' };
+      }
+
+      // digistoreOrderId é o delivery_id da Digistore24
+      const deliveryId = order.digistoreOrderId;
       console.log(`📤 Atualizando entrega Digistore24: delivery_id=${deliveryId} -> ${status}`);
 
       const digistoreService = new DigistoreService({
-        apiKey: stagingOrder.integration.apiKey
+        apiKey: integration.apiKey
       });
 
       const trackingInfo = trackingNumber ? {
@@ -57,16 +67,15 @@ export class DigistoreFulfillmentService {
       );
 
       if (result.success) {
-        // Atualizar tracking na staging table
-        await db.update(digistoreOrders)
+        // Atualizar tracking na tabela orders
+        await db.update(orders)
           .set({
-            tracking: trackingNumber || null,
-            status: status,
+            trackingNumber: trackingNumber || null,
             updatedAt: new Date()
           })
-          .where(eq(digistoreOrders.id, stagingOrder.order.id));
+          .where(eq(orders.id, orderId));
         
-        console.log(`✅ Staging table atualizada para delivery_id=${deliveryId}`);
+        console.log(`✅ Pedido ${orderId} atualizado com tracking`);
       }
 
       return result;
