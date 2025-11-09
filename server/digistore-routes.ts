@@ -410,7 +410,9 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
         ? `PAYID-${orderSlug}`
         : `PAYID-TEST-${timestamp}`;
     const transactionId =
-      rawCustomOrderId.length > 0 ? `${orderSlug}-${timestamp}` : `${timestamp}`;
+      rawCustomOrderId.length > 0
+        ? `${orderSlug}-${timestamp}`
+        : `${timestamp}`;
 
     console.log(`🧪 [TEST] Simulando webhook IPN Digistore24 para operação: ${operationId}`);
 
