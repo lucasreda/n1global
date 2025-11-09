@@ -356,7 +356,7 @@ export function DigistoreIntegration() {
               </Label>
               <Input
                 id="custom-order-id"
-                placeholder="Ex: DS-12345"
+                placeholder="Ex: DTA7ZZN9"
                 value={testOrderId}
                 onChange={(e) => setTestOrderId(e.target.value)}
                 className="bg-black/40 border-white/10 text-white"

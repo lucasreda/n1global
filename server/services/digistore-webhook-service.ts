@@ -264,7 +264,7 @@ export class DigistoreWebhookService {
         console.log(`✅ Pedido Digistore24 atualizado: ${event.order_id}`);
       } else {
         // Criar novo pedido
-        const newOrderId = `DS-${event.order_id}`;
+        const newOrderId = event.order_id || `DIGI-${Date.now()}`;
         
         console.log(`🔍 [DEBUG] Construindo pedido ${newOrderId}...`);
         console.log(`🔍 [DEBUG] customerName: "${customerName}"`);

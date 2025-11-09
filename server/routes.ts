@@ -3449,7 +3449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.log(`✅ [DIGISTORE SYNC] Pedido ${existingOrder.id} atualizado`);
                   } else {
                     // Criar novo pedido
-                    const newOrderId = `DS-${deliveryId}`;
+              const newOrderId = deliveryId;
                     await db.insert(orders).values({
                       id: newOrderId,
                       storeId: operation.storeId,

@@ -151,7 +151,7 @@ async function pollNewOrders() {
               console.log(`✅ [DIGISTORE POLLING] Pedido ${existingOrder.id} atualizado`);
             } else {
               // Criar novo pedido
-              const newOrderId = `DS-${deliveryId}`;
+                const newOrderId = deliveryId;
               await db.insert(orders).values({
                 id: newOrderId,
                 storeId: operation.storeId,
