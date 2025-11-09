@@ -12,6 +12,7 @@ interface AuthRequest extends Request {
 }
 
 const router = Router();
+const publicRouter = Router(); // Router para rotas públicas (webhooks)
 
 // Schema para validação
 const testConnectionSchema = z.object({
@@ -288,8 +289,9 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
 /**
  * Webhook IPN da Digistore24
  * Recebe notificações em tempo real sobre eventos de pedidos
+ * NOTA: Esta rota é PÚBLICA e não requer autenticação
  */
-router.post("/digistore/webhook", async (req, res) => {
+publicRouter.post("/digistore/webhook", async (req, res) => {
   try {
     console.log(`📥 Webhook IPN Digistore24 recebido`);
     console.log(`📋 Payload:`, JSON.stringify(req.body, null, 2));
@@ -313,5 +315,5 @@ router.post("/digistore/webhook", async (req, res) => {
   }
 });
 
-export { router as digistoreRoutes };
+export { router as digistoreRoutes, publicRouter as digistorePublicRoutes };
 
