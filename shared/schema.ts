@@ -452,6 +452,28 @@ export const cartpandaIntegrations = pgTable("cartpanda_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Digistore24 integrations table
+export const digistoreIntegrations = pgTable("digistore_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  apiKey: text("api_key").notNull(), // X-DS-API-KEY header
+  
+  status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  syncErrors: text("sync_errors"), // Error messages from last sync
+  
+  // Store metadata
+  metadata: jsonb("metadata").$type<{
+    vendorName?: string;
+    currency?: string;
+    timezone?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Warehouse Providers - Catalog of available warehouse providers
 export const warehouseProviders = pgTable("warehouse_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

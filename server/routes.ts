@@ -23,6 +23,7 @@ import { registerSupportRoutes } from "./support-routes";
 import { registerCustomerSupportRoutes } from "./customer-support-routes";
 import voiceRoutes, { setupVoiceWebSocket } from "./voice-routes";
 import { cartpandaRoutes } from "./cartpanda-routes";
+import digistoreRoutes from "./digistore-routes";
 import { funnelRoutes } from "./funnel-routes";
 import affiliateRoutes from "./affiliate-routes";
 import affiliateTrackingRoutes from "./affiliate-tracking-routes";
@@ -9033,6 +9034,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register CartPanda integration routes
   app.use("/api/integrations", cartpandaRoutes);
+
+  // Register Digistore24 integration routes
+  app.use("/api/integrations", digistoreRoutes);
 
   // Register Funnel Builder routes
   app.use("/api", funnelRoutes);

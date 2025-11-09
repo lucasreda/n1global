@@ -166,8 +166,8 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 
-  // 🛍️ Start Shopify/CartPanda Polling Workers
-  console.log('🛍️  Starting Shopify/CartPanda Polling Workers...');
+  // 🛍️ Start Shopify/CartPanda/Digistore24 Polling Workers
+  console.log('🛍️  Starting Shopify/CartPanda/Digistore24 Polling Workers...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   // Start Shopify polling worker
@@ -177,6 +177,10 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
   // Start CartPanda polling worker
   const { startCartPandaPollingWorker } = await import('./workers/cartpanda-sync-worker');
   startCartPandaPollingWorker();
+
+  // Start Digistore24 polling worker
+  const { startDigistoreSyncWorker } = await import('./workers/digistore-sync-worker');
+  startDigistoreSyncWorker();
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');

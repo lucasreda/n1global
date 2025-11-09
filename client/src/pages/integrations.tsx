@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ShopifyIntegration } from "@/components/integrations/shopify-integration";
 import { CartPandaIntegration } from "../components/integrations/cartpanda-integration";
+import { DigistoreIntegration } from "../components/integrations/digistore-integration";
 import { OperationalAppIntegration } from "../components/integrations/operational-app-integration";
 import { Settings, CheckCircle, AlertCircle, Store, ShoppingCart, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,11 +39,17 @@ const CartPandaIcon = ({ className, size }: { className?: string; size?: number 
   />
 );
 
+// Componente customizado para o ícone do Digistore24
+const DigistoreIcon = ({ className, size }: { className?: string; size?: number }) => (
+  <Store className={`${className} text-blue-400`} size={size || 30} />
+);
+
 export default function Integrations() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const { selectedOperation } = useCurrentOperation();
   const [shopifyData, setShopifyData] = useState(null);
   const [cartpandaData, setCartpandaData] = useState(null);
+  const [digistoreData, setDigistoreData] = useState(null);
 
   console.log("🔍 Component render - selectedOperation:", selectedOperation);
 
@@ -52,6 +59,7 @@ export default function Integrations() {
       if (!selectedOperation) {
         setShopifyData(null);
         setCartpandaData(null);
+        setDigistoreData(null);
         return;
       }
       
@@ -88,6 +96,23 @@ export default function Integrations() {
         console.error("❌ Error fetching CartPanda integration:", error);
         setCartpandaData(null);
       }
+
+      // Fetch Digistore24 integration
+      console.log("🔄 Fetching Digistore24 integration for operation:", selectedOperation);
+      try {
+        const response = await authenticatedApiRequest("GET", `/api/integrations/digistore?operationId=${selectedOperation}`);
+        if (response.status === 404) {
+          console.log("📋 No Digistore24 integration found for", selectedOperation);
+          setDigistoreData(null);
+        } else {
+          const data = await response.json();
+          console.log("📋 Digistore24 integration found for", selectedOperation, ":", data?.id);
+          setDigistoreData(data);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching Digistore24 integration:", error);
+        setDigistoreData(null);
+      }
     };
 
     fetchIntegrations();
@@ -103,6 +128,12 @@ export default function Integrations() {
   const getCartPandaStatus = () => {
     if (!cartpandaData) return "pending";
     return (cartpandaData as any).status || "pending";
+  };
+
+  // Determinar status real da integração Digistore24
+  const getDigistoreStatus = () => {
+    if (!digistoreData) return "pending";
+    return (digistoreData as any).status || "pending";
   };
 
   const getStatusInfo = (status: string) => {
@@ -150,6 +181,15 @@ export default function Integrations() {
       description: "Integração com a CartPanda para gestão de pedidos",
       icon: CartPandaIcon,
       color: "orange",
+      hasPanel: true,
+    },
+    {
+      id: "digistore",
+      name: "Digistore24",
+      status: getDigistoreStatus(),
+      description: "Integração com Digistore24 para gestão de pedidos",
+      icon: DigistoreIcon,
+      color: "blue",
       hasPanel: true,
     },
   ];
@@ -205,6 +245,7 @@ export default function Integrations() {
                     </DialogHeader>
                     {integration.id === "shopify" && <ShopifyIntegration />}
                     {integration.id === "cartpanda" && <CartPandaIntegration />}
+                    {integration.id === "digistore" && <DigistoreIntegration />}
                   </DialogContent>
                 </Dialog>
               </div>
