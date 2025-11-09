@@ -21,40 +21,54 @@ function mapDigistoreStatus(deliveryType: string): string {
 }
 
 export interface DigistoreIPNEvent {
-  event: string; // 'on_payment', 'on_refund', 'on_chargeback', etc
+  event: string; // 'on_payment', 'on_refund', 'on_chargeback'
   order_id: string;
   transaction_id: string;
   product_id: string;
   product_name: string;
-  buyer_email: string;
-  buyer_name: string;
-  billing_address: {
-    first_name: string;
-    last_name: string;
-    street: string;
-    street2?: string;
-    city: string;
-    state?: string;
-    zipcode: string;
-    country: string;
-    phone?: string;
-  };
-  shipping_address?: {
-    first_name: string;
-    last_name: string;
-    street: string;
-    street2?: string;
-    city: string;
-    state?: string;
-    zipcode: string;
-    country: string;
-    phone?: string;
-  };
-  amount: number;
+  
+  // Campos de cliente (flat structure)
+  email: string;
+  
+  // Endereço (flat structure - prefixo address_)
+  address_first_name?: string;
+  address_last_name?: string;
+  address_company?: string;
+  address_street?: string;
+  address_street2?: string;
+  address_street_name?: string;
+  address_street_number?: string;
+  address_city?: string;
+  address_state?: string;
+  address_zipcode?: string;
+  address_country?: string;
+  address_phone_no?: string;
+  address_mobile_no?: string;
+  
+  // Billing (flat structure - prefixo billing_)
+  billing_first_name?: string;
+  billing_last_name?: string;
+  billing_street?: string;
+  billing_city?: string;
+  billing_state?: string;
+  billing_zipcode?: string;
+  billing_country?: string;
+  billing_phone_no?: string;
+  
+  // Financeiro
+  amount: string | number;
   currency: string;
   payment_status: string;
-  created_at: string;
-  sha_sign?: string; // Assinatura SHA para validação
+  billing_status?: string;
+  
+  // Datas
+  created_at?: string;
+  order_date?: string;
+  order_time?: string;
+  
+  // Outros
+  sha_sign?: string;
+  api_mode?: string;
 }
 
 export class DigistoreWebhookService {
@@ -111,8 +125,8 @@ export class DigistoreWebhookService {
       event.order_id,
       event.transaction_id,
       event.product_id,
-      event.buyer_email,
-      event.amount.toString(),
+      event.email,
+      typeof event.amount === 'number' ? event.amount.toString() : event.amount,
       event.currency,
       secret
     ].join('');
@@ -197,14 +211,23 @@ export class DigistoreWebhookService {
         .where(eq(orders.digistoreOrderId, event.order_id))
         .limit(1);
 
-      const shippingAddress = event.shipping_address || event.billing_address || {};
+      // Construir nome do cliente a partir dos campos flat
+      const customerFirstName = event.address_first_name || event.billing_first_name || '';
+      const customerLastName = event.address_last_name || event.billing_last_name || '';
+      const customerName = `${customerFirstName} ${customerLastName}`.trim() || 'Cliente Digistore24';
+
+      // Construir endereço completo
+      const street = event.address_street || event.billing_street || '';
+      const streetNumber = event.address_street_number || '';
+      const street2 = event.address_street2 || '';
+      const fullAddress = [street, streetNumber, street2].filter(Boolean).join(' ').trim() || null;
 
       if (existingOrder) {
         // Atualizar pedido existente
         await db.update(orders)
           .set({
-            status: mapDigistoreStatus(event.payment_status),
-            paymentStatus: event.payment_status,
+            status: mapDigistoreStatus(event.payment_status || event.billing_status || 'pending'),
+            paymentStatus: event.payment_status || event.billing_status || 'pending',
             providerData: event,
             updatedAt: new Date()
           })
@@ -214,7 +237,9 @@ export class DigistoreWebhookService {
       } else {
         // Criar novo pedido
         const newOrderId = `DS-${event.order_id}`;
-        await db.insert(orders).values({
+        
+        // Garantir que campos obrigatórios nunca sejam null/undefined
+        const safeOrderData = {
           id: newOrderId,
           storeId: operation.storeId,
           operationId: targetOperationId,
@@ -222,24 +247,22 @@ export class DigistoreWebhookService {
           digistoreOrderId: event.order_id,
           digistoreTransactionId: event.transaction_id,
           
-          // Dados do cliente
-          customerName: event.buyer_name || 'N/A',
-          customerEmail: event.buyer_email || '',
-          customerPhone: shippingAddress.phone || null,
-          customerAddress: shippingAddress.street 
-            ? shippingAddress.street + (shippingAddress.street2 ? `, ${shippingAddress.street2}` : '')
-            : null,
-          customerCity: shippingAddress.city || null,
-          customerState: shippingAddress.state || null,
-          customerZip: shippingAddress.zipcode || null,
-          customerCountry: shippingAddress.country || null,
+          // Dados do cliente (usando campos flat)
+          customerName: customerName,
+          customerEmail: event.email || '',
+          customerPhone: event.address_phone_no || event.billing_phone_no || null,
+          customerAddress: fullAddress,
+          customerCity: event.address_city || event.billing_city || null,
+          customerState: event.address_state || event.billing_state || null,
+          customerZip: event.address_zipcode || event.billing_zipcode || null,
+          customerCountry: event.address_country || event.billing_country || null,
           
           // Status
-          status: mapDigistoreStatus(event.payment_status),
-          paymentStatus: event.payment_status,
+          status: mapDigistoreStatus(event.payment_status || event.billing_status || 'pending'),
+          paymentStatus: event.payment_status || event.billing_status || 'pending',
           
           // Financeiro
-          total: event.amount?.toString() || '0',
+          total: typeof event.amount === 'number' ? event.amount.toString() : (event.amount || '0'),
           currency: event.currency || 'EUR',
           
           // Provider
@@ -247,11 +270,13 @@ export class DigistoreWebhookService {
           
           // Metadata
           providerData: event,
-          orderDate: new Date(event.created_at || Date.now()),
+          orderDate: event.created_at ? new Date(event.created_at) : new Date(),
           
           needsSync: false, // Já está sincronizado
           carrierImported: false,
-        });
+        };
+        
+        await db.insert(orders).values(safeOrderData);
         
         console.log(`✅ Pedido Digistore24 criado: ${newOrderId}`);
       }
@@ -264,100 +289,6 @@ export class DigistoreWebhookService {
         error: error instanceof Error ? error.message : 'Erro desconhecido' 
       };
     }
-  }
-
-  /**
-   * Processa evento de pagamento (novo pedido)
-   */
-  private async processPaymentEvent(event: DigistoreIPNEvent, operation: any): Promise<void> {
-    console.log(`💰 Processando pagamento Digistore24: ${event.order_id}`);
-
-    // Verificar se pedido já existe
-    const [existingOrder] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, event.order_id))
-      .limit(1);
-
-    if (existingOrder) {
-      console.log(`ℹ️ Pedido já existe: ${event.order_id}`);
-      return;
-    }
-
-    // Criar novo pedido
-    const shippingAddress = event.shipping_address || event.billing_address;
-    
-    await db.insert(orders).values({
-      id: event.order_id,
-      storeId: operation.storeId,
-      operationId: operation.id,
-      dataSource: 'digistore',
-      
-      // Customer info
-      customerName: event.buyer_name,
-      customerEmail: event.buyer_email,
-      customerPhone: shippingAddress.phone || null,
-      customerAddress: shippingAddress.street + (shippingAddress.street2 ? `, ${shippingAddress.street2}` : ''),
-      customerCity: shippingAddress.city,
-      customerState: shippingAddress.state || null,
-      customerZip: shippingAddress.zipcode,
-      customerCountry: shippingAddress.country,
-      
-      // Order details
-      totalAmount: event.amount.toString(),
-      currency: event.currency,
-      status: 'pending',
-      paymentStatus: event.payment_status,
-      
-      // Metadata
-      metadata: {
-        digistore_transaction_id: event.transaction_id,
-        digistore_product_id: event.product_id,
-        digistore_product_name: event.product_name,
-      },
-      
-      createdAt: new Date(event.created_at),
-    });
-
-    console.log(`✅ Pedido Digistore24 criado: ${event.order_id}`);
-  }
-
-  /**
-   * Processa evento de reembolso
-   */
-  private async processRefundEvent(event: DigistoreIPNEvent, operation: any): Promise<void> {
-    console.log(`↩️ Processando reembolso Digistore24: ${event.order_id}`);
-
-    // Atualizar status do pedido
-    await db
-      .update(orders)
-      .set({
-        status: 'refunded',
-        paymentStatus: 'refunded',
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, event.order_id));
-
-    console.log(`✅ Pedido Digistore24 reembolsado: ${event.order_id}`);
-  }
-
-  /**
-   * Processa evento de chargeback
-   */
-  private async processChargebackEvent(event: DigistoreIPNEvent, operation: any): Promise<void> {
-    console.log(`⚠️ Processando chargeback Digistore24: ${event.order_id}`);
-
-    // Atualizar status do pedido
-    await db
-      .update(orders)
-      .set({
-        status: 'cancelled',
-        paymentStatus: 'chargeback',
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, event.order_id));
-
-    console.log(`✅ Pedido Digistore24 marcado como chargeback: ${event.order_id}`);
   }
 
   /**

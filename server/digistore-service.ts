@@ -6,39 +6,34 @@ export interface DigistoreCredentials {
 }
 
 export interface DigistoreOrder {
-  order_id: string;
-  transaction_id: string;
-  product_id: string;
-  product_name: string;
-  buyer_email: string;
-  buyer_name: string;
-  billing_address: {
-    first_name: string;
-    last_name: string;
-    street: string;
-    street2?: string;
-    city: string;
+  id?: string;
+  delivery_id?: string;
+  purchase_id: string;
+  delivery_type: string;
+  product_name?: string;
+  
+  // Endereço de entrega (objeto aninhado na resposta da API)
+  delivery_address?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone_no?: string;
+    street?: string;
+    street_number?: string;
+    city?: string;
     state?: string;
-    zipcode: string;
-    country: string;
-    phone?: string;
+    zipcode?: string;
+    country?: string;
   };
-  shipping_address?: {
-    first_name: string;
-    last_name: string;
-    street: string;
-    street2?: string;
-    city: string;
-    state?: string;
-    zipcode: string;
-    country: string;
-    phone?: string;
-  };
-  amount: number;
-  currency: string;
-  payment_status: string; // 'paid', 'refunded', 'chargeback'
-  created_at: string;
-  updated_at: string;
+  
+  // Tracking
+  tracking?: Array<{
+    tracking_id?: string;
+    parcel_service?: string;
+  }>;
+  
+  // Datas
+  purchase_created_at?: string;
 }
 
 export interface DigistoreTrackingInfo {
