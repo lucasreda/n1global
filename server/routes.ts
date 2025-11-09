@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -1573,9 +1573,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if has Shopify integration
+      // Check if has any platform integration (Shopify, CartPanda, or Digistore24)
       const shopifyIntegrations = await storage.getShopifyIntegrationsByOperation(operationId);
-      const hasPlatform = shopifyIntegrations.length > 0; // For now only checking Shopify, CartPanda would be added later
+      
+      // Check CartPanda integration
+      const [cartpandaIntegration] = await db
+        .select()
+        .from(cartpandaIntegrations)
+        .where(eq(cartpandaIntegrations.operationId, operationId))
+        .limit(1);
+      
+      // Check Digistore24 integration
+      const [digistoreIntegration] = await db
+        .select()
+        .from(digistoreIntegrations)
+        .where(eq(digistoreIntegrations.operationId, operationId))
+        .limit(1);
+      
+      const hasPlatform = shopifyIntegrations.length > 0 || !!cartpandaIntegration || !!digistoreIntegration;
 
       // Get operation to check shopifyOrderPrefix
       const operation = await db
