@@ -5,13 +5,15 @@
  * USO: node scripts/create-admin-users.js
  */
 
-const { Pool } = require('@neondatabase/serverless');
-const bcrypt = require('bcryptjs');
-const { randomUUID } = require('crypto');
+import pkg from 'pg';
+const { Pool } = pkg;
+import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 
 // Configuração do banco de dados
 const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL 
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 // Usuários a serem criados
@@ -130,9 +132,5 @@ async function main() {
   await createAdminUsers();
 }
 
-// Executar apenas se chamado diretamente
-if (require.main === module) {
-  main().catch(console.error);
-}
-
-module.exports = { createAdminUsers };
+// Executar
+main().catch(console.error);
