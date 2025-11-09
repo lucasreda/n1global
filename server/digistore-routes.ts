@@ -6,6 +6,7 @@ import { digistoreIntegrations, orders } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { authenticateToken } from "./auth-middleware";
 import { validateOperationAccess } from "./middleware/operation-access";
+import { digistoreFulfillmentService } from "./services/digistore-fulfillment-service";
 
 interface AuthRequest extends Request {
   user?: { id: string; email: string; role: string };
@@ -604,6 +605,74 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
     console.error("❌ [TEST] Erro ao simular webhook:", error);
     res.status(500).json({
       error: "Erro ao simular webhook",
+      details: error instanceof Error ? error.message : "Erro desconhecido"
+    });
+  }
+});
+
+/**
+ * Rota de teste para enviar tracking number à Digistore24
+ * TEMPORÁRIA - apenas para validação manual
+ */
+router.post("/digistore/test-tracking", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { operationId } = req.query;
+    const { orderId } = req.body ?? {};
+
+    if (!operationId || typeof operationId !== "string") {
+      return res.status(400).json({ error: "Operation ID é obrigatório" });
+    }
+
+    if (!orderId || typeof orderId !== "string") {
+      return res.status(400).json({ error: "orderId é obrigatório" });
+    }
+
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+
+    if (!order) {
+      return res.status(404).json({ error: "Pedido não encontrado" });
+    }
+
+    if (order.operationId !== operationId) {
+      return res.status(403).json({ error: "Pedido não pertence a esta operação" });
+    }
+
+    if (order.dataSource !== "digistore24" || !order.digistoreOrderId) {
+      return res.status(400).json({ error: "Pedido não é da Digistore24" });
+    }
+
+    const trackingNumber = `DS24${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const trackingUrl = `https://tracking.n1global.app/${trackingNumber}`;
+
+    const result = await digistoreFulfillmentService.updateDeliveryStatus(
+      orderId,
+      "shipped",
+      trackingNumber,
+      trackingUrl,
+      "Teste-Digistore24"
+    );
+
+    if (!result.success) {
+      return res.status(502).json({
+        error: "Falha ao enviar tracking para Digistore24",
+        details: result.error || "Erro desconhecido"
+      });
+    }
+
+    res.json({
+      success: true,
+      trackingNumber,
+      trackingUrl,
+      message: "Tracking de teste enviado para Digistore24."
+    });
+  } catch (error) {
+    console.error("❌ Erro ao enviar tracking de teste Digistore24:", error);
+    res.status(500).json({
+      error: "Erro interno ao enviar tracking",
       details: error instanceof Error ? error.message : "Erro desconhecido"
     });
   }

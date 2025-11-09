@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap } from "lucide-react";
+import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap, Send, Loader2 } from "lucide-react";
 import { cn, formatOperationCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
@@ -75,6 +75,50 @@ export default function Orders() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
+  const [sendingTrackingOrderId, setSendingTrackingOrderId] = useState<string | null>(null);
+  const handleSendDigistoreTracking = async (order: any) => {
+    if (!order?.id) return;
+    const operationToUse = selectedOperation || DSS_OPERATION_ID;
+
+    if (!operationToUse) {
+      toast({
+        title: "Operação não selecionada",
+        description: "Selecione uma operação antes de enviar o tracking.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSendingTrackingOrderId(order.id);
+      const response = await authenticatedApiRequest(
+        "POST",
+        `/api/integrations/digistore/test-tracking?operationId=${operationToUse}`,
+        { orderId: order.id }
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Falha ao enviar tracking");
+      }
+
+      const data = await response.json();
+      toast({
+        title: "Tracking enviado",
+        description: `Tracking ${data.trackingNumber} enviado para a Digistore24.`,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar tracking",
+        description: error?.message || "Não foi possível enviar o tracking.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTrackingOrderId(null);
+    }
+  };
   const [currentSyncState, setCurrentSyncState] = useState(false);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
   const queryClient = useQueryClient();
@@ -425,6 +469,28 @@ export default function Orders() {
                         >
                           <Eye size={16} />
                         </Button>
+                        {order.dataSource === 'digistore24' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSendDigistoreTracking(order)}
+                                className="text-yellow-400 hover:text-yellow-300 transition-colors p-2 h-auto"
+                                disabled={sendingTrackingOrderId === order.id}
+                              >
+                                {sendingTrackingOrderId === order.id ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <Send size={16} />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span>Enviar tracking de teste</span>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -560,6 +626,28 @@ export default function Orders() {
                             >
                               <Eye size={16} />
                             </Button>
+                            {order.dataSource === 'digistore24' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleSendDigistoreTracking(order)}
+                                    className="text-yellow-400 hover:text-yellow-300 transition-colors p-2 h-auto"
+                                    disabled={sendingTrackingOrderId === order.id}
+                                  >
+                                    {sendingTrackingOrderId === order.id ? (
+                                      <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                      <Send size={16} />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span>Enviar tracking de teste</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
