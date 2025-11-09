@@ -120,7 +120,7 @@ export class DigistoreFulfillmentService {
 
             const deliveries = await digistoreService.listOrders({
               ...cleanedParams,
-              type: cleanedParams.type || variant.type || 'request,in_progress,delivery,partial_delivery,cancel,return,all'
+              type: cleanedParams.type || variant.type || 'request,in_progress,delivery,partial_delivery,cancel,return'
             });
 
             if (deliveries.length > 0) {
