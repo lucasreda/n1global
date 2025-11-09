@@ -14,6 +14,44 @@ import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
 import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 
+// Helper para retornar ícone da plataforma baseado no dataSource ou ID do pedido
+const getPlatformIcon = (order: any) => {
+  // Verificar dataSource primeiro
+  if (order.dataSource === 'shopify' || order.shopifyOrderId) {
+    return (
+      <img 
+        src="https://cdn.shopify.com/shopifycloud/brochure/assets/brand-assets/shopify-logo-primary-logo-456baa801ee66a0a435671082365958316831c9960c480451dd0330bcdae304f.svg"
+        alt="Shopify"
+        className="w-3 h-3 inline-block mr-1"
+        style={{ filter: 'brightness(0) invert(1)' }}
+      />
+    );
+  }
+  
+  if (order.dataSource === 'cartpanda' || order.cartpandaOrderId) {
+    return (
+      <img 
+        src="/cartpanda-logo.png"
+        alt="CartPanda"
+        className="w-3 h-3 inline-block mr-1 rounded-sm"
+      />
+    );
+  }
+  
+  if (order.dataSource === 'digistore24' || order.digistoreOrderId || order.id?.startsWith('DS-')) {
+    return (
+      <img 
+        src="/digistore-logo.png"
+        alt="Digistore24"
+        className="w-3 h-3 inline-block mr-1 rounded-sm"
+      />
+    );
+  }
+  
+  // Default: sem ícone para pedidos de fulfillment providers
+  return null;
+};
+
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -315,7 +353,8 @@ export default function Orders() {
                         <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
                           <span className="text-xs font-bold text-blue-400">📦</span>
                         </div>
-                        <div className="font-mono text-blue-400">
+                        <div className="font-mono text-blue-400 flex items-center">
+                          {getPlatformIcon(order)}
                           {(() => {
                             if (order.shopifyOrderNumber) {
                               return order.shopifyOrderNumber;
@@ -428,7 +467,8 @@ export default function Orders() {
                       >
                         <td className="py-4 px-4 text-sm text-white font-mono">
                           <div className="space-y-1">
-                            <div className="text-blue-400">
+                            <div className="text-blue-400 flex items-center">
+                              {getPlatformIcon(order)}
                               {(() => {
                                 // 1. Se tem shopify_order_number, exibe ele (#PDIT3732)
                                 if (order.shopifyOrderNumber) {

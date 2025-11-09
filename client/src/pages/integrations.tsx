@@ -41,24 +41,14 @@ const CartPandaIcon = ({ className, size }: { className?: string; size?: number 
 
 // Componente customizado para o ícone do Digistore24
 const DigistoreIcon = ({ className, size }: { className?: string; size?: number }) => (
-  <svg 
-    width={size || 30} 
-    height={size || 30} 
-    viewBox="0 0 200 200" 
-    fill="none" 
-    xmlns="http://www.w3.org/2000/svg"
+  <img
+    src="/digistore-logo.png"
+    alt="Digistore24"
+    width={size || 30}
+    height={size || 30}
     className={className}
-  >
-    <rect width="200" height="200" rx="40" fill="#2563EB"/>
-    <path 
-      d="M65 55C58.3726 55 53 60.3726 53 67V133C53 139.627 58.3726 145 65 145H85C91.6274 145 97 139.627 97 133V115L125 145C131.627 145 137 139.627 137 133V115C137 108.373 131.627 103 125 103L97 73V67C97 60.3726 91.6274 55 85 55H65Z" 
-      fill="white"
-    />
-    <path 
-      d="M115 55C108.373 55 103 60.3726 103 67V85L131 115C137.627 115 143 109.627 143 103V67C143 60.3726 137.627 55 131 55H115Z" 
-      fill="white"
-    />
-  </svg>
+    style={{ borderRadius: '6px' }}
+  />
 );
 
 export default function Integrations() {
