@@ -52,45 +52,110 @@ export class DigistoreFulfillmentService {
       // Determinar delivery_id aceito pela API (inteiro)
       let deliveryIdForApi: string | null = null;
 
-      // 1. Tentar usar valor numérico direto do pedido
-      if (order.digistoreOrderId && /^\d+$/.test(order.digistoreOrderId)) {
-        deliveryIdForApi = order.digistoreOrderId;
-      }
+      const providerData = (order.providerData || {}) as Record<string, any>;
+      const candidateIds = new Set<string>();
 
-      // 2. Tentar usar transaction_id se for numérico
-      if (!deliveryIdForApi && order.digistoreTransactionId && /^\d+$/.test(order.digistoreTransactionId)) {
-        deliveryIdForApi = order.digistoreTransactionId;
+      [
+        order.digistoreOrderId,
+        order.digistoreTransactionId,
+        providerData?.delivery_id,
+        providerData?.id,
+        providerData?.transaction_id,
+        providerData?.purchase_id,
+        providerData?.purchase_key,
+        providerData?.order_id,
+      ]
+        .filter((value) => value !== undefined && value !== null)
+        .forEach((value) => candidateIds.add(String(value)));
+
+      for (const candidate of candidateIds) {
+        if (/^\d+$/.test(candidate)) {
+          deliveryIdForApi = candidate;
+          break;
+        }
       }
 
       // 3. Buscar lista de entregas para mapear ID
       if (!deliveryIdForApi) {
+        console.log('🔍 [DIGISTORE TRACKING] Nenhum delivery_id numérico direto. Tentando mapear via listDeliveries...', {
+          candidateIds: Array.from(candidateIds)
+        });
+
         try {
-          const fromDate = order.orderDate
-            ? new Date(Math.max(new Date(order.orderDate).getTime() - 7 * 24 * 60 * 60 * 1000, 0))
-            : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
+          const searchVariants = [
+            {
+              order_id: order.digistoreOrderId || undefined,
+              purchase_id: order.digistoreTransactionId || undefined,
+            },
+            {
+              order_id: providerData?.order_id,
+              purchase_id: providerData?.purchase_id,
+              delivery_id: providerData?.delivery_id,
+            },
+            {
+              type: 'all',
+              order_id: order.digistoreOrderId || providerData?.order_id,
+              purchase_id: order.digistoreTransactionId || providerData?.purchase_id,
+              delivery_id: providerData?.delivery_id,
+            },
+            {
+              type: 'all',
+            },
+          ];
 
-          const deliveries = await digistoreService.listOrders({
-            from: fromDate.toISOString().split('T')[0],
-            type: 'request,in_progress,delivery',
-            order_id: order.digistoreOrderId || undefined,
-            purchase_id: order.digistoreTransactionId || undefined
-          });
+          const allDeliveries: any[] = [];
 
-          const matchingDelivery = deliveries.find((delivery: any) => {
-            const deliveryIdStr = delivery.id?.toString() || delivery.delivery_id?.toString() || null;
-            return (
-              deliveryIdStr === order.digistoreOrderId ||
-              delivery.purchase_id?.toString() === order.digistoreTransactionId ||
-              delivery.order_id === order.digistoreOrderId
-            );
-          });
+          for (const variant of searchVariants) {
+            const cleanedParams: Record<string, string> = {};
+            Object.entries(variant).forEach(([key, value]) => {
+              if (typeof value === 'string' && value.trim().length > 0) {
+                cleanedParams[key] = value.trim();
+              }
+            });
 
-          if (matchingDelivery) {
-            deliveryIdForApi =
-              matchingDelivery.id?.toString() ||
-              matchingDelivery.delivery_id?.toString() ||
-              matchingDelivery.purchase_id?.toString() ||
-              null;
+            // Evitar chamadas sem parâmetros relevantes nas primeiras tentativas
+            if (Object.keys(cleanedParams).length === 0 && variant !== searchVariants[searchVariants.length - 1]) {
+              continue;
+            }
+
+            const deliveries = await digistoreService.listOrders({
+              ...cleanedParams,
+              type: cleanedParams.type || variant.type || 'request,in_progress,delivery,partial_delivery,cancel,return,all'
+            });
+
+            if (deliveries.length > 0) {
+              allDeliveries.push(...deliveries);
+              const matchingDelivery = deliveries.find((delivery: any) => {
+                const deliveryIdStr = delivery.id?.toString() || delivery.delivery_id?.toString() || null;
+                const purchaseIdStr = delivery.purchase_id?.toString() || delivery.transaction_id?.toString() || null;
+                const orderIdStr = delivery.order_id || delivery.orderid || null;
+
+                return (
+                  (deliveryIdStr && candidateIds.has(deliveryIdStr)) ||
+                  (purchaseIdStr && candidateIds.has(purchaseIdStr)) ||
+                  (orderIdStr && candidateIds.has(orderIdStr))
+                );
+              });
+
+              if (matchingDelivery) {
+                deliveryIdForApi =
+                  matchingDelivery.id?.toString() ||
+                  matchingDelivery.delivery_id?.toString() ||
+                  matchingDelivery.purchase_id?.toString() ||
+                  null;
+                console.log('✅ [DIGISTORE TRACKING] Delivery mapeado via listDeliveries', {
+                  deliveryIdForApi,
+                  matchingDelivery
+                });
+                break;
+              }
+            }
+          }
+
+          if (!deliveryIdForApi && allDeliveries.length > 0) {
+            console.log('ℹ️ [DIGISTORE TRACKING] Nenhum delivery correspondente encontrado entre os resultados retornados.', {
+              totalDeliveries: allDeliveries.length,
+            });
           }
         } catch (error) {
           console.warn('⚠️ Não foi possível mapear delivery_id automaticamente:', error);
@@ -99,7 +164,9 @@ export class DigistoreFulfillmentService {
 
       if (!deliveryIdForApi || !/^\d+$/.test(deliveryIdForApi)) {
         const errorMsg = `Não foi possível identificar delivery_id numérico para o pedido ${orderId}`;
-        console.error(`❌ ${errorMsg}`);
+        console.error(`❌ ${errorMsg}`, {
+          candidateIds: Array.from(candidateIds)
+        });
         return { success: false, error: errorMsg };
       }
 
