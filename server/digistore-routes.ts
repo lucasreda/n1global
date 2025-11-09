@@ -29,11 +29,26 @@ const saveIntegrationSchema = z.object({
  */
 router.get("/digistore", authenticateToken, validateOperationAccess, async (req, res) => {
   try {
-    const { operationId } = req.query;
+    const { operationId, customOrderId } = req.query;
 
     if (!operationId || typeof operationId !== "string") {
       return res.status(400).json({ error: "Operation ID é obrigatório" });
     }
+
+    const timestamp = Date.now();
+    const rawCustomId =
+      typeof customOrderId === "string" ? customOrderId.trim() : "";
+    const orderId = rawCustomId.length > 0 ? rawCustomId : `TEST-${timestamp}`;
+    const urlSafeOrderId =
+      orderId.replace(/[^a-zA-Z0-9_-]/g, "-") || `TEST-${timestamp}`;
+    const paymentId =
+      rawCustomId.length > 0
+        ? `PAYID-${urlSafeOrderId}`
+        : `PAYID-TEST-${timestamp}`;
+    const transactionId =
+      rawCustomId.length > 0 ? `${urlSafeOrderId}-${timestamp}` : `${timestamp}`;
+    const orderSlug =
+      rawCustomId.length > 0 ? urlSafeOrderId : `TEST${timestamp}`;
 
     console.log(`🔍 Buscando integração Digistore24 para operação: ${operationId}`);
 
@@ -369,7 +384,7 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
 
     // Payload de teste idêntico ao webhook real
     const testPayload = {
-      add_url: "https://www.checkout-ds24.com/order/add/TEST123/3KTP6LRQ",
+      add_url: `https://www.checkout-ds24.com/order/add/${orderSlug}/3KTP6LRQ`,
       address_city: "New York",
       address_company: "",
       address_country: "US",
@@ -457,7 +472,7 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
       function_call: "on_payment",
       has_custom_forms: "N",
       image_url: "/pb/img/merchant_4335044/image/product/711GIGM8.png",
-      invoice_url: "https://www.digistore24.com/invoice/TEST123/102999804/S2Y2RSUQ.pdf",
+      invoice_url: `https://www.digistore24.com/invoice/${orderSlug}/102999804/S2Y2RSUQ.pdf`,
       ipn_config_id: "293127",
       ipn_config_product_ids: "all",
       ipn_version: "1.6",
@@ -476,8 +491,8 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
       number_of_installments: "1",
       order_date: new Date().toISOString().split('T')[0],
       order_date_time: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      order_details_url: "https://www.digistore24-app.com/vendor/reports/transactions/order/TEST123",
-      order_id: `TEST-${Date.now()}`,
+      order_details_url: `https://www.digistore24-app.com/vendor/reports/transactions/order/${orderSlug}`,
+      order_id: orderId,
       order_item_id: "66384497",
       order_time: new Date().toTimeString().substring(0, 8),
       order_type: "regular",
@@ -487,7 +502,7 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
       parent_transaction_id: "102999802",
       pay_method: "test",
       pay_sequence_no: "0",
-      payment_id: `PAYID-TEST-${Date.now()}`,
+      payment_id: paymentId,
       payplan_id: "1328818",
       product_amount: "10.89",
       product_delivery_type: "shipping",
@@ -506,23 +521,23 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
       quantity: "1",
       rebill_stop_noted_at: "",
       rebilling_stop_url: "",
-      receipt_url: "https://www.checkout-ds24.com/receipt/646570/TEST123/3KTP6LRQ",
+      receipt_url: `https://www.checkout-ds24.com/receipt/646570/${orderSlug}/3KTP6LRQ`,
       refund_days: "60",
-      renew_url: "https://www.checkout-ds24.com/renew/TEST123/3KTP6LRQ",
-      request_refund_url: "https://www.digistore24.com/order/cancel/TEST123/XQ466QEY",
+      renew_url: `https://www.checkout-ds24.com/renew/${orderSlug}/3KTP6LRQ`,
+      request_refund_url: `https://www.digistore24.com/order/cancel/${orderSlug}/XQ466QEY`,
       salesteam_id: "",
       salesteam_name: "",
       sha_sign: "no_signature_passphrase_provided",
       store_url: "https://awesometshirts.store/",
-      support_url: "https://www.digistore24.com/support/TEST123/3KTP6LRQ",
-      switch_pay_interval_url: "https://www.checkout-ds24.com/order/switch/TEST123/3KTP6LRQ",
+      support_url: `https://www.digistore24.com/support/${orderSlug}/3KTP6LRQ`,
+      switch_pay_interval_url: `https://www.checkout-ds24.com/order/switch/${orderSlug}/3KTP6LRQ`,
       tag: "blacktshirt",
       tags: "blacktshirt",
       trackingkey: "",
       transaction_amount: "10.89",
       transaction_currency: "USD",
       transaction_date: new Date().toISOString().split('T')[0],
-      transaction_id: `${Date.now()}`,
+      transaction_id: transactionId,
       transaction_time: new Date().toTimeString().substring(0, 8),
       transaction_type: "payment",
       transaction_vat_amount: "0.89",

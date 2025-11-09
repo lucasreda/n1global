@@ -29,6 +29,7 @@ interface DigistoreIntegration {
 
 export function DigistoreIntegration() {
   const [apiKey, setApiKey] = useState("");
+  const [testOrderId, setTestOrderId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation: operationId } = useCurrentOperation();
@@ -146,8 +147,16 @@ export function DigistoreIntegration() {
   // Testar webhook (TEMPORÁRIO - apenas para desenvolvimento)
   const testWebhookMutation = useMutation({
     mutationFn: async () => {
+      if (!operationId) {
+        throw new Error("Selecione uma operação antes de testar o webhook");
+      }
+
+      const params = new URLSearchParams();
+      params.append("operationId", operationId);
+      if (testOrderId.trim()) params.append("customOrderId", testOrderId.trim());
+
       const response = await apiRequest(
-        `/api/integrations/digistore/test-webhook?operationId=${operationId}`,
+        `/api/integrations/digistore/test-webhook?${params.toString()}`,
         "POST"
       );
       return response.json();
@@ -339,6 +348,21 @@ export function DigistoreIntegration() {
                 <code className="text-xs bg-black/30 px-2 py-1 rounded">
                   https://www.n1global.app/api/integrations/digistore/webhook
                 </code>
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="custom-order-id" className="text-sm text-gray-200">
+                ID personalizado para teste (opcional)
+              </Label>
+              <Input
+                id="custom-order-id"
+                placeholder="Ex: DS-12345"
+                value={testOrderId}
+                onChange={(e) => setTestOrderId(e.target.value)}
+                className="bg-black/40 border-white/10 text-white"
+              />
+              <p className="text-xs text-gray-400">
+                Se preenchido, o webhook de teste usará este ID exatamente como fornecido. Deixe vazio para gerar um ID automático.
               </p>
             </div>
             <div className="flex gap-3">
