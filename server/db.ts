@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import pkg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -8,17 +8,16 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Usar driver HTTP do Neon (fetch-based)
-// Funciona em qualquer ambiente, incluindo Railway com restrições de rede
-// Usa fetch() nativo (porta 443 HTTPS) ao invés de TCP (5432) ou WebSocket
-const sql = neon(process.env.DATABASE_URL);
+const { Pool } = pkg;
 
-export const db = drizzle(sql, { schema });
+// Configuração para Supabase com pooler (porta 6543)
+// Funciona perfeitamente com Railway e qualquer Postgres
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  connectionTimeoutMillis: 10000, // 10s timeout
+  idleTimeoutMillis: 30000, // 30s idle
+  max: 20, // máximo de conexões no pool
+});
 
-// Manter compatibilidade com código que usa pool.query()
-export const pool = {
-  query: async (text: string, params?: any[]) => {
-    const result = await sql(text, params);
-    return { rows: result };
-  },
-};
+export const db = drizzle(pool, { schema });
