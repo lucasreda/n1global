@@ -155,6 +155,7 @@ export class DigistoreFulfillmentService {
           if (!deliveryIdForApi && allDeliveries.length > 0) {
             console.log('ℹ️ [DIGISTORE TRACKING] Nenhum delivery correspondente encontrado entre os resultados retornados.', {
               totalDeliveries: allDeliveries.length,
+              candidates: Array.from(candidateIds),
             });
           }
         } catch (error) {
