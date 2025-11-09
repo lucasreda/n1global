@@ -363,19 +363,22 @@ publicRouter.post("/digistore/webhook", async (req, res) => {
     console.log(`📥 Webhook IPN Digistore24 recebido`);
     console.log(`📋 Payload:`, JSON.stringify(req.body, null, 2));
 
-    // TODO: Implementar processamento de webhook IPN
-    // - Validar assinatura do webhook
-    // - Processar evento (on_payment, on_refund, on_chargeback)
-    // - Criar/atualizar pedido no sistema
+    // Importar webhook service
+    const { digistoreWebhookService } = await import('./services/digistore-webhook-service');
+    
+    // Processar evento IPN
+    const result = await digistoreWebhookService.processIPNEvent(req.body);
+    
+    if (!result.success) {
+      console.error(`❌ Erro ao processar webhook Digistore24:`, result.error);
+    }
 
     // Digistore24 espera resposta em texto simples "OK"
     res.status(200).send("OK");
   } catch (error) {
     console.error("❌ Erro ao processar webhook Digistore24:", error);
-    res.status(500).json({
-      error: "Erro ao processar webhook",
-      details: error instanceof Error ? error.message : "Erro desconhecido"
-    });
+    // Mesmo com erro, retornar OK para não bloquear o webhook
+    res.status(200).send("OK");
   }
 });
 
