@@ -301,11 +301,8 @@ publicRouter.post("/digistore/webhook", async (req, res) => {
     // - Processar evento (on_payment, on_refund, on_chargeback)
     // - Criar/atualizar pedido no sistema
 
-    // Por enquanto, apenas confirmar recebimento
-    res.status(200).json({
-      success: true,
-      message: "Webhook recebido com sucesso"
-    });
+    // Digistore24 espera resposta em texto simples "OK"
+    res.status(200).send("OK");
   } catch (error) {
     console.error("❌ Erro ao processar webhook Digistore24:", error);
     res.status(500).json({
