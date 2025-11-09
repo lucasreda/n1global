@@ -3477,14 +3477,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { performStagingSync, getSyncProgress, calculateOverallProgress } = await import("./services/staging-sync-service");
           
           // CRÍTICO: Verificar se o Shopify REALMENTE completou antes de mudar para staging
+          // Se Shopify não está configurado, considerar como "completado"
           const currentProgress = getUserSyncProgress(userId);
-          const shopifyCompleted = 
+          const shopifyCompleted = !hasShopify || (
             currentProgress.shopifyProgress.totalOrders > 0 &&
             currentProgress.shopifyProgress.processedOrders >= currentProgress.shopifyProgress.totalOrders &&
-            currentProgress.shopifyProgress.percentage >= 100;
+            currentProgress.shopifyProgress.percentage >= 100
+          );
           
-          if (!shopifyCompleted) {
+          if (!shopifyCompleted && hasShopify) {
             console.warn(`⚠️ [STAGING SYNC] Shopify ainda não completou! Processed: ${currentProgress.shopifyProgress.processedOrders}/${currentProgress.shopifyProgress.totalOrders}, Percentage: ${currentProgress.shopifyProgress.percentage}%`);
+          } else if (!hasShopify) {
+            console.log(`ℹ️ [STAGING SYNC] Shopify não configurado, pulando verificação`);
           }
           
           // CRÍTICO: Só mudar para 'staging' quando o Shopify REALMENTE completou
