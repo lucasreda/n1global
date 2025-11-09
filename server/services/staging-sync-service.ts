@@ -34,7 +34,7 @@ interface SyncProgress {
   isRunning: boolean;
   phase: 'preparing' | 'syncing' | 'completed' | 'error';
   message: string;
-  currentStep: 'shopify' | 'staging' | null;
+  currentStep: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null;
   overallProgress: number; // 0-100
   shopifyProgress: ShopifyProgress;
   stagingProgress: StagingProgress;
@@ -109,7 +109,7 @@ export function getUserSyncProgress(userId: string): SyncProgress {
 export function calculateOverallProgress(
   shopifyProgress: ShopifyProgress,
   stagingProgress: StagingProgress,
-  currentStep: 'shopify' | 'staging' | null
+  currentStep: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null
 ): number {
   const shopifyWeight = 0.4;
   const stagingWeight = 0.6;

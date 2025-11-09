@@ -3146,8 +3146,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Executar sincronização completa de forma assíncrona
       (async () => {
         try {
-          // 1️⃣ PRIMEIRO: Sincronizar Shopify (importar pedidos)
+          // 🔍 DETECTAR PLATAFORMAS CONFIGURADAS
+          let hasShopify = false;
+          let hasCartPanda = false;
+          let hasDigistore = false;
+          
           if (operationId && typeof operationId === 'string') {
+            // Verificar Shopify
+            const shopifyIntegrations = await storage.getShopifyIntegrationsByOperation(operationId);
+            hasShopify = shopifyIntegrations.length > 0;
+            
+            // Verificar CartPanda
+            const [cartpandaIntegration] = await db
+              .select()
+              .from(cartpandaIntegrations)
+              .where(eq(cartpandaIntegrations.operationId, operationId))
+              .limit(1);
+            hasCartPanda = !!cartpandaIntegration;
+            
+            // Verificar Digistore24
+            const [digistoreIntegration] = await db
+              .select()
+              .from(digistoreIntegrations)
+              .where(eq(digistoreIntegrations.operationId, operationId))
+              .limit(1);
+            hasDigistore = !!digistoreIntegration;
+            
+            console.log(`🔍 [PLATFORM DETECTION] Plataformas configuradas:`, {
+              shopify: hasShopify,
+              cartpanda: hasCartPanda,
+              digistore: hasDigistore,
+              operationId
+            });
+            
+            if (!hasShopify && !hasCartPanda && !hasDigistore) {
+              throw new Error('Nenhuma plataforma de e-commerce configurada para esta operação');
+            }
+          }
+          
+          // 1️⃣ PRIMEIRO: Sincronizar Shopify (importar pedidos) - SE CONFIGURADO
+          if (operationId && typeof operationId === 'string' && hasShopify) {
             console.log(`📦 [SHOPIFY SYNC] Sincronizando Shopify para operação ${operationId}...`);
               
               // CRÍTICO: Definir etapa atual como shopify ANTES de iniciar
@@ -3311,6 +3349,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
               clearInterval(progressInterval);
               throw error;
             }
+          } else {
+            console.log(`⏭️ [SHOPIFY SYNC] Pulando - Shopify não configurado`);
+          }
+
+          // 1️⃣.5 Sincronizar Digistore24 (SE CONFIGURADO)
+          if (operationId && typeof operationId === 'string' && hasDigistore) {
+            console.log(`📦 [DIGISTORE SYNC] Sincronizando Digistore24 para operação ${operationId}...`);
+            
+            const currentProgress = getUserSyncProgress(userId);
+            currentProgress.currentStep = 'digistore';
+            currentProgress.phase = 'syncing';
+            currentProgress.message = 'Importando entregas do Digistore24...';
+            currentProgress.version++;
+            
+            // Buscar integração
+            const [digistoreIntegration] = await db
+              .select()
+              .from(digistoreIntegrations)
+              .where(eq(digistoreIntegrations.operationId, operationId))
+              .limit(1);
+            
+            if (!digistoreIntegration) {
+              console.error(`❌ [DIGISTORE SYNC] Integração não encontrada`);
+            } else {
+              const { DigistoreService } = await import("./digistore-service");
+              const digistoreService = new DigistoreService({
+                apiKey: digistoreIntegration.apiKey
+              });
+              
+              // Buscar entregas dos últimos 90 dias
+              const ninetyDaysAgo = new Date();
+              ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+              
+              const deliveries = await digistoreService.listOrders({
+                from: ninetyDaysAgo.toISOString().split('T')[0],
+                type: 'request,in_progress,delivery'
+              });
+              
+              console.log(`📦 [DIGISTORE SYNC] ${deliveries.length} entregas encontradas`);
+              
+              // Salvar na staging table
+              const { digistoreOrders: digistoreOrdersTable } = await import('@shared/schema');
+              const { and } = await import('drizzle-orm');
+              
+              let created = 0;
+              let updated = 0;
+              
+              for (const delivery of deliveries) {
+                const deliveryId = delivery.id?.toString() || delivery.delivery_id?.toString();
+                const purchaseId = delivery.purchase_id;
+                
+                if (!deliveryId || !purchaseId) continue;
+                
+                const [existing] = await db
+                  .select()
+                  .from(digistoreOrdersTable)
+                  .where(
+                    and(
+                      eq(digistoreOrdersTable.integrationId, digistoreIntegration.id),
+                      eq(digistoreOrdersTable.orderId, deliveryId)
+                    )
+                  )
+                  .limit(1);
+                
+                const deliveryAddress = delivery.delivery_address || {};
+                const recipientName = `${deliveryAddress.first_name || ''} ${deliveryAddress.last_name || ''}`.trim();
+                
+                const orderData = {
+                  integrationId: digistoreIntegration.id,
+                  orderId: deliveryId,
+                  transactionId: purchaseId,
+                  status: delivery.delivery_type || 'request',
+                  tracking: delivery.tracking?.[0]?.tracking_id || null,
+                  value: '0',
+                  recipient: {
+                    name: recipientName || 'N/A',
+                    email: deliveryAddress.email || '',
+                    phone: deliveryAddress.phone_no || ''
+                  },
+                  items: [],
+                  rawData: delivery
+                };
+                
+                if (existing) {
+                  await db.update(digistoreOrdersTable)
+                    .set({
+                      ...orderData,
+                      processedToOrders: false,
+                      processedAt: null,
+                      updatedAt: new Date()
+                    })
+                    .where(eq(digistoreOrdersTable.id, existing.id));
+                  updated++;
+                } else {
+                  await db.insert(digistoreOrdersTable).values({
+                    ...orderData,
+                    processedToOrders: false
+                  });
+                  created++;
+                }
+              }
+              
+              console.log(`✅ [DIGISTORE SYNC] ${created} novos, ${updated} atualizados`);
+              
+              // Atualizar lastSyncAt na integração
+              await db
+                .update(digistoreIntegrations)
+                .set({
+                  lastSyncAt: new Date(),
+                  syncErrors: null,
+                })
+                .where(eq(digistoreIntegrations.id, digistoreIntegration.id));
+            }
+          } else if (hasDigistore) {
+            console.log(`⏭️ [DIGISTORE SYNC] Pulando - sem operationId`);
+          } else {
+            console.log(`⏭️ [DIGISTORE SYNC] Pulando - Digistore24 não configurado`);
           }
 
           // 2️⃣ DEPOIS: Processar staging tables (fazer matching com transportadora)

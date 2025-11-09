@@ -29,7 +29,7 @@ interface CompleteSyncStatus {
   isRunning: boolean;
   phase: 'preparing' | 'syncing' | 'completed' | 'error';
   message: string;
-  currentStep: 'shopify' | 'staging' | null;
+  currentStep: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null;
   overallProgress: number;
   shopifyProgress: ShopifyProgress;
   stagingProgress: StagingProgress;
