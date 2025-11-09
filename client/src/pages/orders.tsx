@@ -19,12 +19,18 @@ const getPlatformIcon = (order: any) => {
   // Verificar dataSource primeiro
   if (order.dataSource === 'shopify' || order.shopifyOrderId) {
     return (
-      <img 
-        src="https://cdn.shopify.com/shopifycloud/brochure/assets/brand-assets/shopify-logo-primary-logo-456baa801ee66a0a435671082365958316831c9960c480451dd0330bcdae304f.svg"
-        alt="Shopify"
-        className="w-3 h-3 inline-block mr-1"
-        style={{ filter: 'brightness(0) invert(1)' }}
-      />
+      <svg 
+        width="12" 
+        height="12" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        className="inline-block mr-1.5 flex-shrink-0"
+      >
+        <path 
+          d="M16.373 8.717c-.002-.03-.02-.057-.047-.068-.026-.011-1.028-.344-1.028-.344s-.676-.656-.745-.725c-.069-.069-.205-.048-.257-.034-.008.002-.145.045-.37.117-.223-1.004-.775-1.93-1.64-1.93h-.001c-.046 0-.092.003-.139.009-.022-.029-.045-.058-.069-.086-.346-.413-.785-.616-1.305-.616-1.012 0-2.018.754-2.831 2.122-.572.963-.997 2.168-1.127 3.197-1.006.311-1.71.529-1.717.531-.505.158-.519.173-.584.647-.05.362-1.338 10.313-1.338 10.313l10.063 1.74 4.464-1.103s-2.327-15.717-2.329-15.77zm-3.662-.863c-.191.06-.402.125-.63.196v-.155c0-.58-.079-1.049-.212-1.424.386.078.683.57.842 1.383zm-1.196.373c-.517.161-1.082.337-1.647.513.16-.612.465-1.218.831-1.61.121-.13.284-.284.478-.393.259.37.381.914.381 1.49v.001zm-.956-2.355c.119 0 .229.024.333.069-.172.11-.341.257-.494.426-.483.534-.856 1.363-1.019 2.276-.46.143-.91.284-1.339.418.319-1.307 1.177-3.189 2.519-3.189z" 
+          fill="white"
+        />
+      </svg>
     );
   }
   
@@ -33,18 +39,33 @@ const getPlatformIcon = (order: any) => {
       <img 
         src="/cartpanda-logo.png"
         alt="CartPanda"
-        className="w-3 h-3 inline-block mr-1 rounded-sm"
+        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
       />
     );
   }
   
   if (order.dataSource === 'digistore24' || order.digistoreOrderId || order.id?.startsWith('DS-')) {
     return (
-      <img 
-        src="/digistore-logo.png"
-        alt="Digistore24"
-        className="w-3 h-3 inline-block mr-1 rounded-sm"
-      />
+      <svg 
+        width="12" 
+        height="12" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        className="inline-block mr-1.5 flex-shrink-0"
+      >
+        <rect width="24" height="24" rx="5" fill="#2563EB"/>
+        <path 
+          d="M7.8 6.6C7.05 6.6 6.36 7.29 6.36 8.04V15.96C6.36 16.71 7.05 17.4 7.8 17.4H10.2C10.95 17.4 11.64 16.71 11.64 15.96V13.8L15 17.4C15.75 17.4 16.44 16.71 16.44 15.96V13.8C16.44 13.05 15.75 12.36 15 12.36L11.64 8.76V8.04C11.64 7.29 10.95 6.6 10.2 6.6H7.8Z" 
+          fill="white"
+        />
+        <path 
+          d="M13.8 6.6C13.05 6.6 12.36 7.29 12.36 8.04V10.2L15.72 13.8C16.47 13.8 17.16 13.11 17.16 12.36V8.04C17.16 7.29 16.47 6.6 15.72 6.6H13.8Z" 
+          fill="white"
+        />
+      </svg>
     );
   }
   
