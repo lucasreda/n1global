@@ -395,6 +395,22 @@ router.post("/digistore/test-webhook", authenticateToken, validateOperationAcces
       return res.status(400).json({ error: "Operation ID é obrigatório" });
     }
 
+    const timestamp = Date.now();
+    const rawCustomOrderId =
+      typeof req.query.customOrderId === "string"
+        ? req.query.customOrderId.trim()
+        : "";
+    const orderId =
+      rawCustomOrderId.length > 0 ? rawCustomOrderId : `TEST-${timestamp}`;
+    const orderSlug =
+      orderId.replace(/[^a-zA-Z0-9_-]/g, "-") || `TEST${timestamp}`;
+    const paymentId =
+      rawCustomOrderId.length > 0
+        ? `PAYID-${orderSlug}`
+        : `PAYID-TEST-${timestamp}`;
+    const transactionId =
+      rawCustomOrderId.length > 0 ? `${orderSlug}-${timestamp}` : `${timestamp}`;
+
     console.log(`🧪 [TEST] Simulando webhook IPN Digistore24 para operação: ${operationId}`);
 
     // Payload de teste idêntico ao webhook real
