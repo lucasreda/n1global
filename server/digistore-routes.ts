@@ -354,6 +354,216 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
 });
 
 /**
+ * Rota de teste - Simula recebimento de webhook IPN
+ * TEMPORÁRIA - apenas para desenvolvimento/debug
+ */
+router.post("/digistore/test-webhook", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { operationId } = req.query;
+
+    if (!operationId || typeof operationId !== "string") {
+      return res.status(400).json({ error: "Operation ID é obrigatório" });
+    }
+
+    console.log(`🧪 [TEST] Simulando webhook IPN Digistore24 para operação: ${operationId}`);
+
+    // Payload de teste idêntico ao webhook real
+    const testPayload = {
+      add_url: "https://www.checkout-ds24.com/order/add/TEST123/3KTP6LRQ",
+      address_city: "New York",
+      address_company: "",
+      address_country: "US",
+      address_country_name: "United States",
+      address_first_name: "Jeremias",
+      address_id: "42780891",
+      address_last_name: "Thompson",
+      address_mobile_no: "",
+      address_phone_no: "+138938383",
+      address_salutation: "",
+      address_salutation_name: "",
+      address_state: "NY",
+      address_street: "200 East 20th Street",
+      address_street2: "",
+      address_street_name: "East 20th Street",
+      address_street_number: "200",
+      address_tax_id: "",
+      address_title: "",
+      address_zipcode: "10003",
+      affiliate_id: "",
+      affiliate_name: "",
+      amount: "10.89",
+      amount_affiliate: "0.00",
+      amount_brutto: "10.89",
+      amount_credited: "0.00",
+      amount_fee: "0.00",
+      amount_main_affiliate: "0.00",
+      amount_netto: "10.00",
+      amount_partner: "0.00",
+      amount_payout: "8.14",
+      amount_provider: "1.86",
+      amount_vat: "0.89",
+      amount_vendor: "8.14",
+      api_mode: "test",
+      billing_city: "New York",
+      billing_company: "",
+      billing_country: "US",
+      billing_descriptor: "",
+      billing_first_name: "Jeremias",
+      billing_id: "42780891",
+      billing_last_name: "Thompson",
+      billing_mobile_no: "",
+      billing_phone_no: "+138938383",
+      billing_salutation: "",
+      billing_salutation_name: "",
+      billing_state: "NY",
+      billing_status: "completed",
+      billing_street: "200 East 20th Street",
+      billing_street2: "",
+      billing_street_name: "East 20th Street",
+      billing_street_number: "200",
+      billing_tax_id: "",
+      billing_title: "",
+      billing_type: "single_payment",
+      billing_zipcode: "10003",
+      buyer_address_city: "New York",
+      buyer_address_company: "",
+      buyer_address_country: "US",
+      buyer_address_id: "42780891",
+      buyer_address_mobile_no: "",
+      buyer_address_phone_no: "+138938383",
+      buyer_address_state: "NY",
+      buyer_address_street: "200 East 20th Street",
+      buyer_address_street2: "",
+      buyer_address_tax_id: "",
+      buyer_address_zipcode: "10003",
+      buyer_email: "test@example.com",
+      buyer_first_name: "Jeremias",
+      buyer_id: "35994875",
+      buyer_language: "en",
+      buyer_last_name: "Thompson",
+      campaignkey: "",
+      click_id: "",
+      country: "US",
+      currency: "USD",
+      custom: "",
+      custom_key: "35994875-TEST",
+      customer_affiliate_name: "user35994875",
+      customer_affiliate_promo_url: "https://www.checkout-ds24.com/redir/646570/user35994875/",
+      email: "test@example.com",
+      event: "on_payment",
+      event_label: "Pagamento",
+      first_amount: "10.89",
+      first_vat_amount: "0.89",
+      function_call: "on_payment",
+      has_custom_forms: "N",
+      image_url: "/pb/img/merchant_4335044/image/product/711GIGM8.png",
+      invoice_url: "https://www.digistore24.com/invoice/TEST123/102999804/S2Y2RSUQ.pdf",
+      ipn_config_id: "293127",
+      ipn_config_product_ids: "all",
+      ipn_version: "1.6",
+      is_gdpr_country: "N",
+      is_payment_planned: "N",
+      item_count: "1",
+      language: "en",
+      language_name: "Inglês",
+      license_accessdata_keys: "",
+      merchant_id: "4335044",
+      merchant_name: "LUKERED",
+      monthly_amount: "0.00",
+      monthly_vat_amount: "0.00",
+      newsletter_choice: "none",
+      newsletter_choice_msg: "Sem indicação",
+      number_of_installments: "1",
+      order_date: new Date().toISOString().split('T')[0],
+      order_date_time: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      order_details_url: "https://www.digistore24-app.com/vendor/reports/transactions/order/TEST123",
+      order_id: `TEST-${Date.now()}`,
+      order_item_id: "66384497",
+      order_time: new Date().toTimeString().substring(0, 8),
+      order_type: "regular",
+      orderform_id: "220953",
+      other_amounts: "0.00",
+      other_vat_amounts: "0.00",
+      parent_transaction_id: "102999802",
+      pay_method: "test",
+      pay_sequence_no: "0",
+      payment_id: `PAYID-TEST-${Date.now()}`,
+      payplan_id: "1328818",
+      product_amount: "10.89",
+      product_delivery_type: "shipping",
+      product_id: "646570",
+      product_language: "en",
+      product_name: "Black Cotton T-Shirt (TEST)",
+      product_name_intern: "Black Cotton T-Shirt (TEST)",
+      product_netto_amount: "10",
+      product_shipping_amount: "0",
+      product_txn_amount: "10.89",
+      product_txn_netto_amount: "10",
+      product_txn_shipping: "0",
+      product_txn_vat_amount: "0.89",
+      product_vat_amount: "0.89",
+      purchase_key: "3KTP6LRQ",
+      quantity: "1",
+      rebill_stop_noted_at: "",
+      rebilling_stop_url: "",
+      receipt_url: "https://www.checkout-ds24.com/receipt/646570/TEST123/3KTP6LRQ",
+      refund_days: "60",
+      renew_url: "https://www.checkout-ds24.com/renew/TEST123/3KTP6LRQ",
+      request_refund_url: "https://www.digistore24.com/order/cancel/TEST123/XQ466QEY",
+      salesteam_id: "",
+      salesteam_name: "",
+      sha_sign: "no_signature_passphrase_provided",
+      store_url: "https://awesometshirts.store/",
+      support_url: "https://www.digistore24.com/support/TEST123/3KTP6LRQ",
+      switch_pay_interval_url: "https://www.checkout-ds24.com/order/switch/TEST123/3KTP6LRQ",
+      tag: "blacktshirt",
+      tags: "blacktshirt",
+      trackingkey: "",
+      transaction_amount: "10.89",
+      transaction_currency: "USD",
+      transaction_date: new Date().toISOString().split('T')[0],
+      transaction_id: `${Date.now()}`,
+      transaction_time: new Date().toTimeString().substring(0, 8),
+      transaction_type: "payment",
+      transaction_vat_amount: "0.89",
+      upgrade_key: "RKTpojTwBbUY",
+      upsell_no: "0",
+      upsell_path: "",
+      vat_amount: "0.89",
+      vat_rate: "8.90",
+      voucher_code: ""
+    };
+
+    // Importar webhook service e processar
+    const { digistoreWebhookService } = await import('./services/digistore-webhook-service');
+    
+    console.log(`🧪 [TEST] Processando payload de teste...`);
+    const result = await digistoreWebhookService.processIPNEvent(testPayload, operationId);
+    
+    if (result.success) {
+      console.log(`✅ [TEST] Webhook de teste processado com sucesso`);
+      res.json({
+        success: true,
+        message: "Webhook de teste processado com sucesso",
+        orderId: testPayload.order_id
+      });
+    } else {
+      console.error(`❌ [TEST] Erro ao processar webhook de teste:`, result.error);
+      res.status(500).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error("❌ [TEST] Erro ao simular webhook:", error);
+    res.status(500).json({
+      error: "Erro ao simular webhook",
+      details: error instanceof Error ? error.message : "Erro desconhecido"
+    });
+  }
+});
+
+/**
  * Webhook IPN da Digistore24
  * Recebe notificações em tempo real sobre eventos de pedidos
  * NOTA: Esta rota é PÚBLICA e não requer autenticação

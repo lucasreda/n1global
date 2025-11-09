@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, RefreshCw, Store } from "lucide-react";
+import { Loader2, CheckCircle, RefreshCw, Store, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -138,6 +138,31 @@ export function DigistoreIntegration() {
       toast({
         title: "Erro na sincronização",
         description: error.message || "Erro ao sincronizar dados",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Testar webhook (TEMPORÁRIO - apenas para desenvolvimento)
+  const testWebhookMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(
+        `/api/integrations/digistore/test-webhook?operationId=${operationId}`,
+        "POST"
+      );
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Webhook de teste processado!",
+        description: `Order ID: ${data.orderId}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao testar webhook",
+        description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
     },
@@ -316,19 +341,36 @@ export function DigistoreIntegration() {
                 </code>
               </p>
             </div>
-            <Button
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              data-testid="button-sync-data"
-            >
-              {syncMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Sincronizar Entregas Pendentes
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                data-testid="button-sync-data"
+              >
+                {syncMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Sincronizar Entregas Pendentes
+              </Button>
+              
+              <Button
+                onClick={() => testWebhookMutation.mutate()}
+                disabled={testWebhookMutation.isPending}
+                variant="outline"
+                className="border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white"
+                data-testid="button-test-webhook"
+              >
+                {testWebhookMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Zap className="h-4 w-4 mr-2" />
+                )}
+                🧪 Testar Webhook
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
