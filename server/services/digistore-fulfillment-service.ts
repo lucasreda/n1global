@@ -71,7 +71,9 @@ export class DigistoreFulfillmentService {
 
           const deliveries = await digistoreService.listOrders({
             from: fromDate.toISOString().split('T')[0],
-            type: 'request,in_progress,delivery'
+            type: 'request,in_progress,delivery',
+            order_id: order.digistoreOrderId || undefined,
+            purchase_id: order.digistoreTransactionId || undefined
           });
 
           const matchingDelivery = deliveries.find((delivery: any) => {

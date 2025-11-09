@@ -109,11 +109,14 @@ export class DigistoreService {
    * Endpoint: GET /listDeliveries
    */
   async listOrders(params?: {
-    from?: string; // YYYY-MM-DD
-    to?: string; // YYYY-MM-DD
-    type?: string; // 'request,in_progress,delivery'
-    is_processed?: boolean;
-  }): Promise<any[]> {
+      from?: string; // YYYY-MM-DD
+      to?: string; // YYYY-MM-DD
+      type?: string; // 'request,in_progress,delivery'
+      is_processed?: boolean;
+      order_id?: string;
+      delivery_id?: string;
+      purchase_id?: string;
+    }): Promise<any[]> {
     try {
       const url = new URL(`${this.baseUrl}/listDeliveries`);
       
@@ -124,6 +127,18 @@ export class DigistoreService {
 
       if (params?.from) {
         searchParams.from = params.from;
+      }
+
+      if (params?.order_id) {
+        searchParams.order_id = params.order_id;
+      }
+
+      if (params?.delivery_id) {
+        searchParams.delivery_id = params.delivery_id;
+      }
+
+      if (params?.purchase_id) {
+        searchParams.purchase_id = params.purchase_id;
       }
       
       if (params?.to) {
