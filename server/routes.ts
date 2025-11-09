@@ -23,7 +23,7 @@ import { registerSupportRoutes } from "./support-routes";
 import { registerCustomerSupportRoutes } from "./customer-support-routes";
 import voiceRoutes, { setupVoiceWebSocket } from "./voice-routes";
 import { cartpandaRoutes } from "./cartpanda-routes";
-import digistoreRoutes from "./digistore-routes";
+import { digistoreRoutes } from "./digistore-routes";
 import { funnelRoutes } from "./funnel-routes";
 import affiliateRoutes from "./affiliate-routes";
 import affiliateTrackingRoutes from "./affiliate-tracking-routes";

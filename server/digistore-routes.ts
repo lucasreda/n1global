@@ -313,5 +313,5 @@ router.post("/digistore/webhook", async (req, res) => {
   }
 });
 
-export default router;
+export { router as digistoreRoutes };
 
