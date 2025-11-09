@@ -45,13 +45,63 @@ export class DigistoreFulfillmentService {
         return { success: false, error: 'Integração não encontrada' };
       }
 
-      // digistoreOrderId é o delivery_id da Digistore24
-      const deliveryId = order.digistoreOrderId;
-      console.log(`📤 Atualizando entrega Digistore24: delivery_id=${deliveryId} -> ${status}`);
-
       const digistoreService = new DigistoreService({
         apiKey: integration.apiKey
       });
+
+      // Determinar delivery_id aceito pela API (inteiro)
+      let deliveryIdForApi: string | null = null;
+
+      // 1. Tentar usar valor numérico direto do pedido
+      if (order.digistoreOrderId && /^\d+$/.test(order.digistoreOrderId)) {
+        deliveryIdForApi = order.digistoreOrderId;
+      }
+
+      // 2. Tentar usar transaction_id se for numérico
+      if (!deliveryIdForApi && order.digistoreTransactionId && /^\d+$/.test(order.digistoreTransactionId)) {
+        deliveryIdForApi = order.digistoreTransactionId;
+      }
+
+      // 3. Buscar lista de entregas para mapear ID
+      if (!deliveryIdForApi) {
+        try {
+          const fromDate = order.orderDate
+            ? new Date(Math.max(new Date(order.orderDate).getTime() - 7 * 24 * 60 * 60 * 1000, 0))
+            : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
+
+          const deliveries = await digistoreService.listOrders({
+            from: fromDate.toISOString().split('T')[0],
+            type: 'request,in_progress,delivery'
+          });
+
+          const matchingDelivery = deliveries.find((delivery: any) => {
+            const deliveryIdStr = delivery.id?.toString() || delivery.delivery_id?.toString() || null;
+            return (
+              deliveryIdStr === order.digistoreOrderId ||
+              delivery.purchase_id?.toString() === order.digistoreTransactionId ||
+              delivery.order_id === order.digistoreOrderId
+            );
+          });
+
+          if (matchingDelivery) {
+            deliveryIdForApi =
+              matchingDelivery.id?.toString() ||
+              matchingDelivery.delivery_id?.toString() ||
+              matchingDelivery.purchase_id?.toString() ||
+              null;
+          }
+        } catch (error) {
+          console.warn('⚠️ Não foi possível mapear delivery_id automaticamente:', error);
+        }
+      }
+
+      if (!deliveryIdForApi || !/^\d+$/.test(deliveryIdForApi)) {
+        const errorMsg = `Não foi possível identificar delivery_id numérico para o pedido ${orderId}`;
+        console.error(`❌ ${errorMsg}`);
+        return { success: false, error: errorMsg };
+      }
+
+      console.log(`📤 Atualizando entrega Digistore24: delivery_id=${deliveryIdForApi} -> ${status}`);
 
       const trackingInfo = trackingNumber ? {
         tracking_number: trackingNumber,
@@ -61,7 +111,7 @@ export class DigistoreFulfillmentService {
 
       // Usar delivery_id para atualizar
       const result = await digistoreService.updateOrderStatus(
-        deliveryId,
+        deliveryIdForApi,
         status,
         trackingInfo
       );
