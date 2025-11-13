@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations, pollingExecutions } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -145,6 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: users.name,
           phone: users.phone,
           avatarUrl: users.avatarUrl,
+          preferredLanguage: users.preferredLanguage,
         })
         .from(users)
         .where(eq(users.id, req.user.id))
@@ -161,7 +162,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email, 
         name: user.name, 
         phone: user.phone || null, 
-        avatarUrl: user.avatarUrl || null 
+        avatarUrl: user.avatarUrl || null,
+        preferredLanguage: user.preferredLanguage || null
       });
       
       const profileData = {
@@ -170,6 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: user.name,
         phone: user.phone || null,
         avatarUrl: user.avatarUrl || null,
+        preferredLanguage: user.preferredLanguage || null,
       };
       
       console.log("📤 Enviando dados do perfil:", profileData);
@@ -386,6 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         role: user.role,
         permissions: user.permissions || [],
+        preferredLanguage: (user as any).preferredLanguage || null,
       });
     } catch (error) {
       res.status(500).json({ message: "Erro interno do servidor" });
@@ -1817,6 +1821,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user preferred language
+  app.put("/api/user/preferred-language", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { preferredLanguage } = req.body;
+
+      // Validate input
+      const validLanguages = ['pt-BR', 'en', 'es'];
+      if (!preferredLanguage || !validLanguages.includes(preferredLanguage)) {
+        return res.status(400).json({ 
+          message: "Idioma inválido. Use: pt-BR, en ou es" 
+        });
+      }
+
+      // Update user preferred language
+      const updatedUser = await storage.updateUser(req.user.id, { 
+        preferredLanguage: preferredLanguage 
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      res.json({
+        message: "Idioma preferido atualizado com sucesso",
+        preferredLanguage: updatedUser.preferredLanguage,
+      });
+    } catch (error) {
+      console.error("Update preferred language error:", error);
+      res.status(500).json({ message: "Erro ao atualizar idioma preferido" });
+    }
+  });
+
   // Configure multer for avatar upload
   const avatarUpload = multer({
     storage: multer.memoryStorage(),
@@ -3024,10 +3060,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Polling sempre está ativo através do worker
       const autoSyncActive = hasWebhooks || hasPolling;
 
-      // Última atualização automática (buscar do staging-sync-service ou workers)
-      // Por enquanto, vamos usar o lastCompleteSync como referência
-      // Em produção, isso deveria vir de uma tabela de logs ou tracking
-      const lastAutoSync = lastCompleteSync; // Pode ser ajustado para buscar de workers
+      // Última atualização automática - buscar da tabela polling_executions
+      let lastAutoSync: Date | null = null;
+      
+      if (operationId) {
+        // Buscar última execução de polling bem-sucedida para esta operação
+        const lastPollingExecution = await db
+          .select({ executedAt: pollingExecutions.executedAt })
+          .from(pollingExecutions)
+          .where(
+            and(
+              eq(pollingExecutions.operationId, operationId as string),
+              eq(pollingExecutions.provider, 'shopify'),
+              eq(pollingExecutions.success, true)
+            )
+          )
+          .orderBy(desc(pollingExecutions.executedAt))
+          .limit(1);
+
+        if (lastPollingExecution.length > 0 && lastPollingExecution[0].executedAt) {
+          lastAutoSync = new Date(lastPollingExecution[0].executedAt);
+        }
+      } else {
+        // Sem operationId, buscar de todas as operações do usuário
+        const userOperations = await db
+          .select({ id: operations.id })
+          .from(userOperationAccess)
+          .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
+          .where(eq(userOperationAccess.userId, userId));
+
+        const operationIds = userOperations.map(op => op.id);
+
+        if (operationIds.length > 0) {
+          const lastPollingExecution = await db
+            .select({ executedAt: pollingExecutions.executedAt })
+            .from(pollingExecutions)
+            .where(
+              and(
+                inArray(pollingExecutions.operationId, operationIds),
+                eq(pollingExecutions.provider, 'shopify'),
+                eq(pollingExecutions.success, true)
+              )
+            )
+            .orderBy(desc(pollingExecutions.executedAt))
+            .limit(1);
+
+          if (lastPollingExecution.length > 0 && lastPollingExecution[0].executedAt) {
+            lastAutoSync = new Date(lastPollingExecution[0].executedAt);
+          }
+        }
+      }
 
       res.json({
         isFirstSync,

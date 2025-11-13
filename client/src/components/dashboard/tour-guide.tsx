@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface TourGuideProps {
   run: boolean;
@@ -11,11 +12,19 @@ interface TourGuideProps {
 }
 
 export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPage, onNavigate }: TourGuideProps) {
+  const { t, currentLanguage } = useTranslation();
   console.log('🎭 TourGuide render:', { run, currentPage });
   
   // Local state to handle delayed tour start
   const [isRunning, setIsRunning] = useState(false);
   const [key, setKey] = useState(0); // Key to force remount
+  
+  // Force remount when language changes to update translations
+  useEffect(() => {
+    if (isRunning) {
+      setKey(prev => prev + 1);
+    }
+  }, [currentLanguage]);
   
   useEffect(() => {
     console.log('🎯 TourGuide useEffect - run or page changed:', { run, currentPage, isRunning });
@@ -49,15 +58,14 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
     }
   }, [currentPage]);
   
-  const getDashboardSteps = (): Step[] => [
+  const getDashboardSteps = useCallback((): Step[] => [
     {
       target: 'body',
       content: (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold">Bem-vindo ao N1 Dashboard! 🎉</h3>
+          <h3 className="text-lg font-bold">{t('tour.dashboard.welcome')} 🎉</h3>
           <p className="text-sm">
-            Vamos fazer um tour rápido pelos principais indicadores e funcionalidades da plataforma.
-            Este tour tem 14 etapas e leva cerca de 3 minutos.
+            {t('tour.dashboard.welcomeDescription')}
           </p>
         </div>
       ),
@@ -68,15 +76,15 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-tour-id="operation-selector-section"]',
       content: (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold">Seletor de Operação 🏢</h3>
+          <h3 className="text-lg font-bold">{t('tour.dashboard.operationSelector')} 🏢</h3>
           <p className="text-sm">
-            O primeiro passo é <strong>criar sua Operação de Negócio Digital</strong>!
+            {t('tour.dashboard.operationSelectorStep1')}
           </p>
           <p className="text-sm">
-            Uma operação representa um negócio ou marca específica. Você pode ter várias operações (ex: diferentes lojas, países ou marcas) e alternar entre elas facilmente.
+            {t('tour.dashboard.operationSelectorStep2')}
           </p>
           <p className="text-sm text-blue-400">
-            Use o botão "Criar Operação" logo abaixo para começar.
+            {t('tour.dashboard.operationSelectorStep3')}
           </p>
         </div>
       ),
@@ -87,10 +95,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-tour-id="card-shopify-orders-desktop"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Faturamento e Pedidos da Plataforma</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.platformRevenue')}</h4>
           <p className="text-sm">
-            Este card mostra o faturamento total e o número de pedidos importados da sua plataforma de vendas (Shopify/CartPanda).
-            É o valor bruto antes de descontar custos.
+            {t('tour.dashboard.platformRevenueDescription')}
           </p>
         </div>
       ),
@@ -101,10 +108,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-tour-id="card-cpa-marketing-desktop"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">CPA Anúncios e Marketing</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.cpaMarketing')}</h4>
           <p className="text-sm">
-            Aqui você vê o custo por aquisição (CPA) dos anúncios e o total gasto em marketing.
-            Ajuda a entender quanto você investe para conseguir cada pedido.
+            {t('tour.dashboard.cpaMarketingDescription')}
           </p>
         </div>
       ),
@@ -115,10 +121,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-tour-id="card-orders-delivered-desktop"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Pedidos N1</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.n1Orders')}</h4>
           <p className="text-sm">
-            Total de pedidos confirmados pelo armazém e entregues ao cliente.
-            Mostra quantos pedidos foram processados e completados com sucesso.
+            {t('tour.dashboard.n1OrdersDescription')}
           </p>
         </div>
       ),
@@ -129,10 +134,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-testid="card-custos-retornados"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Custos Retornados</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.returnedCosts')}</h4>
           <p className="text-sm">
-            Valor total dos custos de pedidos que foram devolvidos ou cancelados.
-            Importante para calcular o prejuízo com devoluções.
+            {t('tour.dashboard.returnedCostsDescription')}
           </p>
         </div>
       ),
@@ -143,10 +147,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-testid="card-shipping-costs"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Custos de Envio</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.shippingCosts')}</h4>
           <p className="text-sm">
-            Total gasto com envios e frete dos pedidos.
-            Uma das principais despesas operacionais do negócio.
+            {t('tour.dashboard.shippingCostsDescription')}
           </p>
         </div>
       ),
@@ -157,10 +160,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-testid="card-product-costs"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Custos de Produtos</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.productCosts')}</h4>
           <p className="text-sm">
-            Valor total gasto com os produtos vendidos (custo de aquisição).
-            Fundamental para calcular a margem de lucro bruta.
+            {t('tour.dashboard.productCostsDescription')}
           </p>
         </div>
       ),
@@ -171,10 +173,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-testid="card-paid-revenue"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Receita Paga</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.paidRevenue')}</h4>
           <p className="text-sm">
-            Valor efetivamente recebido pelos pedidos que foram entregues.
-            Este é o dinheiro real que entrou no caixa, diferente do faturamento bruto.
+            {t('tour.dashboard.paidRevenueDescription')}
           </p>
         </div>
       ),
@@ -185,10 +186,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-testid="card-taxa-entrega"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Taxa de Entrega</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.deliveryRate')}</h4>
           <p className="text-sm">
-            Porcentagem de pedidos que foram entregues com sucesso em relação ao total.
-            Quanto maior, melhor é sua operação logística e satisfação do cliente.
+            {t('tour.dashboard.deliveryRateDescription')}
           </p>
         </div>
       ),
@@ -199,10 +199,9 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-testid="card-cac"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">CPA Real</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.realCPA')}</h4>
           <p className="text-sm">
-            Custo real por aquisição calculado com base nos pedidos efetivamente entregues.
-            Métrica mais precisa do que o CPA de anúncios, pois considera apenas vendas concretizadas.
+            {t('tour.dashboard.realCPADescription')}
           </p>
         </div>
       ),
@@ -213,44 +212,41 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: '[data-testid="card-total-profit"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Lucro Total</h4>
+          <h4 className="font-semibold">{t('tour.dashboard.totalProfit')}</h4>
           <p className="text-sm">
-            O lucro líquido final depois de descontar TODOS os custos (produtos, envio, marketing, devoluções).
-            Este é o indicador mais importante da saúde financeira do seu negócio! 💰
+            {t('tour.dashboard.totalProfitDescription')} 💰
           </p>
         </div>
       ),
       placement: 'bottom',
       disableBeacon: true,
     },
-  ];
+  ], [t]);
 
-  const getIntegrationsSteps = (): Step[] => [
+  const getIntegrationsSteps = useCallback((): Step[] => [
     {
       target: '[data-tour-id="section-shopify"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Integração com Plataformas</h4>
+          <h4 className="font-semibold">{t('tour.integrations.platformIntegration')}</h4>
           <p className="text-sm">
-            Conecte sua loja Shopify ou CartPanda para sincronizar pedidos automaticamente.
-            É o primeiro passo essencial para começar a usar a plataforma!
+            {t('tour.integrations.platformIntegrationDescription')}
           </p>
         </div>
       ),
       placement: 'right',
       disableBeacon: true,
     },
-  ];
+  ], [t]);
 
-  const getAdsSteps = (): Step[] => [
+  const getAdsSteps = useCallback((): Step[] => [
     {
       target: '[data-tour-id="section-ad-accounts"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Gerencie suas Campanhas</h4>
+          <h4 className="font-semibold">{t('tour.ads.manageCampaigns')}</h4>
           <p className="text-sm">
-            Conecte suas contas do Facebook Ads para acompanhar o desempenho das campanhas
-            e otimizar seus anúncios diretamente na plataforma.
+            {t('tour.ads.manageCampaignsDescription')}
           </p>
         </div>
       ),
@@ -261,44 +257,43 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
       target: 'body',
       content: (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold">Tour Concluído! 🎊</h3>
+          <h3 className="text-lg font-bold">{t('tour.ads.completed')} 🎊</h3>
           <p className="text-sm">
-            Você agora conhece todos os principais indicadores e funcionalidades do N1 Dashboard.
-            Está pronto para começar a gerenciar seu negócio de forma profissional!
+            {t('tour.ads.completedDescription')}
           </p>
           <p className="text-sm text-muted-foreground">
-            Você pode refazer este tour a qualquer momento nas configurações.
+            {t('tour.ads.completedFooter')}
           </p>
         </div>
       ),
       placement: 'center',
       disableBeacon: true,
     },
-  ];
+  ], [t]);
 
-  const getSyncOrdersSteps = (): Step[] => [
+  const getSyncOrdersSteps = useCallback((): Step[] => [
     {
       target: '[data-testid="button-sync-complete"]',
       content: (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold">Importe seus Pedidos! 📦</h3>
+          <h3 className="text-lg font-bold">{t('tour.sync.importOrders')} 📦</h3>
           <p className="text-sm">
-            Agora que você configurou sua plataforma e armazém, clique em <strong>Sync Completo</strong> para importar todos os seus pedidos.
+            {t('tour.sync.importOrdersDescription')}
           </p>
           <p className="text-sm">
-            Esta sincronização vai trazer os dados da sua plataforma (Shopify/CartPanda) e do armazém, permitindo que você gerencie tudo em um só lugar.
+            {t('tour.sync.importOrdersDescription2')}
           </p>
           <p className="text-sm text-muted-foreground">
-            Pode levar alguns minutos dependendo da quantidade de pedidos.
+            {t('tour.sync.importOrdersFooter')}
           </p>
         </div>
       ),
       placement: 'bottom',
       disableBeacon: true,
     },
-  ];
+  ], [t]);
 
-  const getAllSteps = (): Step[] => {
+  const getAllSteps = useCallback((): Step[] => {
     // Return steps based on current page
     if (currentPage === 'dashboard') {
       return getDashboardSteps();
@@ -311,7 +306,7 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
     }
     
     return [];
-  };
+  }, [currentPage, getDashboardSteps, getIntegrationsSteps, getAdsSteps, getSyncOrdersSteps]);
 
   const handleJoyrideCallback = useCallback(
     (data: CallBackProps) => {
@@ -383,35 +378,38 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
         return;
       }
     },
-    [currentPage, onComplete, onSkip, onNavigate]
+    [currentPage, onComplete, onSkip, onNavigate, getDashboardSteps, getIntegrationsSteps, getAdsSteps, getSyncOrdersSteps]
   );
 
   // Get current step index for custom button labels
   const [stepIndex, setStepIndex] = useState(0);
   
-  const customCallback = useCallback((data: CallBackProps) => {
-    setStepIndex(data.index);
-    handleJoyrideCallback(data);
-  }, [handleJoyrideCallback]);
-
   // Determinar o label do botão baseado na página e índice
-  const getButtonLabel = () => {
+  const getButtonLabel = useCallback(() => {
     const currentSteps = getAllSteps();
     const isLastStep = stepIndex === currentSteps.length - 1;
     
     // Se for sync-orders, mostrar "Fechar"
     if (currentPage === 'sync-orders' && isLastStep) {
-      return 'Fechar';
+      return t('tour.buttons.close');
     }
     
     // Se for o último step da página de Ads, mostrar "Finalizar"
     if (currentPage === 'ads' && isLastStep) {
-      return 'Finalizar';
+      return t('tour.buttons.finish');
     }
     
     // Caso contrário, sempre mostrar "Próximo"
-    return 'Próximo';
-  };
+    return t('tour.buttons.next');
+  }, [currentPage, stepIndex, getAllSteps, t]);
+  
+  const customCallback = useCallback((data: CallBackProps) => {
+    setStepIndex(data.index);
+    handleJoyrideCallback(data);
+  }, [handleJoyrideCallback]);
+  
+  // Recalculate button label when step index or current page changes
+  const buttonLabel = getButtonLabel();
 
   return (
     <Joyride
@@ -483,12 +481,12 @@ export function TourGuide({ run, onComplete, onSkip, onCloseSyncTour, currentPag
         },
       }}
       locale={{
-        back: 'Voltar',
-        close: 'Fechar',
-        last: getButtonLabel(),
-        next: 'Próximo',
-        skip: 'Pular tour',
-        open: 'Abrir',
+        back: t('tour.buttons.back'),
+        close: t('tour.buttons.close'),
+        last: buttonLabel,
+        next: t('tour.buttons.next'),
+        skip: t('tour.buttons.skip'),
+        open: t('tour.buttons.open'),
       }}
       floaterProps={{
         disableAnimation: false,

@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useTourContext } from "@/contexts/tour-context";
 import { useLocation } from "wouter";
+import { useTranslation } from "@/hooks/use-translation";
 import cartpandaIcon from "@assets/carticon_1758210690464.avif";
 
 interface CartPandaIntegration {
@@ -31,6 +32,7 @@ interface CartPandaIntegration {
 }
 
 export function CartPandaIntegration() {
+  const { t } = useTranslation();
   const [storeSlug, setStoreSlug] = useState("");
   const [bearerToken, setBearerToken] = useState("");
   const [isConfiguring, setIsConfiguring] = useState(false);
@@ -80,14 +82,14 @@ export function CartPandaIntegration() {
       await queryClient.invalidateQueries({ queryKey: ["/api/onboarding/integrations-status"] });
       setIsConfiguring(false);
       toast({
-        title: "Sucesso",
-        description: "Integração CartPanda configurada com sucesso!",
+        title: t('integrations.cartpanda.success'),
+        description: t('integrations.cartpanda.configuredSuccessfully'),
       });
 
       // Redirecionar para orders e iniciar tour
       toast({
-        title: "Pronto para Sincronizar!",
-        description: "Agora você pode importar seus pedidos.",
+        title: t('integrations.cartpanda.readyToSync'),
+        description: t('integrations.cartpanda.readyToSyncDescription'),
       });
       setTimeout(() => {
         setLocation('/orders');
@@ -98,8 +100,8 @@ export function CartPandaIntegration() {
     },
     onError: (error: any) => {
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao configurar integração CartPanda",
+        title: t('integrations.cartpanda.error'),
+        description: error.message || t('integrations.cartpanda.errorConfiguring'),
         variant: "destructive",
       });
     },
@@ -116,14 +118,14 @@ export function CartPandaIntegration() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Conexão válida",
-        description: `Conectado com sucesso à loja CartPanda: ${data.data?.name || storeSlug}`,
+        title: t('integrations.cartpanda.validConnection'),
+        description: t('integrations.cartpanda.connectedSuccessfully', { name: data.data?.name || storeSlug }),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro na conexão",
-        description: error.message || "Erro ao conectar com a loja CartPanda",
+        title: t('integrations.cartpanda.connectionError'),
+        description: error.message || t('integrations.cartpanda.errorConnecting'),
         variant: "destructive",
       });
     },
@@ -138,14 +140,14 @@ export function CartPandaIntegration() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/cartpanda", operationId] });
       toast({
-        title: "Sincronização concluída",
+        title: t('integrations.cartpanda.syncCompleted'),
         description: data.message,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro na sincronização",
-        description: error.message || "Erro ao sincronizar dados",
+        title: t('integrations.cartpanda.syncError'),
+        description: error.message || t('integrations.cartpanda.errorSyncing'),
         variant: "destructive",
       });
     },
@@ -154,8 +156,8 @@ export function CartPandaIntegration() {
   const handleConfigure = () => {
     if (!storeSlug.trim() || !bearerToken.trim()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos",
+        title: t('integrations.cartpanda.requiredFields'),
+        description: t('integrations.cartpanda.fillAllFields'),
         variant: "destructive",
       });
       return;
@@ -166,8 +168,8 @@ export function CartPandaIntegration() {
   const handleTest = () => {
     if (!storeSlug.trim() || !bearerToken.trim()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos para testar",
+        title: t('integrations.cartpanda.requiredFields'),
+        description: t('integrations.cartpanda.fillAllFieldsToTest'),
         variant: "destructive",
       });
       return;
@@ -176,17 +178,17 @@ export function CartPandaIntegration() {
   };
 
   const getStatusBadge = () => {
-    if (!integration) return <Badge variant="secondary">Não configurado</Badge>;
+    if (!integration) return <Badge variant="secondary">{t('integrations.statusNotConfigured')}</Badge>;
     
     switch (integration.status) {
       case "active":
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Ativo</Badge>;
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{t('integrations.statusActive')}</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Pendente</Badge>;
+        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">{t('integrations.statusPending')}</Badge>;
       case "error":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Erro</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{t('integrations.statusError')}</Badge>;
       default:
-        return <Badge variant="secondary">Desconhecido</Badge>;
+        return <Badge variant="secondary">{t('integrations.statusUnknown')}</Badge>;
     }
   };
 
@@ -220,7 +222,7 @@ export function CartPandaIntegration() {
               loading="lazy"
               decoding="async"
             />
-            Status da Integração
+            {t('integrations.cartpanda.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -229,23 +231,23 @@ export function CartPandaIntegration() {
               {integration ? (
                 <div className="space-y-2">
                   <p className="text-gray-300">
-                    <strong>Loja:</strong> {integration.storeSlug}
+                    <strong>{t('integrations.cartpanda.store')}:</strong> {integration.storeSlug}
                   </p>
                   <p className="text-gray-300">
-                    <strong>Última sincronização:</strong>{" "}
+                    <strong>{t('integrations.cartpanda.lastSync')}:</strong>{" "}
                     {integration.lastSyncAt 
                       ? new Date(integration.lastSyncAt).toLocaleString("pt-BR")
-                      : "Nunca"
+                      : t('integrations.shopify.never')
                     }
                   </p>
                   {integration.syncErrors && (
                     <p className="text-red-400 text-sm">
-                      <strong>Erros:</strong> {integration.syncErrors}
+                      <strong>{t('integrations.cartpanda.errors')}:</strong> {integration.syncErrors}
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-gray-400">Nenhuma integração configurada</p>
+                <p className="text-gray-400">{t('integrations.cartpanda.noIntegration')}</p>
               )}
             </div>
             {getStatusBadge()}
@@ -257,46 +259,46 @@ export function CartPandaIntegration() {
       <Card className="bg-black/20 border-white/10">
         <CardHeader>
           <CardTitle className="text-white" style={{ fontSize: '20px' }}>
-            {integration ? "Atualizar" : "Configurar"} Integração CartPanda
+            {integration ? t('integrations.cartpanda.updateTitle') : t('integrations.cartpanda.configureTitle')}
           </CardTitle>
           <CardDescription className="text-gray-400">
-            Configure sua integração com CartPanda para importar pedidos e gerenciar fulfillment
+            {t('integrations.cartpanda.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="storeSlug" className="text-gray-300">
-              Store Slug <span className="text-red-400">*</span>
+              {t('integrations.cartpanda.storeSlug')} <span className="text-red-400">*</span>
             </Label>
             <Input
               id="storeSlug"
               type="text"
-              placeholder="ex: minha-loja"
+              placeholder={t('integrations.cartpanda.storeSlugPlaceholder')}
               value={storeSlug}
               onChange={(e) => setStoreSlug(e.target.value)}
               className="bg-black/40 border-white/20 text-white placeholder:text-gray-500"
               data-testid="input-store-slug"
             />
             <p className="text-sm text-gray-500">
-              O slug único da sua loja CartPanda (ex: se sua loja é "minha-loja.mycartpanda.com", use "minha-loja")
+              {t('integrations.cartpanda.storeSlugHint')}
             </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="bearerToken" className="text-gray-300">
-              Bearer Token <span className="text-red-400">*</span>
+              {t('integrations.cartpanda.bearerToken')} <span className="text-red-400">*</span>
             </Label>
             <Input
               id="bearerToken"
               type="password"
-              placeholder="Seu Bearer Token da API CartPanda"
+              placeholder={t('integrations.cartpanda.bearerTokenPlaceholder')}
               value={bearerToken}
               onChange={(e) => setBearerToken(e.target.value)}
               className="bg-black/40 border-white/20 text-white placeholder:text-gray-500"
               data-testid="input-bearer-token"
             />
             <p className="text-sm text-gray-500">
-              Token de acesso disponível no painel da sua loja CartPanda
+              {t('integrations.cartpanda.bearerTokenHint')}
             </p>
           </div>
 
@@ -313,7 +315,7 @@ export function CartPandaIntegration() {
               ) : (
                 <CheckCircle className="h-4 w-4 mr-2" />
               )}
-              Testar Conexão
+              {t('integrations.cartpanda.testConnection')}
             </Button>
 
             <Button
@@ -327,7 +329,7 @@ export function CartPandaIntegration() {
               ) : (
                 <Store className="h-4 w-4 mr-2" />
               )}
-              {integration ? "Atualizar" : "Configurar"}
+              {integration ? t('integrations.cartpanda.update') : t('integrations.cartpanda.configure')}
             </Button>
           </div>
         </CardContent>
@@ -339,10 +341,10 @@ export function CartPandaIntegration() {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
               <RefreshCw className="text-blue-400" size={20} />
-              Sincronização de Dados
+              {t('integrations.cartpanda.syncTitle')}
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Sincronize pedidos da sua loja CartPanda
+              {t('integrations.cartpanda.syncDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -357,7 +359,7 @@ export function CartPandaIntegration() {
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              Sincronizar Agora
+              {t('integrations.cartpanda.syncNow')}
             </Button>
           </CardContent>
         </Card>

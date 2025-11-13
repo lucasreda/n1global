@@ -18,6 +18,7 @@ interface User {
   email: string;
   role: string;
   permissions?: string[];
+  preferredLanguage?: string | null;
 }
 
 interface AuthResponse {
@@ -87,27 +88,6 @@ export const authenticatedApiRequest = async (
   data?: unknown,
   options?: { headers?: Record<string, string> }
 ): Promise<Response> => {
-  const token = authService.getToken();
-  const headers: HeadersInit = {
-    ...(data ? { "Content-Type": "application/json" } : {}),
-    ...(options?.headers || {})
-  };
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    const text = (await response.text()) || response.statusText;
-    throw new Error(`${response.status}: ${text}`);
-  }
-
-  return response;
+  // Usar apiRequest que já tem timeout e retry logic
+  return apiRequest(url, method, data);
 };
