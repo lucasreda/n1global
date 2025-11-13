@@ -26,7 +26,8 @@ import {
   Truck,
   Plus,
   X,
-  Check
+  Check,
+  Search
 } from "lucide-react";
 import { WarehouseAccountCard } from "@/components/admin/warehouse-account-card";
 import { 
@@ -78,6 +79,14 @@ interface SystemUser {
 }
 
 export default function AdminUsers() {
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterId, setFilterId] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all"); // "all", "active", "inactive"
+  
   // Modal states
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -140,6 +149,54 @@ export default function AdminUsers() {
   const { data: systemUsers, isLoading: usersLoading } = useQuery<SystemUser[]>({
     queryKey: ['/api/admin/users']
   });
+
+  // Filter users based on search and filters
+  const filteredUsers = systemUsers?.filter(user => {
+    // Search filter (nome e email apenas)
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        user.name.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+
+    // ID filter (filtro específico)
+    if (filterId) {
+      const idLower = filterId.toLowerCase();
+      if (!user.id.toLowerCase().includes(idLower)) return false;
+    }
+
+    // Date filter (data de criação)
+    if (filterDateFrom || filterDateTo) {
+      const userDate = new Date(user.createdAt);
+      userDate.setHours(0, 0, 0, 0); // Reset time to start of day
+      
+      if (filterDateFrom) {
+        const fromDate = new Date(filterDateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (userDate < fromDate) return false;
+      }
+      
+      if (filterDateTo) {
+        const toDate = new Date(filterDateTo);
+        toDate.setHours(23, 59, 59, 999); // End of day
+        if (userDate > toDate) return false;
+      }
+    }
+
+    // Role filter
+    if (filterRole !== "all" && user.role !== filterRole) return false;
+
+    // Status filter
+    if (filterStatus === "active" && user.isActive === false) return false;
+    if (filterStatus === "inactive" && user.isActive !== false) return false;
+
+    return true;
+  }) || [];
+
+  // Get unique roles for filter dropdown
+  const uniqueRoles = Array.from(new Set(systemUsers?.map(u => u.role) || [])).sort();
 
   // Buscar warehouse providers catalog - always fetch for better UX
   const { data: warehouseProviders, isLoading: warehouseProvidersLoading, isError: warehouseProvidersError } = useQuery<Array<{
@@ -686,12 +743,131 @@ export default function AdminUsers() {
         </Button>
       </div>
 
+      {/* Search and Filters */}
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            {/* First Row: Search and ID Filter */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Search Input - Nome e Email */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              {/* ID Filter */}
+              <div className="w-full md:w-[200px] relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filtrar por ID..."
+                  value={filterId}
+                  onChange={(e) => setFilterId(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Second Row: Date Filters, Role Filter, Status Filter and Clear Button */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Date From Filter */}
+              <div className="w-full md:w-[180px]">
+                <Label htmlFor="filter-date-from" className="text-sm text-muted-foreground mb-2 block">
+                  Data de criação (De)
+                </Label>
+                <Input
+                  id="filter-date-from"
+                  type="date"
+                  value={filterDateFrom}
+                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                />
+              </div>
+
+              {/* Date To Filter */}
+              <div className="w-full md:w-[180px]">
+                <Label htmlFor="filter-date-to" className="text-sm text-muted-foreground mb-2 block">
+                  Data de criação (Até)
+                </Label>
+                <Input
+                  id="filter-date-to"
+                  type="date"
+                  value={filterDateTo}
+                  onChange={(e) => setFilterDateTo(e.target.value)}
+                  min={filterDateFrom || undefined}
+                />
+              </div>
+
+              {/* Filter by Role */}
+              <div className="w-full md:w-[200px]">
+                <Label htmlFor="filter-role" className="text-sm text-muted-foreground mb-2 block">
+                  Filtrar por função
+                </Label>
+                <Select value={filterRole} onValueChange={setFilterRole}>
+                  <SelectTrigger id="filter-role">
+                    <SelectValue placeholder="Todas as funções" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as funções</SelectItem>
+                    {uniqueRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filter by Status */}
+              <div className="w-full md:w-[200px]">
+                <Label htmlFor="filter-status" className="text-sm text-muted-foreground mb-2 block">
+                  Filtrar por status
+                </Label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger id="filter-status">
+                    <SelectValue placeholder="Todos os status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="active">Ativos</SelectItem>
+                    <SelectItem value="inactive">Inativos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters Button */}
+              {(searchTerm || filterId || filterDateFrom || filterDateTo || filterRole !== "all" || filterStatus !== "all") && (
+                <div className="w-full md:w-auto flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setFilterId("");
+                      setFilterDateFrom("");
+                      setFilterDateTo("");
+                      setFilterRole("all");
+                      setFilterStatus("all");
+                    }}
+                    className="w-full md:w-auto"
+                  >
+                    Limpar Filtros
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Users Table */}
       <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardContent>
           <div className="mt-[15px] mb-4">
             <p className="text-sm text-gray-400">
-              {systemUsers?.length || 0} usuários
+              Usuários ({filteredUsers.length} de {systemUsers?.length || 0})
             </p>
           </div>
           {usersLoading ? (
@@ -701,7 +877,7 @@ export default function AdminUsers() {
                 <p className="text-muted-foreground">Carregando usuários...</p>
               </div>
             </div>
-          ) : systemUsers && systemUsers.length > 0 ? (
+          ) : filteredUsers && filteredUsers.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -714,7 +890,7 @@ export default function AdminUsers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {systemUsers.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -771,9 +947,15 @@ export default function AdminUsers() {
           ) : (
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhum usuário encontrado</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {searchTerm || filterId || filterDateFrom || filterDateTo || filterRole !== "all" || filterStatus !== "all"
+                  ? "Nenhum usuário encontrado"
+                  : "Nenhum usuário encontrado"}
+              </h3>
               <p className="text-muted-foreground">
-                Comece criando o primeiro usuário do sistema
+                {searchTerm || filterId || filterDateFrom || filterDateTo || filterRole !== "all" || filterStatus !== "all"
+                  ? "Tente ajustar os filtros de busca"
+                  : "Comece criando o primeiro usuário do sistema"}
               </p>
             </div>
           )}
