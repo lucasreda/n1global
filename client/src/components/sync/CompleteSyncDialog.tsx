@@ -8,6 +8,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { SyncTimeline } from "./SyncTimeline";
 import { SyncSummaryCard } from "./SyncSummaryCard";
 
+interface PlatformProgress {
+  processedOrders: number;
+  totalOrders: number;
+  newOrders: number;
+  updatedOrders: number;
+  percentage: number;
+}
+
 interface ShopifyProgress {
   processedOrders: number;
   totalOrders: number;
@@ -31,8 +39,10 @@ interface CompleteSyncStatus {
   message: string;
   currentStep: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null;
   overallProgress: number;
-  shopifyProgress: ShopifyProgress;
-  stagingProgress: StagingProgress;
+  platformProgress: PlatformProgress;
+  // Campos antigos mantidos temporariamente para compatibilidade
+  shopifyProgress?: ShopifyProgress;
+  stagingProgress?: StagingProgress;
   errors: number;
   startTime: string | null;
   endTime: string | null;
@@ -56,6 +66,8 @@ export function CompleteSyncDialog({
   onSyncStateChange,
   operationId 
 }: CompleteSyncDialogProps) {
+  console.log('🟢 [DEBUG] CompleteSyncDialog render - isOpen:', isOpen);
+  
   const [syncStatus, setSyncStatus] = useState<CompleteSyncStatus | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [animatedProgress, setAnimatedProgress] = useState(0);
@@ -171,7 +183,51 @@ export function CompleteSyncDialog({
       eventSource.onmessage = (event) => {
         try {
           console.log('📨 [SSE] Mensagem recebida:', event.data);
-          const status: CompleteSyncStatus = JSON.parse(event.data);
+          let status: CompleteSyncStatus = JSON.parse(event.data);
+          
+          // ADAPTADOR: Converter novo formato (platformProgress) para formato antigo (shopifyProgress/stagingProgress)
+          if ((status as any).platformProgress && !(status as any).shopifyProgress) {
+            const platform = (status as any).platformProgress || {};
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: platform.processedOrders || 0,
+                totalOrders: platform.totalOrders || 0,
+                newOrders: platform.newOrders || 0,
+                updatedOrders: platform.updatedOrders || 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: platform.percentage || 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            } as any;
+          } else if (!(status as any).shopifyProgress) {
+            // Se não tem nenhum dos dois, criar estrutura padrão
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: 0,
+                totalOrders: 0,
+                newOrders: 0,
+                updatedOrders: 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            } as any;
+          }
+          
           const incomingRunId = (status as any)?.runId || null;
           if (expectedRunIdRef.current && incomingRunId && incomingRunId !== expectedRunIdRef.current) {
             console.log('⏭️ [SSE] Ignorando update de outra execução', { expected: expectedRunIdRef.current, incomingRunId });
@@ -182,17 +238,11 @@ export function CompleteSyncDialog({
             isRunning: status.isRunning,
             overallProgress: status.overallProgress,
             currentStep: status.currentStep,
-            shopify: {
-              processed: status.shopifyProgress?.processedOrders,
-              total: status.shopifyProgress?.totalOrders,
-              new: status.shopifyProgress?.newOrders,
-              updated: status.shopifyProgress?.updatedOrders
-            },
-            staging: {
-              processed: status.stagingProgress?.processedLeads,
-              total: status.stagingProgress?.totalLeads,
-              new: status.stagingProgress?.newLeads,
-              updated: status.stagingProgress?.updatedLeads
+            platform: {
+              processed: status.platformProgress?.processedOrders,
+              total: status.platformProgress?.totalOrders,
+              new: status.platformProgress?.newOrders,
+              updated: status.platformProgress?.updatedOrders
             }
           });
           
@@ -235,8 +285,7 @@ export function CompleteSyncDialog({
           // CRÍTICO: Criar uma cópia profunda para garantir que React detecta a mudança
           const newStatus = {
             ...status,
-            shopifyProgress: { ...status.shopifyProgress },
-            stagingProgress: { ...status.stagingProgress }
+            platformProgress: { ...status.platformProgress }
           };
           
           setSyncStatus(newStatus);
@@ -247,10 +296,8 @@ export function CompleteSyncDialog({
             isRunning: newStatus.isRunning,
             overallProgress: newStatus.overallProgress,
             currentStep: newStatus.currentStep,
-            shopifyProcessed: newStatus.shopifyProgress?.processedOrders,
-            shopifyTotal: newStatus.shopifyProgress?.totalOrders,
-            stagingProcessed: newStatus.stagingProgress?.processedLeads,
-            stagingTotal: newStatus.stagingProgress?.totalLeads
+            platformProcessed: newStatus.platformProgress?.processedOrders,
+            platformTotal: newStatus.platformProgress?.totalOrders
           });
     onSyncStateChange?.(status.isRunning);
 
@@ -318,8 +365,62 @@ export function CompleteSyncDialog({
         
         const response = await apiRequest(url, 'GET');
         
+        // Se a rota não existe (404), parar o polling silenciosamente
+        if (response.status === 404) {
+          console.log('ℹ️ [POLLING] Rota /api/sync/complete-status não existe mais. Parando polling.');
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          return;
+        }
+        
         if (response.ok) {
-          const status = await response.json();
+          let status = await response.json();
+          
+          // ADAPTADOR: Converter novo formato (platformProgress) para formato antigo (shopifyProgress/stagingProgress)
+          if ((status as any).platformProgress && !(status as any).shopifyProgress) {
+            const platform = (status as any).platformProgress || {};
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: platform.processedOrders || 0,
+                totalOrders: platform.totalOrders || 0,
+                newOrders: platform.newOrders || 0,
+                updatedOrders: platform.updatedOrders || 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: platform.percentage || 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            };
+          } else if (!(status as any).shopifyProgress) {
+            // Se não tem nenhum dos dois, criar estrutura padrão
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: 0,
+                totalOrders: 0,
+                newOrders: 0,
+                updatedOrders: 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            };
+          }
+          
           const incomingRunId = (status as any)?.runId || null;
           if (expectedRunIdRef.current && incomingRunId && incomingRunId !== expectedRunIdRef.current) {
             console.log('⏭️ [POLLING] Ignorando update de outra execução', { expected: expectedRunIdRef.current, incomingRunId });
@@ -566,13 +667,21 @@ export function CompleteSyncDialog({
 
     // Initialize dialog state
     const initDialog = async () => {
+      console.log('🟣 [DEBUG] initDialog - Inicializando dialog...');
       try {
+        console.log('🟣 [DEBUG] initDialog - Limpando error...');
         setError(null);
         
         // IMPORTANTE: Primeiro buscar o status atual para evitar barra ir e voltar
         // Se já há uma sincronização em andamento, mostrar o status atual imediatamente
         try {
+          console.log('🟣 [DEBUG] initDialog - Buscando status atual...');
           const currentStatusResponse = await apiRequest('/api/sync/complete-status', 'GET');
+          // Se a rota não existe (404), continuar normalmente sem status inicial
+          if (currentStatusResponse.status === 404) {
+            console.log('ℹ️ [INIT] Rota /api/sync/complete-status não existe. Continuando sem status inicial.');
+            return;
+          }
           if (currentStatusResponse.ok) {
             const currentStatus = await currentStatusResponse.json();
             
@@ -791,6 +900,10 @@ export function CompleteSyncDialog({
               // Verificar status uma última vez após desmontar
               apiRequest('/api/sync/complete-status', 'GET')
                 .then(response => {
+                  // Se a rota não existe, ignorar silenciosamente
+                  if (response.status === 404) {
+                    return null;
+                  }
                   if (response.ok) {
                     return response.json();
                   }

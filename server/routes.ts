@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations, syncSessions } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -38,12 +38,14 @@ import { registerFhbAdminRoutes } from "./routes/fhb-admin-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
+import { BigArenaService } from "./services/big-arena-service";
 import { EnterpriseAIPageOrchestrator } from "./ai/EnterpriseAIPageOrchestrator.js";
 import { FHBSyncService } from "./services/fhb-sync-service";
 import { EuropeanFulfillmentSyncService } from "./services/european-fulfillment-sync-service";
 import EventEmitter from "events";
 import { shopifyWebhookService } from "./services/shopify-webhook-service";
 import { cartpandaWebhookService } from "./services/cartpanda-webhook-service";
+import { syncBigArenaAccount } from "./workers/big-arena-sync-worker";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -641,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shopifyProgress = ShopifySyncService.getOperationProgress(operationId);
       
       // Se o Shopify sync está rodando, dar prioridade a ele
-      if (shopifyProgress.isRunning) {
+      if (shopifyProgress && shopifyProgress.isRunning) {
         return res.json({
           ...shopifyProgress,
           estimatedTimeRemaining: "",
@@ -2074,6 +2076,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error_type: "validation_error"
           });
         }
+      } else if (providerKey === 'big_arena') {
+        if (!credentials.apiToken?.trim()) {
+          return res.status(400).json({
+            success: false,
+            message: "API Token é obrigatório para conectar à Big Arena.",
+            error_type: "missing_credentials"
+          });
+        }
+
+        if (credentials.domain !== undefined && typeof credentials.domain !== "string") {
+          return res.status(400).json({
+            success: false,
+            message: "Domínio inválido para Big Arena.",
+            error_type: "validation_error"
+          });
+        }
+
+        const sanitizedDomain =
+          typeof credentials.domain === 'string' && credentials.domain.trim().length > 0
+            ? credentials.domain.trim()
+            : undefined;
+
+        if (sanitizedDomain) {
+          try {
+            const bigArenaService = new BigArenaService({
+              apiToken: credentials.apiToken.trim(),
+              domain: sanitizedDomain,
+            });
+            const testResult = await bigArenaService.testConnection();
+            if (!testResult.success) {
+              return res.status(400).json({
+                success: false,
+                message: testResult.error || "Não foi possível validar as credenciais Big Arena.",
+                error_type: "validation_error",
+              });
+            }
+          } catch (error: any) {
+            console.error("❌ Erro ao validar credenciais Big Arena:", error);
+            return res.status(400).json({
+              success: false,
+              message: "Erro ao validar credenciais Big Arena",
+              details: error instanceof Error ? error.message : String(error),
+              error_type: "validation_error",
+            });
+          }
+        }
+
+        return res.json({
+          success: true,
+          message: "Token Big Arena validado!"
+        });
       } else {
         return res.status(400).json({ 
           success: false,
@@ -2137,6 +2190,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ 
             message: "Erro ao validar credenciais FHB: " + error.message,
             error_type: "validation_error"
+          });
+        }
+      } else if (providerKey === 'big_arena') {
+        if (!credentials.apiToken?.trim()) {
+          return res.status(400).json({ 
+            message: "API Token é obrigatório para conectar à Big Arena.",
+            error_type: "missing_credentials"
+          });
+        }
+
+        // Testar conexão com o domínio padrão (https://my.bigarena.net/api/v1/)
+        try {
+          const bigArenaService = new BigArenaService({
+            apiToken: credentials.apiToken.trim(),
+            domain: null, // Sempre usar domínio padrão hardcoded no BigArenaService
+          });
+          const testResult = await bigArenaService.testConnection();
+          if (!testResult.success) {
+            return res.status(400).json({
+              message: testResult.error || "Não foi possível validar as credenciais Big Arena.",
+              error_type: "validation_error",
+            });
+          }
+        } catch (error: any) {
+          console.error("❌ Erro ao validar credenciais Big Arena:", error);
+          return res.status(400).json({
+            message: "Erro ao validar credenciais Big Arena",
+            details: error instanceof Error ? error.message : String(error),
+            error_type: "validation_error",
           });
         }
       } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
@@ -2216,6 +2298,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         credentials,
         status: 'pending'
       });
+
+      let bigArenaAccountId: string | null = null;
+      if (providerKey === 'big_arena') {
+        // Sempre usar domínio padrão (https://my.bigarena.net/api/v1/) hardcoded no BigArenaService
+        const bigArenaRecord = await storage.createBigArenaWarehouseAccount({
+          accountId: account.id,
+          userId: targetUserId,
+          operationId: null,
+          apiToken: credentials.apiToken.trim(),
+          apiDomain: null, // Sempre null - domínio padrão é usado no BigArenaService
+          status: 'pending',
+          metadata: credentials.metadata ?? null,
+        });
+        bigArenaAccountId = bigArenaRecord.id;
+      }
+      
+      let validOperationIds: string[] = [];
       
       // Link account to operations if operationIds provided
       if (operationIds && Array.isArray(operationIds) && operationIds.length > 0) {
@@ -2223,7 +2322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Verify operations belong to target user
         const userOperations = await storage.getUserOperations(targetUserId);
-        const validOperationIds = operationIds.filter(opId => 
+        validOperationIds = operationIds.filter(opId => 
           userOperations.some(op => op.id === opId)
         );
         
@@ -2242,16 +2341,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
-        // Update account status to 'active' after linking operations
-        await storage.updateUserWarehouseAccount(account.id, { status: 'active' });
-        console.log(`✅ Account ${account.id} status updated to 'active'`);
+      }
+      
+      // Update account status to 'active' (always, not just when operationIds provided)
+      await storage.updateUserWarehouseAccount(account.id, { status: 'active' });
+      console.log(`✅ Account ${account.id} status updated to 'active'`);
+
+      // Update Big Arena account status to 'active' if applicable
+      if (providerKey === 'big_arena' && bigArenaAccountId) {
+        try {
+          await storage.updateBigArenaWarehouseAccount(bigArenaAccountId, {
+            operationId: validOperationIds[0] ?? null,
+            status: 'active'
+          });
+          console.log(`✅ Big Arena account ${bigArenaAccountId} status updated to 'active'`);
+        } catch (linkError: any) {
+          console.error(`⚠️ Erro ao atualizar metadados Big Arena para conta ${account.id}:`, linkError.message);
+        }
       }
       
       // Trigger automatic initial sync (3 months) in background
       // Don't await - let it run asynchronously
+      // IMPORTANT: This runs AFTER status is updated to 'active'
       (async () => {
         try {
+          // Small delay to ensure database transaction is committed
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           console.log(`🚀 Triggering initial sync for new warehouse account: ${account.id} (provider: ${providerKey})`);
           
           if (providerKey === 'fhb') {
@@ -2260,6 +2376,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
             const europeanSyncService = new EuropeanFulfillmentSyncService();
             await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+          } else if (providerKey === 'big_arena') {
+            console.log(`🔄 Disparando sincronização inicial Big Arena para conta ${account.id}...`);
+            try {
+              await syncBigArenaAccount(account.id, { reason: "manual" });
+              console.log(`✅ Big Arena initial sync concluída para conta ${account.id}`);
+            } catch (bigArenaSyncError: any) {
+              console.error(`⚠️ Erro ao executar sync inicial Big Arena para conta ${account.id}:`, bigArenaSyncError.message);
+              // Não falhar a requisição - o worker tentará novamente automaticamente
+            }
           }
           
           console.log(`✅ Initial sync triggered successfully for account ${account.id}`);
@@ -2315,6 +2440,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updated = await storage.updateUserWarehouseAccount(req.params.id, updates);
+
+      if (account.providerKey === 'big_arena') {
+        const bigArenaRecord = await storage.getBigArenaWarehouseAccountByAccountId(account.id);
+        if (bigArenaRecord) {
+          const bigArenaUpdates: any = {};
+
+          if (credentials !== undefined) {
+            if (typeof credentials.apiToken === 'string' && credentials.apiToken.trim().length > 0) {
+              bigArenaUpdates.apiToken = credentials.apiToken.trim();
+            }
+            // apiDomain sempre é null - domínio padrão (https://my.bigarena.net/api/v1/) é usado no BigArenaService
+          }
+
+          if (status !== undefined) {
+            bigArenaUpdates.status = status;
+          }
+
+          if (Object.keys(bigArenaUpdates).length > 0) {
+            await storage.updateBigArenaWarehouseAccount(bigArenaRecord.id, bigArenaUpdates);
+          }
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Update warehouse account error:", error);
@@ -2412,6 +2560,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (account.providerKey === 'elogy') {
         const europeanSyncService = new EuropeanFulfillmentSyncService();
         await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+      } else if (account.providerKey === 'big_arena') {
+        const { syncBigArenaAccount } = await import('./workers/big-arena-sync-worker');
+        const result = await syncBigArenaAccount(account.id, { reason: 'manual' });
+        return res.json({
+          success: true,
+          message: `Sync Big Arena executado para ${account.displayName}.`,
+          stats: result,
+        });
       } else {
         return res.status(400).json({ message: `Sync não suportado para provider: ${account.providerKey}` });
       }
@@ -3048,6 +3204,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para sincronização completa progressiva
   // MIGRATED TO STAGING TABLES: Sincroniza Shopify primeiro, depois staging tables
+  // REMOVED: Sync Completo endpoint - functionality removed per user request
+  // Workers now handle automatic synchronization from integration date
+  /*
   app.post('/api/sync/complete-progressive', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;
@@ -3055,43 +3214,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔄 [COMPLETE SYNC] Iniciando sincronização completa para user ${userId}, operation ${operationId || 'all'}`);
 
       // Importar funções de progresso
-        const { setCurrentStep, updateShopifyProgress, getUserSyncProgress, resetSyncProgress } = await import("./services/staging-sync-service");
+        const { setCurrentStep, updateShopifyProgress, updatePlatformProgress, getUserSyncProgress, resetSyncProgress } = await import("./services/staging-sync-service");
       const { ShopifySyncService } = await import("./shopify-sync-service");
+      
+      // Import saveSyncSession para salvar estado no banco
+      const { db } = await import('./db');
+      const { syncSessions } = await import('@shared/schema');
+      
+      const saveSyncSession = async (userId: string, progress: any) => {
+        if (!progress.runId) return;
+        await db.insert(syncSessions).values({
+          userId,
+          runId: progress.runId,
+          isRunning: progress.isRunning,
+          phase: progress.phase,
+          message: progress.message,
+          currentStep: progress.currentStep,
+          overallProgress: progress.overallProgress,
+          platformProgress: progress.platformProgress || progress.shopifyProgress,
+          errors: progress.errors,
+          startTime: progress.startTime || new Date(),
+          endTime: progress.endTime,
+          lastUpdatedAt: new Date()
+        }).onConflictDoUpdate({
+          target: syncSessions.runId,
+          set: {
+            isRunning: progress.isRunning,
+            phase: progress.phase,
+            message: progress.message,
+            currentStep: progress.currentStep,
+            overallProgress: progress.overallProgress,
+            platformProgress: progress.platformProgress || progress.shopifyProgress,
+            errors: progress.errors,
+            endTime: progress.endTime,
+            lastUpdatedAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+      };
 
       // CRÍTICO: Resetar progresso ANTES de fazer qualquer coisa
       // Limpar progresso do Shopify também
       if (operationId && typeof operationId === 'string') {
         ShopifySyncService.resetOperationProgress(operationId);
       }
-      resetSyncProgress(userId);
+      await resetSyncProgress(userId);
       
       // Pequeno delay para garantir que o reset foi processado
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Verificar que resetou corretamente
-      let progress = getUserSyncProgress(userId);
+      let progress = await getUserSyncProgress(userId);
       console.log(`🔍 [RESET VERIFICATION] Progresso após reset:`, {
         isRunning: progress.isRunning,
         phase: progress.phase,
         overallProgress: progress.overallProgress,
-        shopifyProcessed: progress.shopifyProgress.processedOrders,
-        shopifyTotal: progress.shopifyProgress.totalOrders,
-        shopifyPercentage: progress.shopifyProgress.percentage,
+        shopifyProcessed: progress.shopifyProgress?.processedOrders || progress.platformProgress?.processedOrders || 0,
+        shopifyTotal: progress.shopifyProgress?.totalOrders || progress.platformProgress?.totalOrders || 0,
+        shopifyPercentage: progress.shopifyProgress?.percentage || progress.platformProgress?.percentage || 0,
         currentStep: progress.currentStep
       });
       
-      if (progress.phase === 'completed' || progress.isRunning || progress.overallProgress > 0 || progress.shopifyProgress.processedOrders > 0 || progress.shopifyProgress.totalOrders > 0) {
+      if (progress.phase === 'completed' || progress.isRunning || progress.overallProgress > 0 || progress.shopifyProgress?.processedOrders > 0 || progress.shopifyProgress?.totalOrders > 0) {
         console.warn(`⚠️ [COMPLETE SYNC] Progresso ainda está em estado antigo após reset, forçando reset novamente...`);
-        resetSyncProgress(userId);
+        await resetSyncProgress(userId);
         await new Promise(resolve => setTimeout(resolve, 100));
-        progress = getUserSyncProgress(userId);
+        progress = await getUserSyncProgress(userId);
         console.log(`🔍 [RESET VERIFICATION #2] Progresso após segundo reset:`, {
           isRunning: progress.isRunning,
           phase: progress.phase,
           overallProgress: progress.overallProgress,
-          shopifyProcessed: progress.shopifyProgress.processedOrders,
-          shopifyTotal: progress.shopifyProgress.totalOrders,
-          shopifyPercentage: progress.shopifyProgress.percentage,
+          shopifyProcessed: progress.shopifyProgress?.processedOrders || progress.platformProgress?.processedOrders || 0,
+          shopifyTotal: progress.shopifyProgress?.totalOrders || progress.platformProgress?.totalOrders || 0,
+          shopifyPercentage: progress.shopifyProgress?.percentage || progress.platformProgress?.percentage || 0,
           currentStep: progress.currentStep
         });
       }
@@ -3126,6 +3321,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPages: 0,
         percentage: 0
       };
+      progress.platformProgress = {
+        processedOrders: 0,
+        totalOrders: 0,
+        newOrders: 0,
+        updatedOrders: 0,
+        percentage: 0
+      };
       progress.stagingProgress = {
         processedLeads: 0,
         totalLeads: 0,
@@ -3137,12 +3339,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Será recalculado automaticamente quando updateShopifyProgress for chamado
       progress.overallProgress = 0;
       (progress as any).version = 1;
+      (progress as any).errors = 0;
       
       console.log(`✅ [INIT] Progresso completamente zerado e inicializado:`, {
         overallProgress: progress.overallProgress,
-        shopifyProcessed: progress.shopifyProgress.processedOrders,
-        shopifyTotal: progress.shopifyProgress.totalOrders,
-        shopifyPercentage: progress.shopifyProgress.percentage,
+        shopifyProcessed: progress.shopifyProgress?.processedOrders || progress.platformProgress?.processedOrders || 0,
+        shopifyTotal: progress.shopifyProgress?.totalOrders || progress.platformProgress?.totalOrders || 0,
+        shopifyPercentage: progress.shopifyProgress?.percentage || progress.platformProgress?.percentage || 0,
         currentStep: progress.currentStep
       });
       
@@ -3155,6 +3358,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overallProgress: progress.overallProgress,
         runId: runId
       });
+
+      // CRÍTICO: SALVAR SESSÃO NO BANCO IMEDIATAMENTE após inicializar
+      await saveSyncSession(userId, progress);
+      console.log(`💾 [COMPLETE SYNC] Sessão salva no banco com runId: ${runId}`);
 
       // Executar sincronização completa de forma assíncrona
       (async () => {
@@ -3203,12 +3410,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // CRÍTICO: Definir etapa atual como shopify ANTES de iniciar
               // Garantir que o progresso geral começa em 0% e evolui gradualmente
-              const currentProgress = getUserSyncProgress(userId);
+              const currentProgress = await getUserSyncProgress(userId);
               currentProgress.currentStep = 'shopify'; // Forçar como 'shopify' durante todo o processo do Shopify
               currentProgress.phase = 'syncing';
               currentProgress.message = 'Importando pedidos do Shopify...';
               currentProgress.overallProgress = 0; // Garantir que começa em 0%
               currentProgress.version++;
+              await saveSyncSession(userId, currentProgress);
               
               console.log(`🔄 [SHOPIFY SYNC] Etapa definida como 'shopify', progresso geral resetado para 0%`);
             
@@ -3237,17 +3445,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let updateCount = 0;
             
             // CRÍTICO: Garantir que o runId é capturado DEPOIS do reset ser aplicado
-            const currentRunId = (getUserSyncProgress(userId) as any).runId;
+            const currentRunId = ((await getUserSyncProgress(userId)) as any).runId;
             
             console.log(`✅ [SHOPIFY SYNC] Progresso do Shopify resetado ANTES de iniciar importação, runId atual: ${currentRunId}`);
             
             // Monitor progresso do Shopify e atualizar progress compartilhado
             let firstUpdateReceived = false;
             
-            const progressInterval = setInterval(() => {
+            const progressInterval = setInterval(async () => {
               updateCount++;
               const shopifyProgress = ShopifySyncService.getOperationProgress(operationId);
-              const currentProgressRunId = (getUserSyncProgress(userId) as any).runId;
+              const currentProgressRunId = ((await getUserSyncProgress(userId)) as any).runId;
+              
+              // CRÍTICO: Verificar se shopifyProgress existe
+              if (!shopifyProgress) {
+                console.log(`⏭️ [SHOPIFY PROGRESS] Ignorando atualização #${updateCount}: shopifyProgress não existe ainda`);
+                return;
+              }
               
               // CRÍTICO PRIMEIRO: Se não está rodando E não recebemos primeira atualização,
               // QUALQUER valor não-zero é antigo e deve ser SEMPRE ignorado
@@ -3312,18 +3526,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 runId: currentProgressRunId
               });
               
-              updateShopifyProgress(userId, {
+              await updatePlatformProgress(userId, {
                 processedOrders: shopifyProgress.processedOrders,
                 totalOrders: shopifyProgress.totalOrders,
                 newOrders: shopifyProgress.newOrders,
                 updatedOrders: shopifyProgress.updatedOrders,
-                currentPage: shopifyProgress.currentPage,
-                totalPages: shopifyProgress.totalPages,
                 percentage: shopifyProgress.percentage
               });
               
               if (updateCount % 5 === 0 || !shopifyProgress.isRunning) {
-                const currentProgress = getUserSyncProgress(userId);
+                const currentProgress = await getUserSyncProgress(userId);
                 console.log(`📊 [SHOPIFY PROGRESS] Update #${updateCount} resumido: ${shopifyProgress.processedOrders}/${shopifyProgress.totalOrders} (${shopifyProgress.percentage}%) - Overall: ${currentProgress.overallProgress}% - Running: ${shopifyProgress.isRunning}`);
               }
               
@@ -3344,17 +3556,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await new Promise(resolve => setTimeout(resolve, 1000));
               
               const finalShopifyProgress = ShopifySyncService.getOperationProgress(operationId);
-              updateShopifyProgress(userId, {
-                processedOrders: finalShopifyProgress.processedOrders,
-                totalOrders: finalShopifyProgress.totalOrders,
-                newOrders: finalShopifyProgress.newOrders,
-                updatedOrders: finalShopifyProgress.updatedOrders,
-                currentPage: finalShopifyProgress.currentPage,
-                totalPages: finalShopifyProgress.totalPages,
-                percentage: finalShopifyProgress.percentage
-              });
+              if (finalShopifyProgress) {
+                await updatePlatformProgress(userId, {
+                  processedOrders: finalShopifyProgress.processedOrders || 0,
+                  totalOrders: finalShopifyProgress.totalOrders || 0,
+                  newOrders: finalShopifyProgress.newOrders || 0,
+                  updatedOrders: finalShopifyProgress.updatedOrders || 0,
+                  percentage: finalShopifyProgress.percentage || 0
+                });
+              }
               
-              console.log(`📊 [SHOPIFY PROGRESS] Progresso final sincronizado: ${finalShopifyProgress.processedOrders}/${finalShopifyProgress.totalOrders}`);
+              console.log(`📊 [SHOPIFY PROGRESS] Progresso final sincronizado: ${finalShopifyProgress?.processedOrders || 0}/${finalShopifyProgress?.totalOrders || 0}`);
               
               // Deixar intervalo rodando por mais alguns ciclos para garantir atualização
             } catch (error) {
@@ -3370,11 +3582,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (operationId && typeof operationId === 'string' && hasDigistore) {
             console.log(`📦 [DIGISTORE SYNC] Sincronizando Digistore24 para operação ${operationId}...`);
             
-            const currentProgress = getUserSyncProgress(userId);
+            const currentProgress = await getUserSyncProgress(userId);
             currentProgress.currentStep = 'digistore';
             currentProgress.phase = 'syncing';
             currentProgress.message = 'Importando entregas do Digistore24...';
             currentProgress.version++;
+            await saveSyncSession(userId, currentProgress);
             
             // Buscar integração e operação
             const [digistoreIntegration] = await db
@@ -3520,15 +3733,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // CRÍTICO: Verificar se o Shopify REALMENTE completou antes de mudar para staging
           // Se Shopify não está configurado, considerar como "completado"
-          const currentProgress = getUserSyncProgress(userId);
+          const currentProgress = await getUserSyncProgress(userId);
           const shopifyCompleted = !hasShopify || (
-            currentProgress.shopifyProgress.totalOrders > 0 &&
-            currentProgress.shopifyProgress.processedOrders >= currentProgress.shopifyProgress.totalOrders &&
-            currentProgress.shopifyProgress.percentage >= 100
+            currentProgress.shopifyProgress?.totalOrders > 0 &&
+            currentProgress.shopifyProgress?.processedOrders >= currentProgress.shopifyProgress?.totalOrders &&
+            currentProgress.shopifyProgress?.percentage >= 100
           );
           
           if (!shopifyCompleted && hasShopify) {
-            console.warn(`⚠️ [STAGING SYNC] Shopify ainda não completou! Processed: ${currentProgress.shopifyProgress.processedOrders}/${currentProgress.shopifyProgress.totalOrders}, Percentage: ${currentProgress.shopifyProgress.percentage}%`);
+            console.warn(`⚠️ [STAGING SYNC] Shopify ainda não completou! Processed: ${currentProgress.shopifyProgress?.processedOrders || 0}/${currentProgress.shopifyProgress?.totalOrders || 0}, Percentage: ${currentProgress.shopifyProgress?.percentage || 0}%`);
           } else if (!hasShopify) {
             console.log(`ℹ️ [STAGING SYNC] Shopify não configurado, pulando verificação`);
           }
@@ -3536,25 +3749,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // CRÍTICO: Só mudar para 'staging' quando o Shopify REALMENTE completou
           // Durante todo o processo do Shopify, currentStep deve ser 'shopify'
           // Isso garante que o progresso geral evolui de 0% a 40% gradualmente
-          setCurrentStep(userId, 'staging');
+          await setCurrentStep(userId, 'staging');
           currentProgress.isRunning = true;
           currentProgress.phase = 'syncing';
           currentProgress.message = 'Fazendo matching com transportadora...';
+          await saveSyncSession(userId, currentProgress);
           
           // CRÍTICO: Recalcular progresso geral agora que estamos em staging
-          // Deve ser 40% (Shopify 100% * 0.4) + 0% (Staging 0% * 0.6) = 40%
+          // Progresso agora é 100% baseado em plataformas (platformProgress)
           currentProgress.overallProgress = calculateOverallProgress(
-            currentProgress.shopifyProgress,
-            currentProgress.stagingProgress,
+            currentProgress.platformProgress || currentProgress.shopifyProgress,
             'staging'
           );
           
           currentProgress.version++;
           
           console.log(`🔄 [STAGING SYNC] Etapa mudou para 'staging', progresso geral: ${currentProgress.overallProgress}%`, {
-            shopifyPercent: currentProgress.shopifyProgress.percentage,
-            shopifyProcessed: currentProgress.shopifyProgress.processedOrders,
-            shopifyTotal: currentProgress.shopifyProgress.totalOrders,
+            shopifyPercent: currentProgress.shopifyProgress?.percentage || 0,
+            shopifyProcessed: currentProgress.shopifyProgress?.processedOrders || 0,
+            shopifyTotal: currentProgress.shopifyProgress?.totalOrders || 0,
             stagingPercent: 0,
             overallProgress: currentProgress.overallProgress
           });
@@ -3601,11 +3814,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (error) {
           console.error('❌ [COMPLETE SYNC] Erro na sincronização completa:', error);
-          const progress = getUserSyncProgress(userId);
+          const progress = await getUserSyncProgress(userId);
           progress.phase = 'error';
           progress.message = error instanceof Error ? error.message : 'Erro desconhecido';
           progress.isRunning = false;
           progress.endTime = new Date();
+          
+          // CRÍTICO: Salvar estado de erro no banco
+          await saveSyncSession(userId, progress);
         }
       })();
       
@@ -3614,7 +3830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // IMPORTANTE: Obter progresso FRESCO novamente para garantir que tem o runId
-      const freshProgress = getUserSyncProgress(userId);
+      const freshProgress = await getUserSyncProgress(userId);
       const responseRunId = (freshProgress as any).runId;
       
       console.log(`📤 [COMPLETE SYNC] Retornando resposta para user ${userId}:`, {
@@ -3623,9 +3839,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phase: freshProgress.phase,
         version: (freshProgress as any).version,
         overallProgress: freshProgress.overallProgress,
-        shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
-        shopifyTotal: freshProgress.shopifyProgress.totalOrders,
-        shopifyPercentage: freshProgress.shopifyProgress.percentage,
+        shopifyProcessed: freshProgress.shopifyProgress?.processedOrders || freshProgress.platformProgress?.processedOrders || 0,
+        shopifyTotal: freshProgress.shopifyProgress?.totalOrders || freshProgress.platformProgress?.totalOrders || 0,
+        shopifyPercentage: freshProgress.shopifyProgress?.percentage || freshProgress.platformProgress?.percentage || 0,
         currentStep: freshProgress.currentStep
       });
       
@@ -3633,34 +3849,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se ainda há valores antigos, forçar reset novamente até garantir que está zerado
       let resetAttempts = 0;
       const maxResetAttempts = 3;
-      while ((freshProgress.shopifyProgress.processedOrders > 0 || 
-              freshProgress.shopifyProgress.totalOrders > 0 || 
+      while (((freshProgress.shopifyProgress?.processedOrders || 0) > 0 || 
+              (freshProgress.shopifyProgress?.totalOrders || 0) > 0 || 
               freshProgress.overallProgress > 0 ||
               freshProgress.phase === 'completed') && 
              resetAttempts < maxResetAttempts) {
         resetAttempts++;
         console.warn(`⚠️ [COMPLETE SYNC] ATENÇÃO: Progresso ainda tem valores antigos após reset (tentativa ${resetAttempts}/${maxResetAttempts})!`, {
-          shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
-          shopifyTotal: freshProgress.shopifyProgress.totalOrders,
+          shopifyProcessed: freshProgress.shopifyProgress?.processedOrders || 0,
+          shopifyTotal: freshProgress.shopifyProgress?.totalOrders || 0,
           overallProgress: freshProgress.overallProgress,
           phase: freshProgress.phase
         });
         
         // Forçar reset novamente
-        resetSyncProgress(userId);
+        await resetSyncProgress(userId);
         if (operationId && typeof operationId === 'string') {
           ShopifySyncService.resetOperationProgress(operationId);
         }
         await new Promise(resolve => setTimeout(resolve, 200));
         
         // Atualizar freshProgress após reset
-        Object.assign(freshProgress, getUserSyncProgress(userId));
+        Object.assign(freshProgress, await getUserSyncProgress(userId));
       }
       
       if (resetAttempts > 0) {
         console.log(`🔄 [COMPLETE SYNC] Progresso após reset(s):`, {
-          shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
-          shopifyTotal: freshProgress.shopifyProgress.totalOrders,
+          shopifyProcessed: freshProgress.shopifyProgress?.processedOrders || 0,
+          shopifyTotal: freshProgress.shopifyProgress?.totalOrders || 0,
           overallProgress: freshProgress.overallProgress,
           phase: freshProgress.phase,
           attempts: resetAttempts
@@ -3688,9 +3904,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  */
 
-  // Rota para obter status da sincronização completa progressiva
-  // MIGRATED TO STAGING TABLES: Retorna status do staging-sync-service (per-user)
+  // REMOVED: Sync Completo endpoints - functionality removed per user request
+  // Workers now handle automatic synchronization from integration date
+  /*
   app.get('/api/sync/complete-status', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user.id;
@@ -3736,9 +3954,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rota SSE para streaming de status da sincronização completa
-  // Retorna progresso combinado (Shopify + Staging)
-  // Usa authenticateTokenOrQuery porque EventSource não envia headers customizados
+  app.get('/api/sync/active-session', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user.id;
+      
+      const [session] = await db
+        .select()
+        .from(syncSessions)
+        .where(and(
+          eq(syncSessions.userId, userId),
+          eq(syncSessions.isRunning, true)
+        ))
+        .orderBy(desc(syncSessions.startTime))
+        .limit(1);
+      
+      if (!session) {
+        return res.json({ isRunning: false });
+      }
+      
+      res.json({
+        isRunning: session.isRunning,
+        startTime: session.startTime.toISOString(),
+        phase: session.phase,
+        overallProgress: session.overallProgress,
+        runId: session.runId
+      });
+    } catch (error) {
+      console.error('Erro ao verificar sessão ativa:', error);
+      res.status(500).json({ error: 'Erro interno' });
+    }
+  });
+
   app.get('/api/sync/complete-status-stream', authenticateTokenOrQuery, async (req: AuthRequest, res: Response) => {
     // Configurar headers para SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -3861,6 +4107,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.end();
     }
   });
+  */
+  // REMOVED: Sync Completo endpoints - functionality removed per user request
+  // Workers now handle automatic synchronization from integration date
 
   // Rota para sincronização combinada Shopify + Transportadora
   app.post('/api/sync/shopify-carrier', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -6451,9 +6700,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const webhookUrl = shopifyWebhookService.getWebhookUrl();
       const topics = shopifyWebhookService.getRequiredWebhookTopics();
 
+      // Sempre retornar informações de webhook, mesmo quando não há URL pública
       res.json({
-        webhookUrl,
-        topics,
+        webhookUrl: webhookUrl || null,
+        topics: topics || [],
         hasPublicUrl: !!baseUrl,
         instructions: baseUrl ? {
           title: "Configure Webhook na Shopify",
@@ -6469,8 +6719,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             "7. Clique em 'Save webhook'"
           ]
         } : {
-          title: "Webhook não disponível",
-          message: "Configure PUBLIC_URL ou REPLIT_DEV_DOMAIN para usar webhooks. O sistema usará polling inteligente como fallback."
+          title: "Configurar URL Pública para Webhooks",
+          message: "Para usar webhooks, configure PUBLIC_URL ou REPLIT_DEV_DOMAIN nas variáveis de ambiente. O sistema usará polling inteligente como fallback até que a URL pública seja configurada."
         }
       });
     } catch (error: any) {

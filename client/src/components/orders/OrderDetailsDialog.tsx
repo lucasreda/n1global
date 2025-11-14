@@ -218,9 +218,15 @@ export function OrderDetailsDialog({ order, open, onOpenChange, operationCurrenc
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
                         <div className="flex-1">
                           <p className="text-sm text-gray-200">{product.name || product.title || 'Produto'}</p>
-                          {product.sku && (
-                            <p className="text-xs text-gray-400">SKU: {product.sku}</p>
-                          )}
+                          {product.sku && (() => {
+                            // Dividir SKU concatenado por "+" se houver
+                            const skus = product.sku.split('+').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+                            return (
+                              <p className="text-xs text-gray-400">
+                                SKU: {skus.length > 1 ? skus.join(', ') : product.sku}
+                              </p>
+                            );
+                          })()}
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-gray-200">Qtd: {product.quantity || 1}</p>

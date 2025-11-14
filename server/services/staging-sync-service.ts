@@ -3,24 +3,29 @@
 
 import { db } from '../db';
 import { 
+  bigArenaOrders,
   fhbOrders, 
   europeanFulfillmentOrders,
   elogyOrders,
   orders, 
   operations, 
   userWarehouseAccountOperations, 
-  userWarehouseAccounts 
+  userWarehouseAccounts,
+  syncSessions,
+  shopifyIntegrations,
+  cartpandaIntegrations,
+  digistoreIntegrations
 } from '@shared/schema';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, and, inArray, sql, desc, or } from 'drizzle-orm';
 
-interface ShopifyProgress {
+interface PlatformProgress {
   processedOrders: number;
   totalOrders: number;
   newOrders: number;
   updatedOrders: number;
-  currentPage: number;
-  totalPages: number;
   percentage: number;
+  currentPage?: number;
+  totalPages?: number;
 }
 
 interface StagingProgress {
@@ -35,8 +40,9 @@ interface SyncProgress {
   phase: 'preparing' | 'syncing' | 'completed' | 'error';
   message: string;
   currentStep: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null;
-  overallProgress: number; // 0-100
-  shopifyProgress: ShopifyProgress;
+  overallProgress: number; // 0-100 (apenas plataformas)
+  platformProgress: PlatformProgress;
+  shopifyProgress: PlatformProgress;
   stagingProgress: StagingProgress;
   errors: number;
   startTime: Date | null;
@@ -47,6 +53,78 @@ interface SyncProgress {
   version: number;
 }
 
+const createEmptyPlatformProgress = (): PlatformProgress => ({
+        processedOrders: 0,
+        totalOrders: 0,
+        newOrders: 0,
+        updatedOrders: 0,
+        percentage: 0
+});
+
+const createEmptyStagingProgress = (): StagingProgress => ({
+      processedLeads: 0,
+      totalLeads: 0,
+      newLeads: 0,
+        updatedLeads: 0
+});
+
+/**
+ * Obtém a data de integração mais antiga de uma operação
+ * Retorna a data mais antiga entre Shopify, CartPanda e Digistore24
+ * Se nenhuma integração existir, retorna null
+ */
+async function getEarliestIntegrationDate(operationId: string): Promise<Date | null> {
+  try {
+    const [shopifyIntegration] = await db
+      .select({ integrationStartedAt: shopifyIntegrations.integrationStartedAt })
+      .from(shopifyIntegrations)
+      .where(and(
+        eq(shopifyIntegrations.operationId, operationId),
+        eq(shopifyIntegrations.status, 'active')
+      ))
+      .limit(1);
+
+    const [cartpandaIntegration] = await db
+      .select({ integrationStartedAt: cartpandaIntegrations.integrationStartedAt })
+      .from(cartpandaIntegrations)
+      .where(and(
+        eq(cartpandaIntegrations.operationId, operationId),
+        eq(cartpandaIntegrations.status, 'active')
+      ))
+      .limit(1);
+
+    const [digistoreIntegration] = await db
+      .select({ integrationStartedAt: digistoreIntegrations.integrationStartedAt })
+      .from(digistoreIntegrations)
+      .where(and(
+        eq(digistoreIntegrations.operationId, operationId),
+        eq(digistoreIntegrations.status, 'active')
+      ))
+      .limit(1);
+
+    const dates: Date[] = [];
+    if (shopifyIntegration?.integrationStartedAt) {
+      dates.push(new Date(shopifyIntegration.integrationStartedAt));
+    }
+    if (cartpandaIntegration?.integrationStartedAt) {
+      dates.push(new Date(cartpandaIntegration.integrationStartedAt));
+    }
+    if (digistoreIntegration?.integrationStartedAt) {
+      dates.push(new Date(digistoreIntegration.integrationStartedAt));
+    }
+
+    if (dates.length === 0) {
+      return null; // Nenhuma integração ativa encontrada
+    }
+
+    // Retornar a data mais antiga
+    return new Date(Math.min(...dates.map(d => d.getTime())));
+  } catch (error) {
+    console.error(`❌ Erro ao obter data de integração para operação ${operationId}:`, error);
+    return null;
+  }
+}
+
 interface ProcessBatchResult {
   processed: number;
   created: number;
@@ -54,197 +132,185 @@ interface ProcessBatchResult {
   skipped: number;
 }
 
-// Per-user sync state to prevent cross-tenant data leakage
-const userSyncProgress = new Map<string, SyncProgress>();
+// ============================================================================
+// PERSISTÊNCIA DE SYNC SESSIONS NO BANCO DE DADOS
+// ============================================================================
 
-// Helper to get or create sync progress for a user
-export function getUserSyncProgress(userId: string): SyncProgress {
-  if (!userSyncProgress.has(userId)) {
-    userSyncProgress.set(userId, {
+/**
+ * Carrega a sessão de sync ativa do banco de dados
+ */
+async function loadSyncSession(userId: string): Promise<SyncProgress | null> {
+  const sessions = await db
+    .select()
+    .from(syncSessions)
+    .where(and(
+      eq(syncSessions.userId, userId),
+      eq(syncSessions.isRunning, true)
+    ))
+    .orderBy(desc(syncSessions.startTime))
+    .limit(1);
+    
+  if (!sessions[0]) return null;
+  
+  const session = sessions[0];
+  const platformProgress = session.platformProgress ? { ...session.platformProgress } : createEmptyPlatformProgress();
+  const stagingProgress = createEmptyStagingProgress();
+
+  return {
+    isRunning: session.isRunning,
+    phase: session.phase as 'preparing' | 'syncing' | 'completed' | 'error',
+    message: session.message || '',
+    currentStep: session.currentStep as 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null,
+    overallProgress: session.overallProgress,
+    platformProgress,
+    shopifyProgress: platformProgress,
+    stagingProgress,
+    errors: session.errors,
+    startTime: session.startTime,
+    endTime: session.endTime,
+    runId: session.runId,
+    version: 0
+  };
+}
+
+/**
+ * Salva ou atualiza a sessão de sync no banco de dados
+ */
+async function saveSyncSession(userId: string, progress: SyncProgress): Promise<void> {
+  if (!progress.runId) {
+    console.error('❌ [SAVE SESSION] Tentativa de salvar sessão sem runId');
+    return;
+  }
+
+  const platformProgress = progress.platformProgress || createEmptyPlatformProgress();
+  progress.platformProgress = platformProgress;
+  progress.shopifyProgress = progress.shopifyProgress || platformProgress;
+  
+  try {
+    await db
+      .insert(syncSessions)
+      .values({
+        userId,
+        runId: progress.runId,
+        isRunning: progress.isRunning,
+        phase: progress.phase,
+        message: progress.message,
+        currentStep: progress.currentStep,
+        overallProgress: progress.overallProgress,
+        platformProgress: progress.platformProgress,
+        errors: progress.errors,
+        startTime: progress.startTime || new Date(),
+        endTime: progress.endTime,
+        lastUpdatedAt: new Date()
+      })
+      .onConflictDoUpdate({
+        target: syncSessions.runId,
+        set: {
+          isRunning: progress.isRunning,
+          phase: progress.phase,
+          message: progress.message,
+          currentStep: progress.currentStep,
+          overallProgress: progress.overallProgress,
+          platformProgress: progress.platformProgress,
+          errors: progress.errors,
+          endTime: progress.endTime,
+          lastUpdatedAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+  } catch (error) {
+    console.error('❌ [SAVE SESSION] Erro ao salvar sessão:', error);
+  }
+}
+
+/**
+ * Helper to get or create sync progress for a user
+ * Agora carrega do banco de dados em vez de memória
+ */
+export async function getUserSyncProgress(userId: string): Promise<SyncProgress> {
+  const session = await loadSyncSession(userId);
+  
+  if (session) {
+    // Garantir que nunca retorna valores inválidos
+    if (isNaN(session.overallProgress) || !isFinite(session.overallProgress)) {
+      session.overallProgress = 0;
+    }
+    if (isNaN(session.platformProgress.percentage) || !isFinite(session.platformProgress.percentage)) {
+      session.platformProgress.percentage = 0;
+    }
+    return session;
+  }
+  
+  // Retornar estado inicial se não houver sessão ativa
+  const platformProgress = createEmptyPlatformProgress();
+  const stagingProgress = createEmptyStagingProgress();
+
+  return {
       isRunning: false,
       phase: 'preparing',
       message: 'Pronto para sincronizar',
       currentStep: null,
       overallProgress: 0,
-      shopifyProgress: {
-        processedOrders: 0,
-        totalOrders: 0,
-        newOrders: 0,
-        updatedOrders: 0,
-        currentPage: 0,
-        totalPages: 0,
-        percentage: 0
-      },
-      stagingProgress: {
-      processedLeads: 0,
-      totalLeads: 0,
-      newLeads: 0,
-        updatedLeads: 0
-      },
+    platformProgress,
+    shopifyProgress: platformProgress,
+    stagingProgress,
       errors: 0,
       startTime: null,
       endTime: null,
       runId: null,
       version: 0
-    });
-  }
-  const progress = userSyncProgress.get(userId)!;
-  
-  // Garantir que nunca retorna valores inválidos
-  if (isNaN(progress.overallProgress) || !isFinite(progress.overallProgress)) {
-    progress.overallProgress = 0;
-  }
-  if (isNaN(progress.shopifyProgress.percentage) || !isFinite(progress.shopifyProgress.percentage)) {
-    progress.shopifyProgress.percentage = 0;
-  }
-  
-  return progress;
+  };
 }
 
 /**
- * Calculate overall progress considering weights:
- * Shopify: 40% (of total)
- * Staging: 60% (of total)
+ * Calculate overall progress considering only platform progress (Shopify/CartPanda/Digistore)
+ * Staging is processed in background but doesn't affect progress bar
  */
 export function calculateOverallProgress(
-  shopifyProgress: ShopifyProgress,
-  stagingProgress: StagingProgress,
+  platformProgress: PlatformProgress | undefined,
   currentStep: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null
 ): number {
-  const shopifyWeight = 0.4;
-  const stagingWeight = 0.6;
+  // Progresso agora é 100% baseado em plataformas
+  // Staging é processado em background mas não afeta a barra
   
-  // ============================================
-  // CÁLCULO DO PROGRESSO DO SHOPIFY
-  // ============================================
-  let shopifyPercent = 0;
-  
-  // CRÍTICO: Se o Shopify nunca começou (totalOrders === 0 E processedOrders === 0), SEMPRE retornar 0%
-  if (shopifyProgress.totalOrders === 0 && shopifyProgress.processedOrders === 0) {
-    shopifyPercent = 0;
-  }
-  // Se o Shopify tem pedidos para processar, calcular baseado em processedOrders/totalOrders
-  else if (shopifyProgress.totalOrders > 0 && !isNaN(shopifyProgress.processedOrders) && !isNaN(shopifyProgress.totalOrders)) {
-    shopifyPercent = (shopifyProgress.processedOrders / shopifyProgress.totalOrders) * 100;
-    shopifyPercent = Math.max(0, Math.min(100, shopifyPercent)); // Clamp entre 0-100
-    
-    // CRÍTICO: Se o Shopify completou (processed >= total), SEMPRE considerar 100%
-    // Isso garante que mesmo se houver pequenas diferenças numéricas, consideramos completo
-    if (shopifyProgress.processedOrders >= shopifyProgress.totalOrders) {
-      shopifyPercent = 100;
-    }
-  }
-  // Fallback: Usar percentage se disponível
-  else if (shopifyProgress.percentage > 0 && !isNaN(shopifyProgress.percentage)) {
-    shopifyPercent = Math.max(0, Math.min(100, shopifyProgress.percentage));
-    
-    // CRÍTICO: Se percentage é 100% ou mais, garantir que é 100%
-    if (shopifyProgress.percentage >= 100) {
-      shopifyPercent = 100;
-    }
-  }
-  
-  // ============================================
-  // CÁLCULO DO PROGRESSO DO STAGING
-  // ============================================
-  let stagingPercent = 0;
-  
-  if (stagingProgress.totalLeads > 0 && !isNaN(stagingProgress.processedLeads) && !isNaN(stagingProgress.totalLeads)) {
-    // Se há pedidos para processar, calcular baseado em processedLeads/totalLeads
-    stagingPercent = (stagingProgress.processedLeads / stagingProgress.totalLeads) * 100;
-    stagingPercent = Math.max(0, Math.min(100, stagingPercent)); // Clamp entre 0-100
-    
-    // CRÍTICO: Se o staging completou (processed >= total), SEMPRE considerar 100%
-    if (stagingProgress.processedLeads >= stagingProgress.totalLeads) {
-      stagingPercent = 100;
-    }
-  } else if (currentStep === 'staging' && stagingProgress.totalLeads === 0) {
-    // CRÍTICO: Se estamos em staging step mas totalLeads === 0, significa que não há pedidos para processar
-    // Neste caso, staging está 100% completo (não há nada para fazer)
-    // Isso previne que o progresso trave em 40%
-    stagingPercent = 100;
-  }
-  
-  // ============================================
-  // CÁLCULO DO PROGRESSO GERAL
-  // ============================================
-  let overall = 0;
-  
-  // ============================================
-  // DETERMINAR QUAL ETAPA ESTÁ ATIVA
-  // ============================================
-  // CRÍTICO: Se o Shopify ainda está rodando (processed < total OU percentage < 100),
-  // SEMPRE usar 'shopify' como step, mesmo se currentStep for 'staging'
-  const shopifyStillRunning = shopifyProgress.totalOrders > 0 && 
-    (shopifyProgress.processedOrders < shopifyProgress.totalOrders || shopifyProgress.percentage < 100);
-  
-  const effectiveStep = shopifyStillRunning ? 'shopify' : currentStep;
-  
-  if (effectiveStep === 'shopify' || shopifyStillRunning) {
-    // Durante shopify, progresso é apenas da parte do shopify (0-40%)
-    // CRÍTICO: Progresso deve evoluir gradualmente conforme o Shopify processa pedidos
-    overall = Math.round(shopifyPercent * shopifyWeight);
-    
-    // Log para debug se necessário
-    if (shopifyPercent > 0 && overall === 0) {
-      console.warn(`⚠️ [PROGRESS] Shopify tem progresso (${shopifyPercent}%) mas overall é 0!`, {
-        shopifyPercent,
-        shopifyProcessed: shopifyProgress.processedOrders,
-        shopifyTotal: shopifyProgress.totalOrders,
-        shopifyWeight,
-        calculatedOverall: overall,
-        currentStep,
-        effectiveStep
-      });
-    }
-  } else if (effectiveStep === 'staging') {
-    // Durante staging, calcular: shopify progresso REAL + progresso do staging
-    // CRÍTICO: Garantir que o Shopify seja considerado 100% completo se processed >= total
-    const finalShopifyPercent = (shopifyProgress.totalOrders > 0 && shopifyProgress.processedOrders >= shopifyProgress.totalOrders) 
-      ? 100 
-      : shopifyPercent;
-    
-    overall = Math.round(finalShopifyPercent * shopifyWeight + stagingPercent * stagingWeight);
-    
-    // Log detalhado para debug quando há problema
-    if (overall === 40 && shopifyPercent < 100) {
-      console.warn(`⚠️ [PROGRESS] Progresso geral está em 40% mas deveria estar mais alto!`, {
-        shopifyPercent,
-        finalShopifyPercent,
-        shopifyProcessed: shopifyProgress.processedOrders,
-        shopifyTotal: shopifyProgress.totalOrders,
-        stagingPercent,
-        stagingProcessed: stagingProgress.processedLeads,
-        stagingTotal: stagingProgress.totalLeads,
-        currentStep,
-        effectiveStep,
-        calculatedOverall: overall
-      });
-    }
-  } else if (effectiveStep === null && shopifyPercent > 0) {
-    // Se não há step atual mas shopify já começou, calcular baseado no que temos
-    // Se staging ainda não começou, usar apenas shopify
-    overall = Math.round(shopifyPercent * shopifyWeight);
-  } else {
-    // Se não há step atual e shopify não começou, retornar 0
-    overall = 0;
-  }
-  
-  // Garantir que nunca retorna NaN ou valores inválidos
-  if (isNaN(overall) || !isFinite(overall)) {
-    console.warn('⚠️ [PROGRESS] Calculo de progresso retornou NaN, retornando 0');
+  // CRÍTICO: Verificar se platformProgress existe
+  if (!platformProgress) {
     return 0;
   }
   
-  const result = Math.max(0, Math.min(100, overall)); // Garantir que está entre 0-100
+  let platformPercent = 0;
   
-  return result;
+  if (platformProgress.totalOrders === 0 && platformProgress.processedOrders === 0) {
+    platformPercent = 0;
+  } else if (platformProgress.totalOrders > 0 && !isNaN(platformProgress.processedOrders) && !isNaN(platformProgress.totalOrders)) {
+    platformPercent = (platformProgress.processedOrders / platformProgress.totalOrders) * 100;
+    platformPercent = Math.max(0, Math.min(100, platformPercent));
+    
+    if (platformProgress.processedOrders >= platformProgress.totalOrders) {
+      platformPercent = 100;
+    }
+  } else if (platformProgress.percentage > 0 && !isNaN(platformProgress.percentage)) {
+    platformPercent = Math.max(0, Math.min(100, platformProgress.percentage));
+    
+    if (platformProgress.percentage >= 100) {
+      platformPercent = 100;
+    }
+  }
+  
+  const overall = Math.round(platformPercent);
+  
+  if (isNaN(overall) || !isFinite(overall)) {
+    console.warn('⚠️ [PROGRESS] Cálculo de progresso retornou NaN, retornando 0');
+    return 0;
+  }
+  
+  return Math.max(0, Math.min(100, overall));
 }
 
 /**
  * Map provider statuses to orders table status
  */
-function mapProviderStatus(status: string, provider: string): string {
+export function mapProviderStatus(status: string, provider: string): string {
   const statusMap: Record<string, string> = {
     // FHB/European Fulfillment statuses
     'pending': 'pending',
@@ -265,10 +331,25 @@ function mapProviderStatus(status: string, provider: string): string {
     // eLogy statuses
     'in_warehouse': 'confirmed',
     'in_transit': 'shipped',
-    'out_for_delivery': 'shipped'
+    'out_for_delivery': 'shipped',
+    // Big Arena statuses
+    'ready_to_ship': 'processing',
+    'ready-to-ship': 'processing',
+    'packing': 'processing',
+    'packed': 'processing',
+    'awaiting_pickup': 'processing',
+    'picked': 'processing',
+    'queued': 'processing',
+    'awaiting_shipment': 'processing',
+    'in_transit': 'shipped',
+    'in-transit': 'shipped',
+    'on_hold': 'pending',
+    'problem': 'pending',
+    'failed': 'pending',
+    'partial_return': 'returned'
   };
   
-  return statusMap[status.toLowerCase()] || 'pending';
+  return statusMap[status?.toLowerCase?.()] || 'pending';
 }
 
 /**
@@ -329,6 +410,7 @@ function normalizeName(name: string | null | undefined): string {
 /**
  * Intelligent order matching - tries prefix first, then falls back to email/phone/name+total
  * Returns Shopify order if found, null otherwise
+ * Filters orders by integration date if provided
  */
 async function findShopifyOrderIntelligent(
   warehouseOrderNumber: string,
@@ -336,8 +418,13 @@ async function findShopifyOrderIntelligent(
   warehousePhone: string | null | undefined,
   operationId: string,
   warehouseName?: string | null,
-  warehouseValue?: string | number | null
+  warehouseValue?: string | number | null,
+  integrationDate?: Date | null
 ): Promise<typeof orders.$inferSelect | null> {
+  // Construir condições de filtro de data se integrationDate existir
+  const dateFilter = integrationDate 
+    ? sql`${orders.orderDate} >= ${integrationDate.toISOString()}`
+    : sql`TRUE`;
   // Strategy 1: Try to match by order number with prefix
   // Extract potential prefix from warehouse order number (e.g., "LI-479851" -> try matching "#LI-479851" or "#479851")
   // Also try variations with and without dashes, and partial matches
@@ -364,7 +451,8 @@ async function findShopifyOrderIntelligent(
       .where(
         and(
           eq(orders.operationId, operationId),
-          eq(orders.shopifyOrderNumber, orderNum)
+          eq(orders.shopifyOrderNumber, orderNum),
+          dateFilter
         )
       )
       .limit(1);
@@ -383,7 +471,8 @@ async function findShopifyOrderIntelligent(
       .where(
         and(
           eq(orders.operationId, operationId),
-          sql`LOWER(TRIM(${orders.customerEmail})) = ${normalizedEmail}`
+          sql`LOWER(TRIM(${orders.customerEmail})) = ${normalizedEmail}`,
+          dateFilter
         )
       )
       .limit(1);
@@ -416,7 +505,8 @@ async function findShopifyOrderIntelligent(
       .where(
         and(
           eq(orders.operationId, operationId),
-          sql`${normalizePhoneSQL} = ${normalizedPhone}`
+          sql`${normalizePhoneSQL} = ${normalizedPhone}`,
+          dateFilter
         )
       )
       .limit(1);
@@ -436,7 +526,8 @@ async function findShopifyOrderIntelligent(
       .where(
         and(
           eq(orders.operationId, operationId),
-          sql`${normalizePhoneSQL} LIKE ${'%' + suffixDigits}`
+          sql`${normalizePhoneSQL} LIKE ${'%' + suffixDigits}`,
+          dateFilter
         )
       )
       .limit(1);
@@ -454,7 +545,8 @@ async function findShopifyOrderIntelligent(
         .where(
           and(
             eq(orders.operationId, operationId),
-            sql`RIGHT(${normalizePhoneSQL}, ${normalizedPhone.length}) = ${normalizedPhone}`
+            sql`RIGHT(${normalizePhoneSQL}, ${normalizedPhone.length}) = ${normalizedPhone}`,
+            dateFilter
           )
         )
         .limit(1);
@@ -480,7 +572,8 @@ async function findShopifyOrderIntelligent(
             and(
               eq(orders.operationId, operationId),
               sql`LOWER(REGEXP_REPLACE(${orders.customerName}, '[^a-zA-Z0-9\\s]', '', 'g')) LIKE ${'%' + normalizedName + '%'}`,
-              sql`ABS(CAST(${orders.total} AS DECIMAL) - ${totalValue}) <= 1.0`
+              sql`ABS(CAST(${orders.total} AS DECIMAL) - ${totalValue}) <= 1.0`,
+              dateFilter
             )
           )
           .limit(1);
@@ -621,12 +714,18 @@ async function processFHBOrders(
         const customerEmail = recipient?.email || recipient?.address?.email;
         const customerPhone = recipient?.phone || recipient?.address?.phone;
         
+        // Obter data de integração mais antiga para filtrar pedidos
+        const integrationDate = await getEarliestIntegrationDate(operation.id);
+        
         // Use intelligent matching (order number → email → phone)
         const existingOrder = await findShopifyOrderIntelligent(
           fhbOrder.variableSymbol,
           customerEmail,
           customerPhone,
-          operation.id
+          operation.id,
+          undefined,
+          undefined,
+          integrationDate
         );
         
         const rawData = fhbOrder.rawData as any;
@@ -680,8 +779,7 @@ async function processFHBOrders(
         progress.stagingProgress.processedLeads++;
         progress.version++;
         progress.overallProgress = calculateOverallProgress(
-          progress.shopifyProgress,
-          progress.stagingProgress,
+          progress.platformProgress,
           progress.currentStep
         );
         
@@ -795,6 +893,9 @@ async function processEuropeanFulfillmentOrders(
         const customerName = recipient?.name || recipient?.address?.name;
         const orderValue = efOrder.value;
         
+        // Obter data de integração mais antiga para filtrar pedidos
+        const integrationDate = await getEarliestIntegrationDate(operation.id);
+        
         // Use intelligent matching (order number → email → phone → name+total)
         const existingOrder = await findShopifyOrderIntelligent(
           efOrder.orderNumber,
@@ -802,7 +903,8 @@ async function processEuropeanFulfillmentOrders(
           customerPhone,
           operation.id,
           customerName,
-          orderValue
+          orderValue,
+          integrationDate
         );
         
         const rawData = efOrder.rawData as any;
@@ -980,12 +1082,18 @@ async function processElogyOrders(
         const customerEmail = recipient?.email || recipient?.address?.email;
         const customerPhone = recipient?.phone || recipient?.address?.phone;
         
+        // Obter data de integração mais antiga para filtrar pedidos
+        const integrationDate = await getEarliestIntegrationDate(operation.id);
+        
         // Use intelligent matching (order number → email → phone)
         const existingOrder = await findShopifyOrderIntelligent(
           elogyOrder.orderNumber,
           customerEmail,
           customerPhone,
-          operation.id
+          operation.id,
+          undefined,
+          undefined,
+          integrationDate
         );
         
         const rawData = elogyOrder.rawData as any;
@@ -1056,6 +1164,214 @@ async function processElogyOrders(
 }
 
 /**
+ * Process Big Arena staging orders
+ */
+async function processBigArenaOrders(
+  userId: string,
+  accountOpsCache: Map<string, typeof operations.$inferSelect[]>,
+  batchSize: number = 100
+): Promise<ProcessBatchResult> {
+  let totalProcessed = 0;
+  let totalCreated = 0;
+  let totalUpdated = 0;
+  let totalSkipped = 0;
+
+  const accountIds = Array.from(accountOpsCache.keys());
+  if (accountIds.length === 0) return { processed: 0, created: 0, updated: 0, skipped: 0 };
+
+  while (true) {
+    const unprocessedOrders = await db
+      .select()
+      .from(bigArenaOrders)
+      .where(
+        and(
+          eq(bigArenaOrders.processedToOrders, false),
+          inArray(bigArenaOrders.accountId, accountIds)
+        )
+      )
+      .limit(batchSize);
+
+    if (unprocessedOrders.length === 0) break;
+
+    for (const warehouseOrder of unprocessedOrders) {
+      try {
+        const accountId = warehouseOrder.accountId;
+        if (!accountId) {
+          await db
+            .update(bigArenaOrders)
+            .set({ processedToOrders: true, processedAt: new Date(), linkedOrderId: null })
+            .where(eq(bigArenaOrders.id, warehouseOrder.id));
+          totalSkipped++;
+          continue;
+        }
+
+        const accountOperations = accountOpsCache.get(accountId) || [];
+        let operation = accountOperations.find((op) => warehouseOrder.operationId && op.id === warehouseOrder.operationId) || null;
+
+        if (!operation) {
+          const identifier = warehouseOrder.externalId || warehouseOrder.orderId || "";
+          if (identifier) {
+            operation = findOperationByPrefix(identifier, accountOperations);
+          }
+        }
+
+        if (!operation && accountOperations.length === 1) {
+          operation = accountOperations[0];
+        }
+
+        if (!operation) {
+          await db
+            .update(bigArenaOrders)
+            .set({ processedToOrders: true, processedAt: new Date(), linkedOrderId: null })
+            .where(eq(bigArenaOrders.id, warehouseOrder.id));
+          totalSkipped++;
+          continue;
+        }
+
+        const identifierCandidates = Array.from(
+          new Set(
+            [
+              warehouseOrder.orderId,
+              warehouseOrder.externalId,
+              warehouseOrder.orderId ? `#${warehouseOrder.orderId}` : null,
+              warehouseOrder.externalId ? `#${warehouseOrder.externalId}` : null,
+            ].filter((value): value is string => Boolean(value && value.trim())),
+          ),
+        );
+
+        let existingOrder: typeof orders.$inferSelect | null = null;
+
+        // Obter data de integração mais antiga para filtrar pedidos
+        const integrationDate = await getEarliestIntegrationDate(operation.id);
+        const dateFilter = integrationDate 
+          ? sql`${orders.orderDate} >= ${integrationDate.toISOString()}`
+          : sql`TRUE`;
+
+        for (const identifier of identifierCandidates) {
+          const matchById = await db
+            .select()
+            .from(orders)
+            .where(
+              and(
+                eq(orders.operationId, operation.id),
+                eq(orders.id, identifier),
+                dateFilter
+              ),
+            )
+            .limit(1);
+          if (matchById.length > 0) {
+            existingOrder = matchById[0];
+            break;
+          }
+
+          const matchByCarrier = await db
+            .select()
+            .from(orders)
+            .where(
+              and(
+                eq(orders.operationId, operation.id),
+                eq(orders.carrierOrderId, identifier),
+                dateFilter
+              ),
+            )
+            .limit(1);
+          if (matchByCarrier.length > 0) {
+            existingOrder = matchByCarrier[0];
+            break;
+          }
+        }
+
+        if (!existingOrder) {
+          const shippingAddress = warehouseOrder.shippingAddress as any;
+          const customerEmail = warehouseOrder.customerEmail || shippingAddress?.email || null;
+          const customerPhone = warehouseOrder.customerPhone || shippingAddress?.phone || null;
+          const customerName = warehouseOrder.customerName || shippingAddress?.name || null;
+          const totalValue = warehouseOrder.total ? Number(warehouseOrder.total) : null;
+
+          // Obter data de integração mais antiga para filtrar pedidos
+          const integrationDate = await getEarliestIntegrationDate(operation.id);
+
+          const primaryIdentifier = identifierCandidates[0] || warehouseOrder.orderId || warehouseOrder.externalId || "";
+          existingOrder = await findShopifyOrderIntelligent(
+            primaryIdentifier,
+            customerEmail,
+            customerPhone,
+            operation.id,
+            customerName,
+            totalValue,
+            integrationDate
+          );
+        }
+
+        if (existingOrder) {
+          const currentProviderData = (existingOrder.providerData as any) || {};
+          await db
+            .update(orders)
+            .set({
+              status: mapProviderStatus(warehouseOrder.status || '', 'big_arena'),
+              trackingNumber: warehouseOrder.trackingCode ?? existingOrder.trackingNumber,
+              carrierImported: true,
+              carrierOrderId: warehouseOrder.orderId ?? existingOrder.carrierOrderId,
+              carrierMatchedAt: new Date(),
+              provider: existingOrder.provider || 'big_arena',
+              lastSyncAt: new Date(),
+              needsSync: false,
+              providerData: {
+                ...currentProviderData,
+                bigArena: {
+                  orderId: warehouseOrder.orderId,
+                  externalId: warehouseOrder.externalId,
+                  status: warehouseOrder.status,
+                  trackingCode: warehouseOrder.trackingCode,
+                  trackingUrl: warehouseOrder.trackingUrl,
+                  total: warehouseOrder.total,
+                  raw: warehouseOrder.rawData,
+                  syncedAt: new Date().toISOString(),
+                },
+              },
+            })
+            .where(eq(orders.id, existingOrder.id));
+
+          await db
+            .update(bigArenaOrders)
+            .set({
+              processedToOrders: true,
+              processedAt: new Date(),
+              linkedOrderId: existingOrder.id,
+              updatedAt: new Date(),
+            })
+            .where(eq(bigArenaOrders.id, warehouseOrder.id));
+
+          totalProcessed++;
+          totalUpdated++;
+        } else {
+          console.warn(
+            `⚠️ No order match found for Big Arena order ${warehouseOrder.orderId || warehouseOrder.externalId}, keeping for retry`,
+          );
+          totalSkipped++;
+        }
+
+        const progress = getUserSyncProgress(userId);
+        progress.stagingProgress.processedLeads++;
+        progress.version++;
+        progress.overallProgress = calculateOverallProgress(
+          progress.shopifyProgress,
+          progress.stagingProgress,
+          progress.currentStep,
+        );
+      } catch (error) {
+        console.error(`❌ Error processing Big Arena order:`, error);
+        const progress = getUserSyncProgress(userId);
+        progress.errors++;
+        totalSkipped++;
+      }
+    }
+  }
+  
+  return { processed: totalProcessed, created: totalCreated, updated: totalUpdated, skipped: totalSkipped };
+}
+
+/**
  * Count unprocessed orders for a user across all staging tables
  */
 async function countUnprocessedOrders(userId: string): Promise<number> {
@@ -1075,7 +1391,7 @@ async function countUnprocessedOrders(userId: string): Promise<number> {
   const accountIds = userAccounts.map(a => a.id);
   
   // Log total de pedidos por provider (incluindo os já processados para debug)
-  const [fhbTotalCount, efTotalCount, elogyTotalCount] = await Promise.all([
+  const [fhbTotalCount, efTotalCount, elogyTotalCount, bigArenaTotalCount] = await Promise.all([
     db.select({ count: sql<number>`count(*)` })
       .from(fhbOrders)
       .where(
@@ -1089,10 +1405,13 @@ async function countUnprocessedOrders(userId: string): Promise<number> {
       .where(inArray(europeanFulfillmentOrders.accountId, accountIds)),
     db.select({ count: sql<number>`count(*)` })
       .from(elogyOrders)
-      .where(inArray(elogyOrders.accountId, accountIds))
+      .where(inArray(elogyOrders.accountId, accountIds)),
+    db.select({ count: sql<number>`count(*)` })
+      .from(bigArenaOrders)
+      .where(inArray(bigArenaOrders.accountId, accountIds))
   ]);
   
-  const [fhbCount, efCount, elogyCount] = await Promise.all([
+  const [fhbCount, efCount, elogyCount, bigArenaCount] = await Promise.all([
     db.select({ count: sql<number>`count(*)` })
       .from(fhbOrders)
       .where(
@@ -1121,27 +1440,38 @@ async function countUnprocessedOrders(userId: string): Promise<number> {
           eq(elogyOrders.processedToOrders, false),
           inArray(elogyOrders.accountId, accountIds)
         )
+      ),
+    db.select({ count: sql<number>`count(*)` })
+      .from(bigArenaOrders)
+      .where(
+        and(
+          eq(bigArenaOrders.processedToOrders, false),
+          inArray(bigArenaOrders.accountId, accountIds)
+        )
       )
   ]);
   
   const fhb = fhbCount[0]?.count || 0;
   const ef = efCount[0]?.count || 0;
   const elogy = elogyCount[0]?.count || 0;
-  const total = Number(fhb) + Number(ef) + Number(elogy);
+  const bigArena = bigArenaCount[0]?.count || 0;
+  const total = Number(fhb) + Number(ef) + Number(elogy) + Number(bigArena);
   
   const fhbTotal = fhbTotalCount[0]?.count || 0;
   const efTotal = efTotalCount[0]?.count || 0;
   const elogyTotal = elogyTotalCount[0]?.count || 0;
+  const bigArenaTotal = bigArenaTotalCount[0]?.count || 0;
   
   console.log(`📊 [countUnprocessedOrders] User ${userId}:`);
   console.log(`   FHB: ${fhb}/${fhbTotal} não processados`);
   console.log(`   EF: ${ef}/${efTotal} não processados`);
   console.log(`   eLogy: ${elogy}/${elogyTotal} não processados`);
+  console.log(`   Big Arena: ${bigArena}/${bigArenaTotal} não processados`);
   console.log(`   TOTAL: ${total} pedidos não processados`);
   
   // Se há pedidos totais mas nenhum não processado, pode ser que todos já foram processados
-  if ((fhbTotal + efTotal + elogyTotal) > 0 && total === 0) {
-    console.log(`ℹ️ [countUnprocessedOrders] Todos os ${fhbTotal + efTotal + elogyTotal} pedidos já foram processados anteriormente`);
+  if ((fhbTotal + efTotal + elogyTotal + bigArenaTotal) > 0 && total === 0) {
+    console.log(`ℹ️ [countUnprocessedOrders] Todos os ${fhbTotal + efTotal + elogyTotal + bigArenaTotal} pedidos já foram processados anteriormente`);
   }
   
   return total;
@@ -1353,18 +1683,20 @@ export async function performStagingSync(userId: string): Promise<void> {
     
     // Process all staging tables in parallel for speed
     // Nota: Cada função de processamento já atualiza o progresso individualmente
-    console.log(`🔄 [STAGING SYNC] Iniciando processamento paralelo de FHB, EF e eLogy...`);
+    console.log(`🔄 [STAGING SYNC] Iniciando processamento paralelo de FHB, EF, eLogy e Big Arena...`);
     const startTime = Date.now();
-    const [fhbResult, efResult, elogyResult] = await Promise.all([
+    const [fhbResult, efResult, elogyResult, bigArenaResult] = await Promise.all([
       processFHBOrders(userId, accountOpsCache),
       processEuropeanFulfillmentOrders(userId, accountOpsCache),
-      processElogyOrders(userId, accountOpsCache)
+      processElogyOrders(userId, accountOpsCache),
+      processBigArenaOrders(userId, accountOpsCache)
     ]);
     const processingTime = Date.now() - startTime;
     console.log(`✅ [STAGING SYNC] Processamento paralelo concluído em ${processingTime}ms:`, {
       fhb: fhbResult,
       ef: efResult,
-      elogy: elogyResult
+      elogy: elogyResult,
+      bigArena: bigArenaResult
     });
     
     // Atualizar progresso imediatamente após processamento iniciar
@@ -1380,12 +1712,12 @@ export async function performStagingSync(userId: string): Promise<void> {
     progress.version++;
     
     // Aggregate results from all providers
-    progress.stagingProgress.newLeads = fhbResult.created + efResult.created + elogyResult.created;
-    progress.stagingProgress.updatedLeads = fhbResult.updated + efResult.updated + elogyResult.updated;
+    progress.stagingProgress.newLeads = fhbResult.created + efResult.created + elogyResult.created + bigArenaResult.created;
+    progress.stagingProgress.updatedLeads = fhbResult.updated + efResult.updated + elogyResult.updated + bigArenaResult.updated;
     
     // Atualizar processedLeads com o total real processado (já foi atualizado durante o processamento)
     // Mas garantir que está sincronizado
-    const totalProcessed = fhbResult.processed + efResult.processed + elogyResult.processed;
+    const totalProcessed = fhbResult.processed + efResult.processed + elogyResult.processed + bigArenaResult.processed;
     if (progress.stagingProgress.processedLeads < totalProcessed) {
       progress.stagingProgress.processedLeads = totalProcessed;
     }
@@ -1480,8 +1812,11 @@ export async function performStagingSync(userId: string): Promise<void> {
  * Get current sync progress for a specific user
  */
 export async function getSyncProgress(userId: string): Promise<SyncProgress> {
-  const progress = getUserSyncProgress(userId);
-  const runId = (progress as any).runId || null;
+  const progress = await getUserSyncProgress(userId);
+  const runId = progress.runId || null;
+
+  progress.shopifyProgress = progress.shopifyProgress || progress.platformProgress;
+  progress.stagingProgress = progress.stagingProgress || createEmptyStagingProgress();
   
   // CRÍTICO PRIMEIRO: Limpar progressTracker ANTES de qualquer verificação
   // Isso garante que valores antigos não sejam retornados mesmo se houver uma race condition
@@ -1539,16 +1874,15 @@ export async function getSyncProgress(userId: string): Promise<SyncProgress> {
         ? (Date.now() - new Date(progress.endTime).getTime()) < 5000
         : (Date.now() - progress.endTime.getTime()) < 5000);
     
-    // Se há valores do Shopify mas não há sync ativa E não completou muito recentemente, SEMPRE zerar
-    // Não importa quando completou - se não está rodando E não completou nos últimos 5 segundos, é antigo
+    // Se há valores das plataformas mas não há sync ativa E não completou muito recentemente, SEMPRE zerar
     if (!hasVeryRecentCompletion && 
-        (progress.shopifyProgress.totalOrders > 0 || 
-         progress.shopifyProgress.processedOrders > 0 || 
-         progress.shopifyProgress.percentage > 0)) {
-      console.log(`🔄 [GET SYNC PROGRESS] Zerando valores antigos do Shopify (não há sync ativa):`, {
-        shopifyTotal: progress.shopifyProgress.totalOrders,
-        shopifyProcessed: progress.shopifyProgress.processedOrders,
-        shopifyPercentage: progress.shopifyProgress.percentage,
+        (progress.platformProgress.totalOrders > 0 || 
+         progress.platformProgress.processedOrders > 0 || 
+         progress.platformProgress.percentage > 0)) {
+      console.log(`🔄 [GET SYNC PROGRESS] Zerando valores antigos de plataforma (não há sync ativa):`, {
+        platformTotal: progress.platformProgress.totalOrders,
+        platformProcessed: progress.platformProgress.processedOrders,
+        platformPercentage: progress.platformProgress.percentage,
         isRunning: progress.isRunning,
         hasRunId: !!runId,
         phase: progress.phase,
@@ -1556,28 +1890,24 @@ export async function getSyncProgress(userId: string): Promise<SyncProgress> {
         endTime: progress.endTime
       });
       
-      progress.shopifyProgress = {
+      progress.platformProgress = {
         processedOrders: 0,
         totalOrders: 0,
         newOrders: 0,
         updatedOrders: 0,
-        currentPage: 0,
-        totalPages: 0,
         percentage: 0
       };
       progress.overallProgress = 0;
       progress.currentStep = null;
-      // Resetar phase para 'preparing' se não completou muito recentemente
-      // Isso garante que uma nova sync pode começar com estado limpo
+      
       if (!hasVeryRecentCompletion) {
         progress.phase = 'preparing';
         progress.message = 'Pronto para sincronizar';
-        (progress as any).runId = null;
-        (progress as any).version = 0;
+        progress.runId = null;
+        progress.version = 0;
       }
       
-      // progressTracker já foi limpo no início da função
-      console.log(`✅ [GET SYNC PROGRESS] Valores do Shopify zerados no progress.shopifyProgress (progressTracker já foi limpo anteriormente)`);
+      console.log(`✅ [GET SYNC PROGRESS] Valores de plataforma zerados`);
     }
   }
   
@@ -1587,19 +1917,15 @@ export async function getSyncProgress(userId: string): Promise<SyncProgress> {
   } else {
     // Recalculate overall progress before returning (garantir que nunca seja NaN)
     const calculatedProgress = calculateOverallProgress(
-      progress.shopifyProgress,
-      progress.stagingProgress,
+      progress.platformProgress,
       progress.currentStep
     );
     progress.overallProgress = isNaN(calculatedProgress) ? 0 : Math.max(0, Math.min(100, calculatedProgress));
   }
   
   // Garantir que não há valores inválidos
-  if (isNaN(progress.shopifyProgress.percentage)) {
-    progress.shopifyProgress.percentage = 0;
-  }
-  if (isNaN(progress.stagingProgress.processedLeads)) {
-    progress.stagingProgress.processedLeads = 0;
+  if (isNaN(progress.platformProgress.percentage)) {
+    progress.platformProgress.percentage = 0;
   }
   
   // Retornar cópia com dates convertidos para ISO strings para serialização JSON
@@ -1633,17 +1959,14 @@ export async function getSyncProgress(userId: string): Promise<SyncProgress> {
       currentStep: serialized.currentStep,
       runId: serialized.runId,
       version: serialized.version,
-      shopifyProcessed: serialized.shopifyProgress.processedOrders,
-      shopifyTotal: serialized.shopifyProgress.totalOrders,
-      stagingProcessed: serialized.stagingProgress.processedLeads,
-      stagingTotal: serialized.stagingProgress.totalLeads
+      platformProcessed: serialized.platformProgress.processedOrders,
+      platformTotal: serialized.platformProgress.totalOrders
     });
     
     // Se overallProgress está undefined, é um erro crítico
     if (serialized.overallProgress === undefined || isNaN(serialized.overallProgress)) {
       const currentCalculatedProgress = calculateOverallProgress(
-        progress.shopifyProgress,
-        progress.stagingProgress,
+        progress.platformProgress,
         progress.currentStep
       );
       console.error(`❌ [GET SYNC PROGRESS] ERRO CRÍTICO: overallProgress está undefined ou NaN!`, {
@@ -1660,103 +1983,76 @@ export async function getSyncProgress(userId: string): Promise<SyncProgress> {
 }
 
 /**
- * Update shopify progress for a user
+ * Update platform progress for a user (Shopify/CartPanda/Digistore)
  */
-export function updateShopifyProgress(
+export async function updatePlatformProgress(
   userId: string,
-  updates: Partial<ShopifyProgress>
-): void {
-  const progress = getUserSyncProgress(userId);
+  updates: Partial<PlatformProgress>
+): Promise<void> {
+  const progress = await getUserSyncProgress(userId);
   const oldOverall = progress.overallProgress;
-  const runId = (progress as any).runId;
+  const runId = progress.runId;
   
   // CRÍTICO: Se estamos recebendo valores não-zero mas não há runId E não há sync rodando, isso é um valor antigo
-  // Ignorar completamente para evitar mostrar "369/369" quando uma nova sync inicia
   if (((updates.totalOrders ?? 0) > 0 || (updates.processedOrders ?? 0) > 0 || (updates.percentage ?? 0) > 0) && !runId && !progress.isRunning) {
-    console.log(`⏭️ [UPDATE SHOPIFY PROGRESS] Ignorando atualização antiga sem runId e sem sync rodando (aguardando reset com runId):`, {
-      updatesTotal: updates.totalOrders,
-      updatesProcessed: updates.processedOrders,
-      currentTotal: progress.shopifyProgress.totalOrders,
-      currentProcessed: progress.shopifyProgress.processedOrders,
-      hasRunId: !!runId,
-      isRunning: progress.isRunning
-    });
+    console.log(`⏭️ [UPDATE PLATFORM PROGRESS] Ignorando atualização antiga sem runId e sem sync rodando`);
     return;
   }
   
   // CRÍTICO: Se estamos recebendo valores zerados, isso indica um reset
-  // Mas só aplicar se realmente queremos resetar (runId existe significa que é uma nova sync)
-  // Se não temos runId ainda, pode ser que estamos recebendo valores zerados de uma sync antiga
   if (updates.totalOrders === 0 && updates.processedOrders === 0 && updates.percentage === 0) {
-    // Se temos runId (nova sync), aceitar valores zerados - é um reset válido
-    // Se não temos runId ainda, pode ser valores antigos, mas se o progresso atual também está zerado, aceitar
-    if (!runId && (progress.shopifyProgress.totalOrders > 0 || progress.shopifyProgress.processedOrders > 0)) {
-      console.log(`⏭️ [UPDATE SHOPIFY PROGRESS] Ignorando atualização com valores zerados sem runId (aguardando reset completo)`);
+    if (!runId && (progress.platformProgress.totalOrders > 0 || progress.platformProgress.processedOrders > 0)) {
+      console.log(`⏭️ [UPDATE PLATFORM PROGRESS] Ignorando atualização com valores zerados sem runId`);
       return;
     }
-    // Se temos runId OU o progresso atual já está zerado, aplicar o reset
-    console.log(`✅ [UPDATE SHOPIFY PROGRESS] Aplicando reset do Shopify (valores zerados)`);
+    console.log(`✅ [UPDATE PLATFORM PROGRESS] Aplicando reset (valores zerados)`);
   }
   
   // Aplicar atualizações
-  progress.shopifyProgress = { ...progress.shopifyProgress, ...updates };
+  progress.platformProgress = { ...progress.platformProgress, ...updates };
+  progress.shopifyProgress = progress.platformProgress;
   progress.version++;
   
   // Calculate percentage if totalOrders > 0
-  if (progress.shopifyProgress.totalOrders > 0) {
-    progress.shopifyProgress.percentage = Math.round(
-      (progress.shopifyProgress.processedOrders / progress.shopifyProgress.totalOrders) * 100
+  if (progress.platformProgress.totalOrders > 0) {
+    progress.platformProgress.percentage = Math.round(
+      (progress.platformProgress.processedOrders / progress.platformProgress.totalOrders) * 100
     );
     
-    // CRÍTICO: Garantir que percentage nunca excede 100% ou seja menor que 0%
-    progress.shopifyProgress.percentage = Math.max(0, Math.min(100, progress.shopifyProgress.percentage));
+    progress.platformProgress.percentage = Math.max(0, Math.min(100, progress.platformProgress.percentage));
     
-    // CRÍTICO: Se processed >= total, percentage DEVE ser 100%
-    if (progress.shopifyProgress.processedOrders >= progress.shopifyProgress.totalOrders) {
-      progress.shopifyProgress.percentage = 100;
+    if (progress.platformProgress.processedOrders >= progress.platformProgress.totalOrders) {
+      progress.platformProgress.percentage = 100;
     }
   } else {
-    // CRÍTICO: Se totalOrders é 0, percentage DEVE ser 0 também
-    progress.shopifyProgress.percentage = 0;
+    progress.platformProgress.percentage = 0;
   }
   
-  // CRÍTICO: Durante o processo do Shopify, currentStep DEVE ser 'shopify'
-  // Só mudar para 'staging' quando o Shopify REALMENTE completar (processed >= total E percentage >= 100)
-  if (progress.shopifyProgress.totalOrders > 0) {
-    // Se o Shopify ainda está rodando (processed < total OU percentage < 100), manter como 'shopify'
-    const shopifyStillRunning = 
-      progress.shopifyProgress.processedOrders < progress.shopifyProgress.totalOrders ||
-      progress.shopifyProgress.percentage < 100;
+  // Durante o processo de plataforma, currentStep DEVE refletir a plataforma atual
+  if (progress.platformProgress.totalOrders > 0) {
+    const platformStillRunning = 
+      progress.platformProgress.processedOrders < progress.platformProgress.totalOrders ||
+      progress.platformProgress.percentage < 100;
     
-    if (shopifyStillRunning && progress.currentStep !== 'shopify') {
-      progress.currentStep = 'shopify';
-      console.log(`🔄 [PROGRESS] currentStep atualizado para 'shopify' (Shopify ainda rodando: ${progress.shopifyProgress.processedOrders}/${progress.shopifyProgress.totalOrders})`);
-    }
-    // Se o Shopify completou (processed >= total E percentage >= 100), só então pode ser 'staging'
-    else if (!shopifyStillRunning && progress.currentStep === 'shopify') {
-      // Shopify completou, mas ainda não mudamos para staging
-      // Manter como 'shopify' até que setCurrentStep('staging') seja chamado explicitamente
-      console.log(`✅ [PROGRESS] Shopify completou (${progress.shopifyProgress.processedOrders}/${progress.shopifyProgress.totalOrders}), mas mantendo currentStep='shopify' até staging começar`);
-    }
-  } else if (progress.shopifyProgress.processedOrders === 0 && progress.shopifyProgress.totalOrders === 0) {
-    // Se o Shopify ainda não começou, não definir step ainda
-    if (progress.currentStep === null) {
-      // Não fazer nada - aguardar que o Shopify comece
+    if (platformStillRunning && !['shopify', 'cartpanda', 'digistore'].includes(progress.currentStep || '')) {
+      progress.currentStep = 'shopify'; // Default to shopify if no specific step
     }
   }
   
-  // Recalculate overall progress
+  // Recalculate overall progress (agora apenas com plataformas)
   progress.overallProgress = calculateOverallProgress(
-    progress.shopifyProgress,
-    progress.stagingProgress,
+    progress.platformProgress,
     progress.currentStep
   );
   
-  console.log(`📊 [PROGRESS] Shopify progress atualizado:`, {
+  // Salvar no banco de dados
+  await saveSyncSession(userId, progress);
+  
+  console.log(`📊 [PROGRESS] Platform progress atualizado:`, {
     userId,
-    processed: progress.shopifyProgress.processedOrders,
-    total: progress.shopifyProgress.totalOrders,
-    percentage: progress.shopifyProgress.percentage,
+    processed: progress.platformProgress.processedOrders,
+    total: progress.platformProgress.totalOrders,
+    percentage: progress.platformProgress.percentage,
     currentStep: progress.currentStep,
     oldOverall,
     newOverall: progress.overallProgress,
@@ -1764,56 +2060,55 @@ export function updateShopifyProgress(
   });
 }
 
+// Manter compatibilidade com código existente
+export const updateShopifyProgress = updatePlatformProgress;
+
 /**
- * Set current step (shopify or staging)
+ * Set current step (shopify, cartpanda, digistore or staging)
  */
-export function setCurrentStep(
+export async function setCurrentStep(
   userId: string,
-  step: 'shopify' | 'staging' | null
-): void {
-  const progress = getUserSyncProgress(userId);
+  step: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null
+): Promise<void> {
+  const progress = await getUserSyncProgress(userId);
   progress.currentStep = step;
   progress.overallProgress = calculateOverallProgress(
-    progress.shopifyProgress,
-    progress.stagingProgress,
+    progress.platformProgress,
     step
   );
+  
+  // Salvar no banco de dados
+  await saveSyncSession(userId, progress);
 }
 
 /**
- * Reset sync progress for a specific user (for testing)
+ * Reset sync progress for a specific user
  */
-export function resetSyncProgress(userId: string): void {
+export async function resetSyncProgress(userId: string): Promise<void> {
   console.log(`🔄 [RESET] Resetando progresso para user ${userId}`);
+  
+  const platformProgress = createEmptyPlatformProgress();
+  const stagingProgress = createEmptyStagingProgress();
+
   const resetProgress: SyncProgress = {
     isRunning: false,
     phase: 'preparing',
     message: 'Pronto para sincronizar',
     currentStep: null,
     overallProgress: 0,
-    shopifyProgress: {
-      processedOrders: 0,
-      totalOrders: 0,
-      newOrders: 0,
-      updatedOrders: 0,
-      currentPage: 0,
-      totalPages: 0,
-      percentage: 0
-    },
-    stagingProgress: {
-    processedLeads: 0,
-    totalLeads: 0,
-    newLeads: 0,
-      updatedLeads: 0
-    },
+    platformProgress,
+    shopifyProgress: platformProgress,
+    stagingProgress,
     errors: 0,
     startTime: null,
     endTime: null,
     runId: null,
     version: 0
   };
-  // IMPORTANTE: Usar set para garantir que sobrescreve completamente
-  userSyncProgress.set(userId, resetProgress);
+  
+  // Salvar no banco de dados
+  await saveSyncSession(userId, resetProgress);
+  
   console.log(`✅ [RESET] Progresso resetado para user ${userId}:`, {
     isRunning: resetProgress.isRunning,
     phase: resetProgress.phase,

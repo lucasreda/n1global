@@ -4,8 +4,6 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { OnboardingCard } from "@/components/dashboard/onboarding-card";
 import { WelcomeMessage } from "@/components/dashboard/welcome-message";
-import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
-import { SyncConfirmationDialog } from "@/components/sync/SyncConfirmationDialog";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -17,10 +15,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, RefreshCw, X, Package } from "lucide-react";
+import { CalendarIcon, X, Package } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
+
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -30,41 +29,10 @@ export default function Dashboard() {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
-  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
-  const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
-  const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
-  const [currentSyncState, setCurrentSyncState] = useState(false);
-  
-  // Verificar status da sync quando necessário
-  const handleSyncButtonClick = async () => {
-    try {
-      // Verificar se há uma sync ativa
-      const response = await authenticatedApiRequest("GET", "/api/sync/complete-status");
-      const status = await response.json();
-      
-      // Se há sync ativa, abrir diretamente o modal de progresso
-      if (status.isRunning) {
-        setIsSyncDialogOpen(true);
-      } else {
-        // Se não há sync ativa, mostrar modal de confirmação
-        setIsSyncConfirmationOpen(true);
-      }
-    } catch (error) {
-      console.error("Erro ao verificar status da sync:", error);
-      // Em caso de erro, mostrar modal de confirmação normalmente
-      setIsSyncConfirmationOpen(true);
-    }
-  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
 
-  // Detectar quando o modal fecha durante sync
-  useEffect(() => {
-    if (!isSyncDialogOpen && currentSyncState) {
-      setIsSyncingInBackground(true);
-    }
-  }, [isSyncDialogOpen, currentSyncState]);
   
   // Tour context
   const { startTour, isTourRunning, tourWasCompletedOrSkipped } = useTourContext();
@@ -106,6 +74,7 @@ export default function Dashboard() {
       return res.json();
     },
   });
+
 
 
   // Auto-sync on page load (optimized - no page reload)
@@ -311,7 +280,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
-      {/* Header with Complete Sync Button and Date Filter */}
+      {/* Header with Date Filter */}
       <div className="w-full flex items-center justify-end gap-2 sm:gap-3">
         {/* Product Filter */}
         {products.length > 0 && (
@@ -507,35 +476,6 @@ export default function Dashboard() {
           </PopoverContent>
         </Popover>
 
-        {/* Complete Sync Button - Right on mobile */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Button
-                  onClick={handleSyncButtonClick}
-                  disabled={!integrationsStatus?.hasPlatform}
-                  variant="outline"
-                  size="sm"
-                  className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0 ${
-                    isSyncingInBackground ? 'animate-pulse ring-2 ring-blue-500/50' : ''
-                  }`}
-                  data-testid="button-complete-sync"
-                >
-                  <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 ${isSyncingInBackground ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">
-                    {isSyncingInBackground ? 'Sincronizando...' : 'Sync Completo'}
-                  </span>
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {!integrationsStatus?.hasPlatform && (
-              <TooltipContent className="max-w-xs">
-                <p>É necessário conectar pelo menos uma plataforma (Shopify) para realizar a sincronização completa</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
       </div>
       
       <WelcomeMessage />
@@ -556,44 +496,6 @@ export default function Dashboard() {
         currency={operationCurrency}
       />
 
-      {/* Sync Confirmation Dialog */}
-      <SyncConfirmationDialog
-        isOpen={isSyncConfirmationOpen}
-        onClose={() => setIsSyncConfirmationOpen(false)}
-        onConfirm={() => {
-          setIsSyncDialogOpen(true);
-        }}
-        operationId={selectedOperation}
-      />
-
-      {/* Complete Sync Dialog */}
-      <CompleteSyncDialog 
-        isOpen={isSyncDialogOpen}
-        onClose={() => {
-          setIsSyncDialogOpen(false);
-        }}
-        onSyncStateChange={(isRunning) => {
-          // Rastrear estado atual do sync
-          setCurrentSyncState(isRunning);
-          // Se terminou, limpar background
-          if (!isRunning) {
-            setIsSyncingInBackground(false);
-          }
-        }}
-        onComplete={() => {
-          setIsSyncingInBackground(false);
-          // Refresh ALL dashboard data and sync stats
-          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-          toast({
-            title: "✅ Sincronização Concluída!",
-            description: "Todos os dados foram atualizados com sucesso",
-          });
-        }}
-        operationId={selectedOperation}
-      />
     </div>
   );
 }

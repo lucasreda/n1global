@@ -158,6 +158,11 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
       .where(eq(digistoreIntegrations.operationId, operationId))
       .limit(1);
 
+    // Determinar se deve definir integrationStartedAt
+    const shouldSetIntegrationStartedAt = 
+      !existingIntegration || // Nova integração
+      (existingIntegration.status !== "active" && existingIntegration.integrationStartedAt === null); // Ativando pela primeira vez
+
     let integration;
 
     if (existingIntegration) {
@@ -169,6 +174,7 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
         .set({
           apiKey: apiKey.trim(),
           status: "active",
+          ...(shouldSetIntegrationStartedAt && { integrationStartedAt: new Date() }),
           updatedAt: new Date(),
         })
         .where(eq(digistoreIntegrations.id, existingIntegration.id))
@@ -185,6 +191,7 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
           operationId,
           apiKey: apiKey.trim(),
           status: "active",
+          integrationStartedAt: new Date(), // Nova integração sempre define integrationStartedAt
         })
         .returning();
 
@@ -261,12 +268,19 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
     // Criar serviço e buscar entregas pendentes
     const digistoreService = new DigistoreService({ apiKey: integration.apiKey });
     
-    // Buscar entregas dos últimos 30 dias
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Determinar data inicial: usar integrationStartedAt se existir, senão últimos 30 dias
+    let fromDate: Date;
+    if (integration.integrationStartedAt) {
+      fromDate = integration.integrationStartedAt;
+      console.log(`📅 Filtrando entregas a partir da data de integração: ${fromDate.toISOString().split('T')[0]}`);
+    } else {
+      fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 30);
+      console.log(`📅 Filtrando entregas dos últimos 30 dias: ${fromDate.toISOString().split('T')[0]}`);
+    }
     
     const deliveries = await digistoreService.listOrders({
-      from: thirtyDaysAgo.toISOString().split('T')[0], // YYYY-MM-DD
+      from: fromDate.toISOString().split('T')[0], // YYYY-MM-DD
       type: 'request,in_progress' // Apenas entregas pendentes
     });
 

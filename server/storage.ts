@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, stores, orders, products, userProducts, shippingProviders, operations, userOperationAccess, aiDirectives, marketplaceProducts, productOperationLinks, announcements, warehouseProviders, userWarehouseAccounts, userWarehouseAccountOperations, User, Order, Product, UserProduct, ShippingProvider, Operation, WarehouseProvider, UserWarehouseAccount, UserWarehouseAccountOperation, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserWarehouseAccount, UpdateUserWarehouseAccount, InsertUserWarehouseAccountOperation, LinkProductBySku, MarketplaceProduct, InsertMarketplaceProduct, ProductOperationLink, InsertProductOperationLink, Announcement, InsertAnnouncement } from "@shared/schema";
+import { users, stores, orders, products, userProducts, shippingProviders, operations, userOperationAccess, aiDirectives, marketplaceProducts, productOperationLinks, announcements, warehouseProviders, userWarehouseAccounts, userWarehouseAccountOperations, bigArenaWarehouseAccounts, User, Order, Product, UserProduct, ShippingProvider, Operation, WarehouseProvider, UserWarehouseAccount, UserWarehouseAccountOperation, BigArenaWarehouseAccount, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserWarehouseAccount, UpdateUserWarehouseAccount, InsertUserWarehouseAccountOperation, InsertBigArenaWarehouseAccount, UpdateBigArenaWarehouseAccount, LinkProductBySku, MarketplaceProduct, InsertMarketplaceProduct, ProductOperationLink, InsertProductOperationLink, Announcement, InsertAnnouncement } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -107,6 +107,10 @@ export interface IStorage {
   updateUserWarehouseAccount(id: string, updates: UpdateUserWarehouseAccount): Promise<UserWarehouseAccount | undefined>;
   deleteUserWarehouseAccount(id: string): Promise<boolean>;
   testUserWarehouseAccount(id: string): Promise<{ success: boolean; message: string }>;
+  getBigArenaWarehouseAccountByAccountId(accountId: string): Promise<BigArenaWarehouseAccount | undefined>;
+  createBigArenaWarehouseAccount(data: InsertBigArenaWarehouseAccount): Promise<BigArenaWarehouseAccount>;
+  updateBigArenaWarehouseAccount(id: string, updates: UpdateBigArenaWarehouseAccount): Promise<BigArenaWarehouseAccount | undefined>;
+  deleteBigArenaWarehouseAccount(id: string): Promise<boolean>;
   
   // User Warehouse Account Operations methods
   linkAccountToOperation(link: InsertUserWarehouseAccountOperation): Promise<UserWarehouseAccountOperation>;
@@ -1392,7 +1396,71 @@ export class DatabaseStorage implements IStorage {
 
   // Warehouse Providers methods
   async getWarehouseProviders(): Promise<WarehouseProvider[]> {
-    return await db.select().from(warehouseProviders).where(eq(warehouseProviders.isActive, true));
+    const providers = await db
+      .select()
+      .from(warehouseProviders)
+      .where(eq(warehouseProviders.isActive, true));
+
+    const hasBigArena = providers.some((provider) => provider.key === "big_arena");
+    if (!hasBigArena) {
+      providers.push({
+        id: "virtual-big-arena",
+        key: "big_arena",
+        name: "Big Arena Logistics",
+        description: "Integração oficial Big Arena para pedidos, estoque e logística.",
+        requiredFields: [
+          {
+            fieldName: "apiToken",
+            fieldType: "password",
+            label: "API Token",
+            placeholder: "seu_token_api",
+            required: true,
+          },
+          {
+            fieldName: "domain",
+            fieldType: "text",
+            label: "Domínio (opcional)",
+            placeholder: "ex: api.sualoja.bigarena.com",
+            required: false,
+          },
+        ],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } satisfies WarehouseProvider);
+    } else {
+      const bigArenaProvider = providers.find((p) => p.key === "big_arena");
+      if (bigArenaProvider) {
+        // Ensure requiredFields is an array
+        if (!bigArenaProvider.requiredFields || !Array.isArray(bigArenaProvider.requiredFields)) {
+          bigArenaProvider.requiredFields = [
+            {
+              fieldName: "apiToken",
+              fieldType: "password",
+              label: "API Token",
+              placeholder: "seu_token_api",
+              required: true,
+            },
+            {
+              fieldName: "domain",
+              fieldType: "text",
+              label: "Domínio (opcional)",
+              placeholder: "ex: api.sualoja.bigarena.com",
+              required: false,
+            },
+          ];
+        }
+      }
+    }
+
+    // Ensure all providers have valid requiredFields
+    for (const provider of providers) {
+      if (!provider.requiredFields || !Array.isArray(provider.requiredFields)) {
+        provider.requiredFields = [];
+      }
+    }
+
+    return providers;
   }
 
   async getWarehouseProvider(key: string): Promise<WarehouseProvider | undefined> {
@@ -1512,6 +1580,39 @@ export class DatabaseStorage implements IStorage {
     
     // TODO: Implement actual provider testing logic
     return { success: true, message: "Test connection placeholder - to be implemented with provider services" };
+  }
+
+  async getBigArenaWarehouseAccountByAccountId(accountId: string): Promise<BigArenaWarehouseAccount | undefined> {
+    const [record] = await db
+      .select()
+      .from(bigArenaWarehouseAccounts)
+      .where(eq(bigArenaWarehouseAccounts.accountId, accountId))
+      .limit(1);
+    return record || undefined;
+  }
+
+  async createBigArenaWarehouseAccount(data: InsertBigArenaWarehouseAccount): Promise<BigArenaWarehouseAccount> {
+    const [record] = await db
+      .insert(bigArenaWarehouseAccounts)
+      .values(data)
+      .returning();
+    return record;
+  }
+
+  async updateBigArenaWarehouseAccount(id: string, updates: UpdateBigArenaWarehouseAccount): Promise<BigArenaWarehouseAccount | undefined> {
+    const [record] = await db
+      .update(bigArenaWarehouseAccounts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(bigArenaWarehouseAccounts.id, id))
+      .returning();
+    return record || undefined;
+  }
+
+  async deleteBigArenaWarehouseAccount(id: string): Promise<boolean> {
+    const result = await db
+      .delete(bigArenaWarehouseAccounts)
+      .where(eq(bigArenaWarehouseAccounts.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // User Warehouse Account Operations methods

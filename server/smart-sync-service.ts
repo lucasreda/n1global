@@ -2,6 +2,7 @@ import { db } from "./db";
 import { orders, stores, operations, type InsertOrder } from "@shared/schema";
 import { BaseFulfillmentProvider } from "./fulfillment-providers/base-fulfillment-provider";
 import { eq, and, not, inArray } from "drizzle-orm";
+import { extractAllSkusFromProducts } from "./utils/sku-parser";
 
 interface SyncOptions {
   forceFullSync?: boolean;
@@ -124,6 +125,7 @@ export class SmartSyncService {
 
   /**
    * Calcula custos de produto e envio baseado no status e valor do pedido
+   * Agora suporta múltiplos SKUs concatenados (ex: "sku1+sku2+sku3")
    */
   private async calculateOrderCosts(status: string, total: string, products: any[], storeId: string): Promise<{ productCost: number; shippingCost: number }> {
     // Se não há produtos, retorna custos zerados
@@ -131,67 +133,93 @@ export class SmartSyncService {
       return { productCost: 0, shippingCost: 0 };
     }
 
-    // Extrai o SKU do primeiro produto (assumindo um produto por pedido)
-    const firstProduct = products[0];
-    const sku = firstProduct?.sku;
+    // Extrai todos os SKUs únicos de todos os produtos (incluindo concatenados)
+    const allSkus = extractAllSkusFromProducts(products);
     
-    if (!sku) {
-      console.warn('⚠️ Produto sem SKU encontrado, usando custos padrão');
+    if (allSkus.length === 0) {
+      console.warn('⚠️ Nenhum SKU encontrado nos produtos, usando custos padrão');
       return { productCost: 0, shippingCost: 0 };
     }
+
+    console.log(`📦 Processando ${allSkus.length} SKU(s) para cálculo de custos:`, allSkus);
 
     try {
       const { pool } = await import("./db");
       
-      // Busca custos customizados do produto primeiro (user_products)
-      const customCostsResult = await pool.query(`
-        SELECT 
-          up.custom_cost_price,
-          up.custom_shipping_cost,
-          p.cost_price,
-          p.shipping_cost
-        FROM user_products up
-        JOIN products p ON up.product_id = p.id
-        WHERE up.sku = $1 AND up.store_id = $2 AND up.is_active = true
-        LIMIT 1
-      `, [sku, storeId]);
+      let totalProductCostBase = 0;
+      let totalShippingCostBase = 0;
+      const foundSkus: string[] = [];
+      const notFoundSkus: string[] = [];
 
-      let productCostBase = 0;
-      let shippingCostBase = 0;
-
-      if (customCostsResult.rows.length > 0) {
-        const costs = customCostsResult.rows[0];
-        // Usa custo customizado se disponível, senão usa o custo padrão do produto
-        productCostBase = parseFloat(costs.custom_cost_price) || parseFloat(costs.cost_price) || 0;
-        shippingCostBase = parseFloat(costs.custom_shipping_cost) || parseFloat(costs.shipping_cost) || 0;
-        console.log(`💰 Custos encontrados para SKU ${sku}: Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
-      } else {
-        // Fallback: busca diretamente na tabela products
-        const productResult = await pool.query(`
-          SELECT cost_price, shipping_cost
-          FROM products 
-          WHERE sku = $1 AND store_id = $2 
+      // Para cada SKU, buscar os custos
+      for (const sku of allSkus) {
+        // Busca custos customizados do produto primeiro (user_products)
+        const customCostsResult = await pool.query(`
+          SELECT 
+            up.custom_cost_price,
+            up.custom_shipping_cost,
+            p.cost_price,
+            p.shipping_cost
+          FROM user_products up
+          JOIN products p ON up.product_id = p.id
+          WHERE up.sku = $1 AND up.store_id = $2 AND up.is_active = true
           LIMIT 1
         `, [sku, storeId]);
 
-        if (productResult.rows.length > 0) {
-          const costs = productResult.rows[0];
-          productCostBase = parseFloat(costs.cost_price) || 0;
-          shippingCostBase = parseFloat(costs.shipping_cost) || 0;
-          console.log(`💰 Custos padrão para SKU ${sku}: Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
+        let productCostBase = 0;
+        let shippingCostBase = 0;
+
+        if (customCostsResult.rows.length > 0) {
+          const costs = customCostsResult.rows[0];
+          // Usa custo customizado se disponível, senão usa o custo padrão do produto
+          productCostBase = parseFloat(costs.custom_cost_price) || parseFloat(costs.cost_price) || 0;
+          shippingCostBase = parseFloat(costs.custom_shipping_cost) || parseFloat(costs.shipping_cost) || 0;
+          totalProductCostBase += productCostBase;
+          totalShippingCostBase += shippingCostBase;
+          foundSkus.push(sku);
+          console.log(`💰 Custos encontrados para SKU "${sku}": Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
         } else {
-          console.warn(`⚠️ Produto com SKU ${sku} não encontrado, usando custos zerados`);
+          // Fallback: busca diretamente na tabela products
+          const productResult = await pool.query(`
+            SELECT cost_price, shipping_cost
+            FROM products 
+            WHERE sku = $1 AND store_id = $2 
+            LIMIT 1
+          `, [sku, storeId]);
+
+          if (productResult.rows.length > 0) {
+            const costs = productResult.rows[0];
+            productCostBase = parseFloat(costs.cost_price) || 0;
+            shippingCostBase = parseFloat(costs.shipping_cost) || 0;
+            totalProductCostBase += productCostBase;
+            totalShippingCostBase += shippingCostBase;
+            foundSkus.push(sku);
+            console.log(`💰 Custos padrão para SKU "${sku}": Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
+          } else {
+            notFoundSkus.push(sku);
+            console.warn(`⚠️ Produto com SKU "${sku}" não encontrado`);
+          }
         }
+      }
+
+      if (foundSkus.length > 0) {
+        console.log(`✅ Custos calculados para ${foundSkus.length} produto(s): Total Produto: €${totalProductCostBase.toFixed(2)}, Total Envio: €${totalShippingCostBase.toFixed(2)}`);
+      }
+
+      if (notFoundSkus.length > 0) {
+        console.warn(`⚠️ ${notFoundSkus.length} SKU(s) não encontrado(s): ${notFoundSkus.join(', ')}`);
       }
 
       // Aplica custos baseado no status do pedido
       // Custo do produto: aplicado para pedidos confirmados/entregues/pendentes
       const productCost = ['confirmed', 'delivered', 'shipped', 'in transit', 'in delivery', 'pending'].includes(status) ?
-        productCostBase : 0.00;
+        totalProductCostBase : 0.00;
       
       // Custo de envio: aplicado para pedidos enviados/entregues + pendentes
+      // NOTA: Normalmente o custo de envio é aplicado apenas uma vez por pedido, não por produto
+      // Mas vamos somar para casos onde cada produto tem seu próprio custo de envio
       const shippingCost = ['shipped', 'delivered', 'in transit', 'in delivery', 'pending'].includes(status) ?
-        shippingCostBase : 0.00;
+        totalShippingCostBase : 0.00;
 
       return { productCost, shippingCost };
       
