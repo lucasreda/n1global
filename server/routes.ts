@@ -5,7 +5,8 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations } from "@shared/schema";
+import crypto from "crypto";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, operationInvitations, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -16,6 +17,8 @@ import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 import { validateOperationAccess as operationAccess } from "./middleware/operation-access";
+import { requireTeamManagementPermission, hasPermission, getDefaultPermissions } from "./middleware/team-permissions";
+import { teamInvitationEmailService } from "./services/team-invitation-email-service";
 import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
@@ -1371,6 +1374,727 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Erro ao atualizar configurações" });
+    }
+  });
+
+  // ============================================================================
+  // TEAM MANAGEMENT ROUTES
+  // ============================================================================
+
+  // Get team members and pending invitations
+  app.get("/api/operations/:operationId/team", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      console.log(`[Team API] Fetching team for operation: ${operationId}`);
+
+      // Get all team members - handle case where invitedAt/invitedBy might not exist
+      let members;
+      try {
+        members = await db
+          .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            avatarUrl: users.avatarUrl,
+            role: userOperationAccess.role,
+            permissions: userOperationAccess.permissions,
+            invitedAt: userOperationAccess.invitedAt,
+            invitedBy: userOperationAccess.invitedBy,
+          })
+          .from(userOperationAccess)
+          .innerJoin(users, eq(userOperationAccess.userId, users.id))
+          .where(eq(userOperationAccess.operationId, operationId));
+        console.log(`[Team API] Found ${members.length} members`);
+      } catch (memberError: any) {
+        console.error("[Team API] Error fetching members:", memberError);
+        // If columns don't exist, try without them
+        if (memberError.message?.includes('column') && memberError.message?.includes('invited')) {
+          console.log("[Team API] Retrying without invitedAt/invitedBy columns");
+          members = await db
+            .select({
+              id: users.id,
+              name: users.name,
+              email: users.email,
+              avatarUrl: users.avatarUrl,
+              role: userOperationAccess.role,
+              permissions: userOperationAccess.permissions,
+            })
+            .from(userOperationAccess)
+            .innerJoin(users, eq(userOperationAccess.userId, users.id))
+            .where(eq(userOperationAccess.operationId, operationId));
+          // Add null values for missing columns
+          members = members.map(m => ({ ...m, invitedAt: null, invitedBy: null }));
+        } else {
+          throw memberError;
+        }
+      }
+
+      // Get pending invitations - handle case where table might not exist
+      let invitations = [];
+      try {
+        invitations = await db
+          .select({
+            id: operationInvitations.id,
+            email: operationInvitations.email,
+            role: operationInvitations.role,
+            permissions: operationInvitations.permissions,
+            status: operationInvitations.status,
+            expiresAt: operationInvitations.expiresAt,
+            createdAt: operationInvitations.createdAt,
+            invitedBy: operationInvitations.invitedBy,
+          })
+          .from(operationInvitations)
+          .where(
+            and(
+              eq(operationInvitations.operationId, operationId),
+              eq(operationInvitations.status, 'pending')
+            )
+          );
+        console.log(`[Team API] Found ${invitations.length} pending invitations`);
+      } catch (invitationError: any) {
+        console.error("[Team API] Error fetching invitations:", invitationError);
+        // If table doesn't exist, return empty array
+        if (invitationError.message?.includes('does not exist') || invitationError.message?.includes('relation')) {
+          console.log("[Team API] operation_invitations table doesn't exist, returning empty array");
+          invitations = [];
+        } else {
+          throw invitationError;
+        }
+      }
+
+      res.json({
+        members,
+        invitations,
+      });
+    } catch (error: any) {
+      console.error("Get team error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        message: "Erro ao buscar membros da equipe",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Send invitation
+  app.post("/api/operations/:operationId/team/invite", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { email, role, permissions, userExists } = req.body;
+
+      console.log(`[Team Invite] Received request:`, {
+        operationId,
+        email,
+        role,
+        hasPermissions: !!permissions,
+        userExists,
+        userId: req.user?.id
+      });
+
+      if (!email || !role) {
+        return res.status(400).json({ message: "Email e role são obrigatórios" });
+      }
+
+      // Validate role
+      if (!['owner', 'admin', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Role inválido" });
+      }
+
+      // Check if user already has access
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingUser) {
+        const [existingAccess] = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.userId, existingUser.id),
+              eq(userOperationAccess.operationId, operationId)
+            )
+          )
+          .limit(1);
+
+        if (existingAccess) {
+          return res.status(400).json({ message: "Usuário já faz parte desta operação" });
+        }
+      }
+
+      // Check for existing pending invitation
+      const [existingInvitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(
+          and(
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.email, email),
+            eq(operationInvitations.status, 'pending')
+          )
+        )
+        .limit(1);
+
+      if (existingInvitation) {
+        return res.status(400).json({ message: "Já existe um convite pendente para este email" });
+      }
+
+      // Generate token - usando import crypto (não require)
+      console.log('[Team Invite] Generating token using crypto module...');
+      const token = crypto.randomBytes(32).toString('hex');
+      console.log('[Team Invite] Token generated successfully, length:', token.length);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+      // Use default permissions if not provided
+      let finalPermissions;
+      try {
+        finalPermissions = permissions || getDefaultPermissions(role);
+        console.log(`[Team Invite] Permissions for role ${role}:`, JSON.stringify(finalPermissions));
+      } catch (permError: any) {
+        console.error("[Team Invite] Error getting default permissions:", permError);
+        // Fallback to basic permissions
+        finalPermissions = {
+          dashboard: { view: true },
+          orders: { view: true },
+          products: { view: true },
+          ads: { view: true },
+          integrations: { view: true },
+          settings: { view: true },
+          team: { view: true }
+        };
+      }
+
+      console.log(`[Team Invite] Creating invitation for ${email} in operation ${operationId}`);
+
+      // Create invitation
+      let invitation;
+      try {
+        const invitationData: any = {
+          operationId,
+          email,
+          invitedBy: req.user.id,
+          role,
+          permissions: finalPermissions,
+          token,
+          status: 'pending',
+          expiresAt,
+        };
+        
+        console.log(`[Team Invite] Inserting invitation with data:`, {
+          operationId: invitationData.operationId,
+          email: invitationData.email,
+          invitedBy: invitationData.invitedBy,
+          role: invitationData.role,
+          token: invitationData.token.substring(0, 10) + '...',
+          status: invitationData.status,
+          expiresAt: invitationData.expiresAt.toISOString(),
+          hasPermissions: !!invitationData.permissions
+        });
+
+        [invitation] = await db
+          .insert(operationInvitations)
+          .values(invitationData)
+          .returning();
+        
+        if (!invitation) {
+          throw new Error("Failed to create invitation - no data returned");
+        }
+        
+        console.log(`[Team Invite] Invitation created successfully:`, invitation.id);
+      } catch (insertError: any) {
+        console.error("[Team Invite] Error inserting invitation:", insertError);
+        console.error("[Team Invite] Insert error details:", {
+          message: insertError.message,
+          code: insertError.code,
+          constraint: insertError.constraint,
+          detail: insertError.detail,
+          name: insertError.name,
+          stack: insertError.stack?.substring(0, 500)
+        });
+        
+        // Se for erro de constraint ou campo não encontrado, fornecer mensagem mais útil
+        if (insertError.code === '23503') {
+          return res.status(400).json({ 
+            message: "Erro ao criar convite: operação ou usuário inválido",
+            error: process.env.NODE_ENV === 'development' ? insertError.detail : undefined
+          });
+        }
+        
+        if (insertError.code === '23505') {
+          return res.status(400).json({ 
+            message: "Já existe um convite com este token (erro interno)",
+            error: process.env.NODE_ENV === 'development' ? insertError.detail : undefined
+          });
+        }
+        
+        throw insertError;
+      }
+
+      // Get operation details for email (não bloquear se falhar)
+      let operation = null;
+      let inviter = null;
+      
+      try {
+        [operation] = await db
+          .select({ name: operations.name, language: operations.language })
+          .from(operations)
+          .where(eq(operations.id, operationId))
+          .limit(1);
+        
+        if (!operation) {
+          console.warn(`[Team Invite] Operation ${operationId} not found for email`);
+        }
+      } catch (opError: any) {
+        console.error("[Team Invite] Error fetching operation:", opError);
+      }
+
+      try {
+        [inviter] = await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, req.user.id))
+          .limit(1);
+        
+        if (!inviter) {
+          console.warn(`[Team Invite] Inviter user ${req.user.id} not found`);
+        }
+      } catch (inviterError: any) {
+        console.error("[Team Invite] Error fetching inviter:", inviterError);
+      }
+
+      // Send invitation email (não bloquear se falhar)
+      if (operation && inviter) {
+        try {
+          console.log(`[Team Invite] Tentando enviar email para ${email}...`);
+          await teamInvitationEmailService.sendInvitationEmail({
+            email,
+            operationName: operation.name,
+            inviterName: inviter.name,
+            role,
+            invitationToken: token,
+            language: operation.language || 'pt',
+          });
+          console.log(`✅ [Team Invite] Email de convite enviado com sucesso para ${email}`);
+        } catch (emailError: any) {
+          console.error("⚠️ [Team Invite] Erro ao enviar email de convite (mas convite foi criado):", {
+            error: emailError.message,
+            email,
+            operationName: operation.name,
+            hasMailgunApiKey: !!process.env.MAILGUN_API_KEY,
+            hasMailgunDomain: !!process.env.MAILGUN_DOMAIN
+          });
+          // Não bloquear a resposta se o email falhar - o convite já foi criado
+          // Mas logar o erro para debug
+        }
+      } else {
+        console.warn("⚠️ [Team Invite] Operação ou inviter não encontrado, email não enviado");
+        console.warn(`[Team Invite] Operation found: ${!!operation}, Inviter found: ${!!inviter}`);
+        if (!operation) {
+          console.warn(`[Team Invite] Operation ${operationId} não encontrada no banco de dados`);
+        }
+        if (!inviter) {
+          console.warn(`[Team Invite] Inviter user ${req.user.id} não encontrado no banco de dados`);
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        invitation,
+        message: "Convite enviado com sucesso",
+      });
+    } catch (error: any) {
+      console.error("Send invitation error:", error);
+      console.error("Error stack:", error.stack);
+      console.error("Error details:", {
+        operationId: req.params.operationId,
+        email: req.body.email,
+        role: req.body.role,
+        userId: req.user?.id
+      });
+      res.status(500).json({ 
+        message: "Erro ao enviar convite",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Update team member role and permissions
+  app.patch("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, userId } = req.params;
+      const { role, permissions } = req.body;
+
+      // Validate role
+      if (role && !['owner', 'admin', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Role inválido" });
+      }
+
+      // Check if user is the last owner
+      if (role && role !== 'owner') {
+        const owners = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.operationId, operationId),
+              eq(userOperationAccess.role, 'owner')
+            )
+          );
+
+        const [currentAccess] = await db
+          .select({ role: userOperationAccess.role })
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.userId, userId),
+              eq(userOperationAccess.operationId, operationId)
+            )
+          )
+          .limit(1);
+
+        if (currentAccess?.role === 'owner' && owners.length === 1) {
+          return res.status(400).json({ message: "Não é possível remover o último owner da operação" });
+        }
+      }
+
+      // Build update object
+      const updates: any = {};
+      if (role) updates.role = role;
+      if (permissions !== undefined) updates.permissions = permissions;
+
+      await db
+        .update(userOperationAccess)
+        .set(updates)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Membro da equipe atualizado com sucesso",
+      });
+    } catch (error) {
+      console.error("Update team member error:", error);
+      res.status(500).json({ message: "Erro ao atualizar membro da equipe" });
+    }
+  });
+
+  // Remove team member
+  app.delete("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, userId } = req.params;
+
+      // Check if user is the last owner
+      const [currentAccess] = await db
+        .select({ role: userOperationAccess.role })
+        .from(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        )
+        .limit(1);
+
+      if (currentAccess?.role === 'owner') {
+        const owners = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.operationId, operationId),
+              eq(userOperationAccess.role, 'owner')
+            )
+          );
+
+        if (owners.length === 1) {
+          return res.status(400).json({ message: "Não é possível remover o último owner da operação" });
+        }
+      }
+
+      await db
+        .delete(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Membro removido da equipe com sucesso",
+      });
+    } catch (error) {
+      console.error("Remove team member error:", error);
+      res.status(500).json({ message: "Erro ao remover membro da equipe" });
+    }
+  });
+
+  // Resend invitation
+  app.post("/api/operations/:operationId/team/invite/:invitationId/resend", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, invitationId } = req.params;
+
+      const [invitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(
+          and(
+            eq(operationInvitations.id, invitationId),
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.status, 'pending')
+          )
+        )
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado ou já aceito" });
+      }
+
+      // Check if expired
+      if (new Date(invitation.expiresAt) < new Date()) {
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitationId));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Get operation and inviter details
+      const [operation] = await db
+        .select({ name: operations.name, language: operations.language })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      const [inviter] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, invitation.invitedBy))
+        .limit(1);
+
+      if (operation && inviter) {
+        await teamInvitationEmailService.sendInvitationEmail({
+          email: invitation.email,
+          operationName: operation.name,
+          inviterName: inviter.name,
+          role: invitation.role,
+          invitationToken: invitation.token,
+          language: operation.language || 'pt',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Convite reenviado com sucesso",
+      });
+    } catch (error) {
+      console.error("Resend invitation error:", error);
+      res.status(500).json({ message: "Erro ao reenviar convite" });
+    }
+  });
+
+  // Cancel invitation
+  app.delete("/api/operations/:operationId/team/invite/:invitationId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, invitationId } = req.params;
+
+      await db
+        .update(operationInvitations)
+        .set({ status: 'cancelled' })
+        .where(
+          and(
+            eq(operationInvitations.id, invitationId),
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.status, 'pending')
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Convite cancelado com sucesso",
+      });
+    } catch (error) {
+      console.error("Cancel invitation error:", error);
+      res.status(500).json({ message: "Erro ao cancelar convite" });
+    }
+  });
+
+  // ============================================================================
+  // INVITATION ACCEPTANCE ROUTES
+  // ============================================================================
+
+  // Get invitation details by token
+  app.get("/api/invitations/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+
+      const [invitation] = await db
+        .select({
+          id: operationInvitations.id,
+          email: operationInvitations.email,
+          role: operationInvitations.role,
+          permissions: operationInvitations.permissions,
+          status: operationInvitations.status,
+          expiresAt: operationInvitations.expiresAt,
+          operationId: operationInvitations.operationId,
+        })
+        .from(operationInvitations)
+        .where(eq(operationInvitations.token, token))
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Convite já foi ${invitation.status === 'accepted' ? 'aceito' : invitation.status === 'expired' ? 'expirado' : 'cancelado'}` 
+        });
+      }
+
+      if (new Date(invitation.expiresAt) < new Date()) {
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitation.id));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Get operation name
+      const [operation] = await db
+        .select({ name: operations.name })
+        .from(operations)
+        .where(eq(operations.id, invitation.operationId))
+        .limit(1);
+
+      res.json({
+        invitation: {
+          ...invitation,
+          operationName: operation?.name,
+        },
+      });
+    } catch (error) {
+      console.error("Get invitation error:", error);
+      res.status(500).json({ message: "Erro ao buscar convite" });
+    }
+  });
+
+  // Accept invitation
+  app.post("/api/invitations/:token/accept", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const { name, password } = req.body;
+
+      const [invitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(eq(operationInvitations.token, token))
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Convite já foi ${invitation.status === 'accepted' ? 'aceito' : invitation.status === 'expired' ? 'expirado' : 'cancelado'}` 
+        });
+      }
+
+      if (new Date(invitation.expiresAt) < new Date()) {
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitation.id));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Check if user already exists
+      let [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, invitation.email))
+        .limit(1);
+
+      let userId: string;
+
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        // Create new user
+        if (!name || !password) {
+          return res.status(400).json({ message: "Nome e senha são obrigatórios para criar conta" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            name,
+            email: invitation.email,
+            password: hashedPassword,
+            role: 'user',
+          })
+          .returning();
+
+        userId = newUser.id;
+      }
+
+      // Check if user already has access
+      const [existingAccess] = await db
+        .select()
+        .from(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, invitation.operationId)
+          )
+        )
+        .limit(1);
+
+      if (existingAccess) {
+        return res.status(400).json({ message: "Você já faz parte desta operação" });
+      }
+
+      // Create user operation access
+      await db.insert(userOperationAccess).values({
+        userId,
+        operationId: invitation.operationId,
+        role: invitation.role,
+        permissions: invitation.permissions,
+        invitedAt: new Date(),
+        invitedBy: invitation.invitedBy,
+      });
+
+      // Update invitation status
+      await db
+        .update(operationInvitations)
+        .set({ 
+          status: 'accepted',
+          updatedAt: new Date(),
+        })
+        .where(eq(operationInvitations.id, invitation.id));
+
+      res.json({
+        success: true,
+        message: "Convite aceito com sucesso",
+        userId,
+        isNewUser: !existingUser,
+      });
+    } catch (error) {
+      console.error("Accept invitation error:", error);
+      res.status(500).json({ message: "Erro ao aceitar convite" });
     }
   });
 
