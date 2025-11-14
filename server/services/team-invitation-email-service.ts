@@ -54,6 +54,82 @@ export class TeamInvitationEmailService {
     return this.translations[language] || this.translations.en;
   }
 
+  /**
+   * Obtém a URL base do frontend baseada em variáveis de ambiente
+   * Prioridade: FRONTEND_URL > PUBLIC_URL > RAILWAY_PUBLIC_DOMAIN > detecção automática
+   */
+  private getFrontendBaseUrl(): string {
+    // 1. FRONTEND_URL (específico para frontend)
+    if (process.env.FRONTEND_URL) {
+      const url = process.env.FRONTEND_URL.trim();
+      if (url && !url.includes('localhost') && !url.includes('127.0.0.1')) {
+        console.log('[Team Invite Email] Usando FRONTEND_URL:', url);
+        return this.normalizeUrl(url);
+      }
+    }
+
+    // 2. PUBLIC_URL (padrão usado em outros serviços)
+    if (process.env.PUBLIC_URL) {
+      const url = process.env.PUBLIC_URL.trim();
+      if (url && !url.includes('localhost') && !url.includes('127.0.0.1')) {
+        console.log('[Team Invite Email] Usando PUBLIC_URL:', url);
+        return this.normalizeUrl(url);
+      }
+    }
+
+    // 3. RAILWAY_PUBLIC_DOMAIN (se disponível no Railway)
+    if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+      const domain = process.env.RAILWAY_PUBLIC_DOMAIN.trim();
+      if (domain && !domain.includes('localhost') && !domain.includes('127.0.0.1')) {
+        const url = `https://${domain}`;
+        console.log('[Team Invite Email] Usando RAILWAY_PUBLIC_DOMAIN:', url);
+        return url;
+      }
+    }
+
+    // 4. Detectar automaticamente do RAILWAY_ENVIRONMENT se disponível
+    if (process.env.RAILWAY_ENVIRONMENT_NAME) {
+      // Railway geralmente fornece o domínio através de outras variáveis
+      // Mas podemos tentar construir baseado no nome do ambiente
+      console.warn('[Team Invite Email] RAILWAY_ENVIRONMENT_NAME detectado mas sem URL pública configurada');
+    }
+
+    // Se nenhuma URL pública estiver configurada, lançar erro
+    // Não usar localhost como fallback pois não funciona para emails
+    const error = new Error(
+      'Nenhuma URL pública do frontend configurada. Configure FRONTEND_URL, PUBLIC_URL ou RAILWAY_PUBLIC_DOMAIN.'
+    );
+    console.error('❌ [Team Invite Email]', error.message);
+    console.error('[Team Invite Email] Variáveis de ambiente disponíveis:', {
+      hasFrontendUrl: !!process.env.FRONTEND_URL,
+      hasPublicUrl: !!process.env.PUBLIC_URL,
+      hasRailwayPublicDomain: !!process.env.RAILWAY_PUBLIC_DOMAIN,
+      nodeEnv: process.env.NODE_ENV || 'unknown'
+    });
+    throw error;
+  }
+
+  /**
+   * Normaliza URL garantindo HTTPS e formato correto
+   */
+  private normalizeUrl(url: string): string {
+    // Remover espaços e barras finais
+    let normalized = url.trim().replace(/\/+$/, '');
+
+    // Garantir HTTPS se não tiver protocolo
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = `https://${normalized}`;
+    }
+
+    // Em produção, sempre usar HTTPS
+    if (process.env.NODE_ENV === 'production' && normalized.startsWith('http://')) {
+      normalized = normalized.replace('http://', 'https://');
+      console.warn('[Team Invite Email] Convertendo HTTP para HTTPS em produção');
+    }
+
+    return normalized;
+  }
+
   private buildEmailTemplate(
     params: {
       operationName: string;
@@ -189,15 +265,25 @@ ${translation.footer}
       const language = params.language || 'pt';
       const translation = this.getTranslation(language);
       
-      const baseUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || 'http://localhost:5173';
+      // Obter URL base do frontend usando método helper
+      const baseUrl = this.getFrontendBaseUrl();
       const invitationUrl = `${baseUrl}/accept-invitation/${params.invitationToken}`;
+
+      // Validação adicional: garantir que não seja localhost em produção
+      if (process.env.NODE_ENV === 'production' && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'))) {
+        const error = new Error('URL do frontend não pode ser localhost em produção');
+        console.error('❌ [Team Invite Email]', error.message, { baseUrl });
+        throw error;
+      }
 
       console.log('[Team Invite Email] Preparando email:', {
         to: params.email,
         from: `noreply@${MAILGUN_DOMAIN}`,
         domain: MAILGUN_DOMAIN,
+        baseUrl,
         invitationUrl,
-        language
+        language,
+        environment: process.env.NODE_ENV || 'unknown'
       });
 
       const templates = this.buildEmailTemplate(

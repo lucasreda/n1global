@@ -15,16 +15,20 @@ export default function AcceptInvitation() {
   const { token } = useParams<{ token: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, login, checkAuth } = useAuth();
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Fetch invitation details
+  // Fetch invitation details - não requer autenticação
   const { data: invitationData, isLoading, error } = useQuery({
     queryKey: [`/api/invitations/${token}`],
     queryFn: async () => {
       const res = await apiRequest(`/api/invitations/${token}`, 'GET');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erro ao carregar convite');
+      }
       return res.json();
     },
     enabled: !!token,
@@ -33,16 +37,25 @@ export default function AcceptInvitation() {
 
   const invitation = invitationData?.invitation;
 
-  // Check if user is already logged in and email matches
+  // Verificar se usuário logado tem email diferente do convite
   useEffect(() => {
-    if (isAuthenticated && user && invitation?.email === user.email) {
-      // User is logged in and email matches, can accept directly
+    if (isAuthenticated && user && invitation?.email && user.email !== invitation.email) {
+      toast({
+        title: "Email diferente",
+        description: `Este convite é para ${invitation.email}, mas você está logado como ${user.email}. Faça logout para aceitar este convite.`,
+        variant: "destructive",
+      });
     }
-  }, [isAuthenticated, user, invitation]);
+  }, [isAuthenticated, user, invitation, toast]);
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
       if (!invitation) throw new Error("Convite não encontrado");
+
+      // Se usuário está logado mas email não corresponde, não permitir aceitar
+      if (isAuthenticated && user && user.email !== invitation.email) {
+        throw new Error("Este convite é para outro email. Faça logout para aceitar este convite.");
+      }
 
       // If user is not logged in, need name and password
       if (!isAuthenticated) {
@@ -61,24 +74,58 @@ export default function AcceptInvitation() {
         name: isAuthenticated ? undefined : name,
         password: isAuthenticated ? undefined : password,
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erro ao aceitar convite');
+      }
+
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: "Sucesso",
         description: "Convite aceito com sucesso!",
       });
 
-      if (data.isNewUser) {
-        // New user created, redirect to login
+      if (data.isNewUser && data.token) {
+        // Nova conta criada - fazer login automático
+        try {
+          // Salvar token e fazer login usando o mesmo formato do authService
+          localStorage.setItem('auth_token', data.token);
+          if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+          }
+          
+          // Atualizar estado de autenticação
+          checkAuth();
+          
+          // Redirecionar para dashboard após um breve delay
+          setTimeout(() => {
+            navigate('/');
+          }, 1000);
+        } catch (loginError) {
+          console.error('Erro ao fazer login automático:', loginError);
+          // Se falhar o login automático, redirecionar para login
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
+      } else if (data.isNewUser && !data.token) {
+        // Nova conta criada mas sem token - redirecionar para login
+        toast({
+          title: "Conta criada",
+          description: "Por favor, faça login para continuar.",
+        });
         setTimeout(() => {
           navigate('/login');
         }, 2000);
       } else {
-        // Existing user, redirect to dashboard
+        // Usuário existente - recarregar autenticação e redirecionar
+        checkAuth();
         setTimeout(() => {
           navigate('/');
-        }, 2000);
+        }, 1000);
       }
     },
     onError: (error: any) => {
@@ -236,9 +283,19 @@ export default function AcceptInvitation() {
 
           {/* Info for logged in users */}
           {isAuthenticated && user && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-              <p className="text-blue-300 text-sm">
-                Você está logado como <strong>{user.email}</strong>. Ao aceitar, você será adicionado à operação.
+            <div className={`rounded-lg p-4 ${
+              user.email === invitation?.email 
+                ? 'bg-blue-500/10 border border-blue-500/20' 
+                : 'bg-yellow-500/10 border border-yellow-500/20'
+            }`}>
+              <p className={`text-sm ${
+                user.email === invitation?.email ? 'text-blue-300' : 'text-yellow-300'
+              }`}>
+                {user.email === invitation?.email ? (
+                  <>Você está logado como <strong>{user.email}</strong>. Ao aceitar, você será adicionado à operação.</>
+                ) : (
+                  <>Este convite é para <strong>{invitation?.email}</strong>, mas você está logado como <strong>{user.email}</strong>. Faça logout para aceitar este convite.</>
+                )}
               </p>
             </div>
           )}
@@ -246,7 +303,11 @@ export default function AcceptInvitation() {
           {/* Accept Button */}
           <Button
             onClick={() => acceptMutation.mutate()}
-            disabled={acceptMutation.isPending || (!isAuthenticated && (!name || !password || password !== confirmPassword))}
+            disabled={
+              acceptMutation.isPending || 
+              (!isAuthenticated && (!name || !password || password !== confirmPassword)) ||
+              (isAuthenticated && user ? user.email !== invitation?.email : false)
+            }
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           >
             {acceptMutation.isPending ? (

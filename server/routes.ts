@@ -2028,27 +2028,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
 
       let userId: string;
+      let isNewUser = false;
+      let userToken: string | undefined;
+      let userData: any | undefined;
 
       if (existingUser) {
         userId = existingUser.id;
+        
+        // Se usuário já existe, verificar se email corresponde ao convite
+        if (existingUser.email !== invitation.email) {
+          return res.status(400).json({ 
+            message: "Este convite é para outro email. Faça logout para aceitar este convite." 
+          });
+        }
       } else {
-        // Create new user
+        // Create new user - conta para membro de equipe (não cliente comum)
         if (!name || !password) {
           return res.status(400).json({ message: "Nome e senha são obrigatórios para criar conta" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Criar conta adequada para membro de equipe:
+        // - role: 'user' (padrão, mas sem storeId e sem características de cliente)
+        // - onboardingCompleted: true (pular onboarding de cliente)
+        // - sem storeId (não é cliente)
         const [newUser] = await db
           .insert(users)
           .values({
             name,
             email: invitation.email,
             password: hashedPassword,
-            role: 'user',
+            role: 'user', // Role padrão, mas sem storeId = membro de equipe
+            storeId: null, // Importante: não ter storeId = não é cliente comum
+            onboardingCompleted: true, // Pular onboarding de cliente
+            onboardingSteps: {
+              step1_operation: true,
+              step2_shopify: true,
+              step3_shipping: true,
+              step4_ads: true,
+              step5_sync: true
+            },
           })
           .returning();
 
         userId = newUser.id;
+        isNewUser = true;
+
+        // Gerar token JWT para login automático
+        userToken = jwt.sign(
+          { id: newUser.id, email: newUser.email, role: newUser.role },
+          JWT_SECRET,
+          { expiresIn: "24h" }
+        );
+
+        // Preparar dados do usuário para retornar
+        userData = {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          permissions: newUser.permissions || [],
+        };
       }
 
       // Check if user already has access
@@ -2086,12 +2127,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .where(eq(operationInvitations.id, invitation.id));
 
-      res.json({
-        success: true,
-        message: "Convite aceito com sucesso",
-        userId,
-        isNewUser: !existingUser,
-      });
+      // Se for novo usuário, retornar token para login automático
+      if (isNewUser && userToken && userData) {
+        res.json({
+          success: true,
+          message: "Convite aceito com sucesso",
+          userId,
+          isNewUser: true,
+          token: userToken,
+          user: userData,
+        });
+      } else {
+        // Usuário existente - não retornar token (já está logado ou deve fazer login)
+        res.json({
+          success: true,
+          message: "Convite aceito com sucesso",
+          userId,
+          isNewUser: false,
+        });
+      }
     } catch (error) {
       console.error("Accept invitation error:", error);
       res.status(500).json({ message: "Erro ao aceitar convite" });
