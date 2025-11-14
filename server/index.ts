@@ -231,5 +231,13 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
   
   server.listen(listenOptions, () => {
     log(`serving on port ${port}`);
+  }).on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Porta ${port} já está em uso. Por favor, libere a porta ou use outra porta.`);
+      console.error(`💡 Para liberar a porta no Windows, use: Get-Process -Id (Get-NetTCPConnection -LocalPort ${port}).OwningProcess | Stop-Process -Force`);
+    } else {
+      console.error(`❌ Erro ao iniciar servidor na porta ${port}:`, err);
+    }
+    process.exit(1);
   });
 })();
