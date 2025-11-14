@@ -17,7 +17,7 @@ import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 import { validateOperationAccess as operationAccess } from "./middleware/operation-access";
-import { requireTeamManagementPermission, hasPermission, getDefaultPermissions } from "./middleware/team-permissions";
+import { requireTeamManagementPermission, hasPermission, getDefaultPermissions, requirePermission } from "./middleware/team-permissions";
 import { teamInvitationEmailService } from "./services/team-invitation-email-service";
 import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -713,7 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes - using real database data
-  app.get("/api/dashboard/metrics", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/metrics", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = req.query.period as string;
       const dateFrom = req.query.dateFrom as string;
@@ -734,7 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = req.query.period as string;
       const dateFrom = req.query.dateFrom as string;
@@ -778,7 +778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;
@@ -1387,6 +1387,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { operationId } = req.params;
       console.log(`[Team API] Fetching team for operation: ${operationId}`);
 
+      // Get operation ownerId
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      const ownerId = operation?.ownerId || null;
+      console.log(`[Team API] Operation ownerId: ${ownerId}`);
+
       // Get all team members - handle case where invitedAt/invitedBy might not exist
       let members;
       try {
@@ -1429,8 +1439,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Add isOwner field to each member
+      const membersWithOwnerFlag = members.map(member => ({
+        ...member,
+        isOwner: ownerId !== null && member.id === ownerId,
+      }));
+
       // Get pending invitations - handle case where table might not exist
-      let invitations = [];
+      let invitations: Array<{
+        id: string;
+        email: string;
+        role: string;
+        permissions: any;
+        status: string;
+        expiresAt: string;
+        createdAt: string;
+        invitedBy?: string | null;
+      }> = [];
       try {
         invitations = await db
           .select({
@@ -1456,14 +1481,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If table doesn't exist, return empty array
         if (invitationError.message?.includes('does not exist') || invitationError.message?.includes('relation')) {
           console.log("[Team API] operation_invitations table doesn't exist, returning empty array");
-          invitations = [];
+          invitations = [] as typeof invitations;
         } else {
           throw invitationError;
         }
       }
 
       res.json({
-        members,
+        ownerId,
+        members: membersWithOwnerFlag,
         invitations,
       });
     } catch (error: any) {
@@ -1789,6 +1815,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId, userId } = req.params;
+
+      // Check if user is the operation creator (ownerId)
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      if (operation?.ownerId === userId) {
+        console.log(`[Team API] Tentativa de remover proprietário criador da operação bloqueada: userId=${userId}, operationId=${operationId}`);
+        return res.status(403).json({ 
+          message: "Não é possível remover o proprietário criador da operação" 
+        });
+      }
 
       // Check if user is the last owner
       const [currentAccess] = await db
@@ -4756,7 +4796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Orders routes - fetch from database with filters and pagination
-  app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/orders", authenticateToken, requirePermission('orders', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       // CRITICAL: Get user's operation for data isolation
       const userOperations = await storage.getUserOperations(req.user.id);
@@ -4903,7 +4943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/orders/:id", authenticateToken, requirePermission('orders', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) {
@@ -4915,7 +4955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/orders", authenticateToken, requirePermission('orders', 'create'), async (req: AuthRequest, res: Response) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
@@ -4931,7 +4971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/orders/:id", authenticateToken, requirePermission('orders', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const updates = updateOrderSchema.parse(req.body);
       const order = await storage.updateOrder(req.params.id, updates);
@@ -4944,7 +4984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.delete("/api/orders/:id", authenticateToken, requirePermission('orders', 'delete'), async (req: AuthRequest, res: Response) => {
     try {
       const deleted = await storage.deleteOrder(req.params.id);
       if (!deleted) {
@@ -5002,7 +5042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, apiUrl, operationId } = req.body;
       console.log("🔧 Iniciando salvamento de credenciais...", { email, operationId });
@@ -5079,7 +5119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get countries
-  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, operationAccess, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.validatedOperationId!;
       
@@ -5109,7 +5149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get stores
-  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.validatedOperationId!;
       
@@ -5139,7 +5179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create store
-  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { name, link } = req.body;
       const operationId = req.validatedOperationId!;
@@ -5376,7 +5416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/elogy/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/elogy/credentials", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, authHeader, warehouseId, apiUrl, operationId } = req.body;
       console.log("🔧 eLogy: Iniciando salvamento de credenciais...", { email, operationId });
@@ -5669,7 +5709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/fhb/:operationId/credentials", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/fhb/:operationId/credentials", authenticateToken, operationAccess, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { appId, secret, apiUrl } = req.body;
       const { operationId } = req.params;
@@ -6087,7 +6127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Products routes
-  app.get("/api/products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/products", authenticateToken, storeContext, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       // Get storeId from middleware context for data isolation
       const storeId = (req as any).storeId;
@@ -6099,7 +6139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get products by operation ID
-  app.get("/api/operations/:operationId/products", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/operations/:operationId/products", authenticateToken, operationAccess, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
       const products = await storage.getProductsByOperation(operationId);
@@ -6110,7 +6150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/products/:id", authenticateToken, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const product = await storage.getProduct(req.params.id);
       if (!product) {
@@ -6122,7 +6162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/products", authenticateToken, requirePermission('products', 'create'), async (req: AuthRequest, res: Response) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
@@ -6132,7 +6172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/products/:id", authenticateToken, requirePermission('products', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const updates = req.body;
       const product = await storage.updateProduct(req.params.id, updates);
@@ -7190,7 +7230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Shopify Integration Routes
   
   // Get Shopify integration for operation
-  app.get("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/shopify", authenticateToken, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;
       
@@ -7212,7 +7252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save/update Shopify integration
-  app.post("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/shopify", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId, shopName, accessToken } = req.body;
       

@@ -32,6 +32,7 @@ interface TeamMember {
   permissions: any;
   invitedAt?: string | null;
   invitedBy?: string | null;
+  isOwner?: boolean; // Indica se é o proprietário criador da operação
 }
 
 interface PendingInvitation {
@@ -56,6 +57,7 @@ export function TeamManagementTab() {
 
   // Query for team data - must be at the top level, not conditional
   const { data: teamData, isLoading, error: teamError } = useQuery<{
+    ownerId: string | null;
     members: TeamMember[];
     invitations: PendingInvitation[];
   }>({
@@ -277,6 +279,11 @@ export function TeamManagementTab() {
                   </div>
                   <div className="flex items-center gap-4">
                     {getRoleBadge(member.role)}
+                    {member.isOwner && (
+                      <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                        Criador
+                      </Badge>
+                    )}
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
@@ -289,14 +296,28 @@ export function TeamManagementTab() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setMemberToRemove(member)}
-                        className="text-red-400 hover:text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!member.isOwner && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setMemberToRemove(member)}
+                          className="text-red-400 hover:text-red-500"
+                          title="Remover membro"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {member.isOwner && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled
+                          className="text-gray-600 cursor-not-allowed"
+                          title="O proprietário criador da operação não pode ser removido"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

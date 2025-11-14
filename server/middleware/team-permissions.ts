@@ -69,19 +69,74 @@ export async function hasPermission(
     const permissions = userAccess.permissions as Permissions | null;
     if (!permissions) {
       // Viewer role without specific permissions has view-only access
-      return action === 'view';
+      const hasViewAccess = action === 'view';
+      if (!hasViewAccess) {
+        console.log(`[Permission Check] Permissões não configuradas para usuário ${userId}, ação ${action} requerida mas apenas 'view' permitido`);
+      }
+      return hasViewAccess;
     }
 
     const modulePermissions = permissions[module as keyof Permissions];
     if (!modulePermissions) {
+      console.log(`[Permission Check] Módulo ${module} não encontrado nas permissões do usuário ${userId}`);
       return false;
     }
 
-    return modulePermissions[action as keyof typeof modulePermissions] === true;
+    const hasPermission = modulePermissions[action as keyof typeof modulePermissions] === true;
+    if (!hasPermission) {
+      console.log(`[Permission Check] Ação ${action} não permitida no módulo ${module} para usuário ${userId}`);
+    }
+    return hasPermission;
   } catch (error) {
-    console.error('Error checking permission:', error);
+    console.error(`[Permission Check] Erro ao verificar permissão ${module}.${action} para usuário ${userId}:`, error);
     return false;
   }
+}
+
+/**
+ * Middleware factory to require a specific permission
+ * Usage: requirePermission('orders', 'edit')
+ */
+export function requirePermission(module: string, action: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      
+      // Get operationId from params, query, or body
+      const operationId = req.params.operationId || req.query.operationId || req.body.operationId;
+
+      if (!user) {
+        return res.status(401).json({ message: "Usuário não autenticado" });
+      }
+
+      // Super admins have all permissions
+      if (user.role === 'super_admin' || user.role === 'admin') {
+        return next();
+      }
+
+      if (!operationId) {
+        console.log(`[Permission Check] Operation ID não encontrado para módulo ${module}, ação ${action}`);
+        return res.status(400).json({ message: "Operation ID é obrigatório" });
+      }
+
+      const hasAccess = await hasPermission(user.id, operationId, module, action);
+
+      if (!hasAccess) {
+        console.log(`[Permission Check] Acesso negado: usuário ${user.id} não tem permissão ${module}.${action} para operação ${operationId}`);
+        return res.status(403).json({ 
+          message: `Acesso negado: você não tem permissão para ${action} em ${module}` 
+        });
+      }
+
+      console.log(`[Permission Check] Permissão concedida: usuário ${user.id} tem permissão ${module}.${action} para operação ${operationId}`);
+      next();
+    } catch (error) {
+      console.error(`[Permission Check] Erro ao verificar permissão ${module}.${action}:`, error);
+      return res.status(500).json({ 
+        message: "Erro interno ao validar permissões" 
+      });
+    }
+  };
 }
 
 /**
