@@ -1748,10 +1748,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update team member role and permissions
-  app.patch("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requirePermission('team', 'manage'), requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId, userId } = req.params;
       const { role, permissions } = req.body;
+      const currentUserId = req.user?.id;
+
+      // Check if user is trying to edit themselves
+      if (userId === currentUserId) {
+        // Check if user has permission to manage team
+        const hasManagePermission = await hasPermission(currentUserId!, operationId, 'team', 'manage');
+        if (!hasManagePermission) {
+          console.log(`[Team API] Usuário ${currentUserId} tentou editar a si mesmo sem permissão team.manage`);
+          return res.status(403).json({ 
+            message: "Você não tem permissão para editar seu próprio acesso. Contate um administrador." 
+          });
+        }
+      }
+
+      // Check if user is the operation creator (ownerId)
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      if (operation?.ownerId === userId) {
+        console.log(`[Team API] Tentativa de editar proprietário criador da operação bloqueada: userId=${userId}, operationId=${operationId}`);
+        return res.status(403).json({ 
+          message: "Não é possível editar o proprietário criador da operação" 
+        });
+      }
 
       // Validate role
       if (role && !['owner', 'admin', 'viewer'].includes(role)) {
@@ -1812,7 +1839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove team member
-  app.delete("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+  app.delete("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requirePermission('team', 'manage'), requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId, userId } = req.params;
 

@@ -102,8 +102,11 @@ export function requirePermission(module: string, action: string) {
     try {
       const user = req.user;
       
-      // Get operationId from params, query, or body
-      const operationId = req.params.operationId || req.query.operationId || req.body.operationId;
+      // Get operationId from multiple sources: params, query, body, or headers
+      const operationId = req.params.operationId 
+        || req.query.operationId 
+        || req.body.operationId 
+        || req.headers['x-operation-id'] as string;
 
       if (!user) {
         return res.status(401).json({ message: "Usuário não autenticado" });
@@ -115,7 +118,16 @@ export function requirePermission(module: string, action: string) {
       }
 
       if (!operationId) {
-        console.log(`[Permission Check] Operation ID não encontrado para módulo ${module}, ação ${action}`);
+        console.log(`[Permission Check] Operation ID não encontrado para módulo ${module}, ação ${action}`, {
+          url: req.url,
+          method: req.method,
+          params: req.params,
+          query: req.query,
+          bodyKeys: req.body ? Object.keys(req.body) : [],
+          headers: {
+            'x-operation-id': req.headers['x-operation-id']
+          }
+        });
         return res.status(400).json({ message: "Operation ID é obrigatório" });
       }
 

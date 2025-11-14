@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +50,8 @@ interface PendingInvitation {
 
 export function TeamManagementTab() {
   const { selectedOperation } = useCurrentOperation();
+  const { user } = useAuth();
+  const { canManageTeam, canInviteTeam } = useOperationPermissions();
   const { toast } = useToast();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -237,13 +241,15 @@ export function TeamManagementTab() {
             Gerencie quem tem acesso a esta operação
           </p>
         </div>
-        <Button
-          onClick={() => setShowInviteModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Convidar Membro
-        </Button>
+        {canInviteTeam() && (
+          <Button
+            onClick={() => setShowInviteModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Convidar Membro
+          </Button>
+        )}
       </div>
 
       {/* Team Members */}
@@ -285,38 +291,53 @@ export function TeamManagementTab() {
                       </Badge>
                     )}
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setMemberToEdit(member);
-                          setShowEditModal(true);
-                        }}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {!member.isOwner && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setMemberToRemove(member)}
-                          className="text-red-400 hover:text-red-500"
-                          title="Remover membro"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      {canManageTeam() && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setMemberToEdit(member);
+                              setShowEditModal(true);
+                            }}
+                            disabled={member.isOwner || (member.id === user?.id && !canManageTeam())}
+                            className="text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed"
+                            title={
+                              member.isOwner
+                                ? "O proprietário criador da operação não pode ser editado"
+                                : member.id === user?.id
+                                ? "Você não tem permissão para editar seu próprio acesso"
+                                : "Editar membro"
+                            }
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {!member.isOwner && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setMemberToRemove(member)}
+                              className="text-red-400 hover:text-red-500"
+                              title="Remover membro"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {member.isOwner && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled
+                              className="text-gray-600 cursor-not-allowed"
+                              title="O proprietário criador da operação não pode ser removido"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </>
                       )}
-                      {member.isOwner && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled
-                          className="text-gray-600 cursor-not-allowed"
-                          title="O proprietário criador da operação não pode ser removido"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      {!canManageTeam() && (
+                        <span className="text-xs text-gray-500">Sem permissão para gerenciar</span>
                       )}
                     </div>
                   </div>
