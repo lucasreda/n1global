@@ -21,37 +21,90 @@ export default function AcceptInvitation() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   // Fetch invitation details - não requer autenticação
-  const { data: invitationData, isLoading, error } = useQuery({
+  const { data: invitationData, isLoading, error, isError } = useQuery({
     queryKey: [`/api/invitations/${token}`],
     queryFn: async () => {
+      if (!token) {
+        throw new Error('Token do convite não fornecido');
+      }
+
+      console.log('[Accept Invitation] Iniciando busca de convite com token:', token.substring(0, 20) + '...');
+      
+      // Criar um AbortController para timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+
       try {
-        console.log('[Accept Invitation] Buscando convite com token:', token?.substring(0, 20));
-        const res = await fetch(`/api/invitations/${token}`, {
+        const url = `/api/invitations/${encodeURIComponent(token)}`;
+        console.log('[Accept Invitation] URL da requisição:', url);
+        
+        const res = await fetch(url, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
           credentials: 'include',
+          signal: controller.signal,
         });
         
-        console.log('[Accept Invitation] Resposta recebida:', res.status, res.statusText);
+        clearTimeout(timeoutId);
+        
+        console.log('[Accept Invitation] Resposta recebida:', {
+          status: res.status,
+          statusText: res.statusText,
+          ok: res.ok,
+          headers: Object.fromEntries(res.headers.entries())
+        });
         
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          console.error('[Accept Invitation] Erro na resposta:', errorData);
-          throw new Error(errorData.message || `Erro ao carregar convite: ${res.status}`);
+          let errorData: any = {};
+          try {
+            const text = await res.text();
+            errorData = text ? JSON.parse(text) : {};
+          } catch (parseError) {
+            console.error('[Accept Invitation] Erro ao parsear resposta de erro:', parseError);
+          }
+          
+          console.error('[Accept Invitation] Erro na resposta:', {
+            status: res.status,
+            statusText: res.statusText,
+            errorData
+          });
+          
+          throw new Error(errorData.message || `Erro ao carregar convite: ${res.status} ${res.statusText}`);
         }
         
         const data = await res.json();
         console.log('[Accept Invitation] Dados do convite recebidos:', data);
+        
+        if (!data || !data.invitation) {
+          throw new Error('Resposta inválida do servidor: convite não encontrado nos dados');
+        }
+        
         return data;
       } catch (err: any) {
-        console.error('[Accept Invitation] Erro ao buscar convite:', err);
+        clearTimeout(timeoutId);
+        
+        if (err.name === 'AbortError') {
+          console.error('[Accept Invitation] Requisição cancelada por timeout');
+          throw new Error('Tempo de espera esgotado. Tente novamente.');
+        }
+        
+        console.error('[Accept Invitation] Erro ao buscar convite:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+        
         throw err;
       }
     },
     enabled: !!token,
     retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const invitation = invitationData?.invitation;
@@ -166,6 +219,18 @@ export default function AcceptInvitation() {
     return <Badge variant={roleInfo.variant}>{roleInfo.label}</Badge>;
   };
 
+  // Debug logs
+  useEffect(() => {
+    console.log('[Accept Invitation] Estado da query:', {
+      isLoading,
+      isError,
+      error: error?.message,
+      hasData: !!invitationData,
+      hasInvitation: !!invitation,
+      token: token?.substring(0, 20) + '...'
+    });
+  }, [isLoading, isError, error, invitationData, invitation, token]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -174,6 +239,7 @@ export default function AcceptInvitation() {
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
               <p className="text-gray-400">Carregando convite...</p>
+              <p className="text-gray-500 text-sm mt-2">Aguarde enquanto buscamos as informações do convite</p>
             </div>
           </CardContent>
         </Card>
@@ -181,7 +247,15 @@ export default function AcceptInvitation() {
     );
   }
 
-  if (error || !invitation) {
+  if (isError || error || !invitationData || !invitation) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('[Accept Invitation] Exibindo tela de erro:', {
+      isError,
+      error: errorMessage,
+      hasData: !!invitationData,
+      hasInvitation: !!invitation
+    });
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
         <Card className="w-full max-w-md bg-black/20 backdrop-blur-sm border border-white/10">
@@ -189,12 +263,22 @@ export default function AcceptInvitation() {
             <div className="flex flex-col items-center justify-center py-12">
               <XCircle className="h-12 w-12 text-red-500 mb-4" />
               <h2 className="text-xl font-semibold text-white mb-2">Convite Inválido</h2>
-              <p className="text-gray-400 text-center mb-6">
-                Este convite não foi encontrado ou já expirou.
+              <p className="text-gray-400 text-center mb-4">
+                {errorMessage || 'Este convite não foi encontrado ou já expirou.'}
               </p>
-              <Button onClick={() => navigate('/login')} className="bg-blue-600 hover:bg-blue-700">
-                Ir para Login
-              </Button>
+              {process.env.NODE_ENV === 'development' && error && (
+                <p className="text-gray-500 text-xs text-center mb-4 font-mono">
+                  {errorMessage}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button onClick={() => window.location.reload()} variant="outline" className="border-gray-600">
+                  Tentar Novamente
+                </Button>
+                <Button onClick={() => navigate('/login')} className="bg-blue-600 hover:bg-blue-700">
+                  Ir para Login
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
