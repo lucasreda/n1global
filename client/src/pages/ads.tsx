@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -148,6 +149,7 @@ export default function Ads() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
   const [manualSpendDialogOpen, setManualSpendDialogOpen] = useState(false);
   const [editingSpend, setEditingSpend] = useState<ManualAdSpend | null>(null);
+  const { canEdit: canEditAds, canCreate: canCreateAds, canDelete: canDeleteAds } = useOperationPermissions();
   const [newAccount, setNewAccount] = useState({
     accountId: "",
     name: "",
@@ -1417,17 +1419,20 @@ export default function Ads() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        onClick={() => {
-                          setEditingSpend(spend);
-                          setManualSpendDialogOpen(true);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
+                      {canEditAds('ads') && (
+                        <Button
+                          onClick={() => {
+                            setEditingSpend(spend);
+                            setManualSpendDialogOpen(true);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                          title="Editar gasto manual"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

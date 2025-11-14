@@ -1440,10 +1440,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Add isOwner field to each member
-      const membersWithOwnerFlag = members.map(member => ({
-        ...member,
-        isOwner: ownerId !== null && member.id === ownerId,
-      }));
+      const membersWithOwnerFlag = members.map(member => {
+        const isOwner = ownerId !== null && member.id === ownerId;
+        console.log(`[Team API] Member ${member.id} (${member.email}): ownerId=${ownerId}, member.id=${member.id}, isOwner=${isOwner}`);
+        return {
+          ...member,
+          isOwner,
+        };
+      });
 
       // Get pending invitations - handle case where table might not exist
       let invitations: Array<{
@@ -1849,17 +1853,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { operationId, userId } = req.params;
 
-      // Check if user is the operation creator (ownerId)
+      // CRITICAL: Check if user is the operation creator (ownerId) - ABSOLUTE PROTECTION
       const [operation] = await db
         .select({ ownerId: operations.ownerId })
         .from(operations)
         .where(eq(operations.id, operationId))
         .limit(1);
 
-      if (operation?.ownerId === userId) {
-        console.log(`[Team API] Tentativa de remover proprietário criador da operação bloqueada: userId=${userId}, operationId=${operationId}`);
+      if (!operation) {
+        console.log(`[Team API] Operação não encontrada: operationId=${operationId}`);
+        return res.status(404).json({ 
+          message: "Operação não encontrada" 
+        });
+      }
+
+      // ABSOLUTE PROTECTION: Never allow removal of the operation creator
+      if (operation.ownerId && operation.ownerId === userId) {
+        console.log(`[Team API] BLOQUEADO: Tentativa de remover proprietário criador da operação - userId=${userId}, operationId=${operationId}, ownerId=${operation.ownerId}`);
         return res.status(403).json({ 
-          message: "Não é possível remover o proprietário criador da operação" 
+          message: "Não é possível remover o proprietário criador da operação. Esta ação é permanentemente bloqueada." 
         });
       }
 

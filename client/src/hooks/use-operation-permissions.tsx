@@ -47,20 +47,41 @@ export function useOperationPermissions() {
 
   // Helper functions
   const hasPermission = (module: keyof OperationPermissions, action: string): boolean => {
-    if (!currentUserAccess) return false;
+    if (!currentUserAccess) {
+      return false;
+    }
     
     // Owners and admins have all permissions
     if (currentUserAccess.role === 'owner' || currentUserAccess.role === 'admin') {
       return true;
     }
 
-    // Check granular permissions
-    const modulePermissions = currentUserAccess.permissions?.[module];
-    if (!modulePermissions) {
-      // Viewer role without specific permissions has view-only access
+    // CRITICAL: For viewers/employees, they need explicit permission for manage/invite
+    // If no permissions object exists, they only have view access
+    if (!currentUserAccess.permissions) {
       return action === 'view';
     }
 
+    // Check granular permissions
+    const modulePermissions = currentUserAccess.permissions[module];
+    if (!modulePermissions) {
+      // Employee/viewer role without specific permissions has view-only access
+      return action === 'view';
+    }
+
+    // CRITICAL: For team module, viewers need explicit permission for manage/invite actions
+    if (module === 'team' && currentUserAccess.role === 'viewer') {
+      // Viewers can only view by default, need explicit permission for manage/invite
+      if (action === 'view') {
+        return true; // Viewers can always view team
+      }
+      // For manage/invite, must have explicit permission set to true
+      // Check if the property exists and is explicitly true
+      const actionValue = modulePermissions[action as keyof typeof modulePermissions];
+      return actionValue === true;
+    }
+
+    // For other modules or roles, check if permission is explicitly true
     return modulePermissions[action as keyof typeof modulePermissions] === true;
   };
 

@@ -213,7 +213,8 @@ export default function AcceptInvitation() {
     const roleMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
       owner: { label: "Proprietário", variant: "default" },
       admin: { label: "Administrador", variant: "default" },
-      viewer: { label: "Visualizador", variant: "secondary" },
+      viewer: { label: "Funcionário", variant: "secondary" },
+      employee: { label: "Funcionário", variant: "secondary" }, // Suporte para ambos durante transição
     };
     const roleInfo = roleMap[role] || { label: role, variant: "secondary" as const };
     return <Badge variant={roleInfo.variant}>{roleInfo.label}</Badge>;

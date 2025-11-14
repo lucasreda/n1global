@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { CheckSquare, Square, Home, Package, ShoppingCart, Target, Plug, Settings, Users } from "lucide-react";
 
 interface InviteMemberModalProps {
   open: boolean;
@@ -125,9 +126,16 @@ export function InviteMemberModal({ open, onClose, operationId }: InviteMemberMo
     onClose();
   };
 
-  const getModuleActions = (module: keyof TeamPermissions): string[] => {
+  const getModuleActions = (module: keyof TeamPermissions, currentRole?: string): string[] => {
     const modulePerms = permissions[module];
     if (!modulePerms) return [];
+    
+    // Para funcionários (viewer), ocultar opções de convidar e gerenciar no módulo team
+    if (module === 'team' && currentRole === 'viewer') {
+      return ['view']; // Apenas visualizar
+    }
+    
+    // Para owner e admin, mostrar todas as ações disponíveis
     return Object.keys(modulePerms);
   };
 
@@ -142,6 +150,62 @@ export function InviteMemberModal({ open, onClose, operationId }: InviteMemberMo
       team: "Equipe",
     };
     return labels[module] || module;
+  };
+
+  const getModuleIcon = (module: string) => {
+    const icons: Record<string, typeof Home> = {
+      dashboard: Home,
+      orders: Package,
+      products: ShoppingCart,
+      ads: Target,
+      integrations: Plug,
+      settings: Settings,
+      team: Users,
+    };
+    return icons[module] || Settings;
+  };
+
+  const areAllModulePermissionsSelected = (module: keyof TeamPermissions): boolean => {
+    const modulePerms = permissions[module];
+    if (!modulePerms) return false;
+    
+    // Para funcionários (viewer) no módulo team, verificar apenas 'view'
+    if (module === 'team' && role === 'viewer') {
+      return modulePerms.view === true;
+    }
+    
+    // Para outros casos, verificar todas as ações
+    return Object.values(modulePerms).every((value) => value === true);
+  };
+
+  const handleToggleModulePermissions = (module: keyof TeamPermissions) => {
+    const modulePerms = permissions[module];
+    if (!modulePerms) return;
+
+    // Para funcionários (viewer) no módulo team, apenas toggle da ação 'view'
+    if (module === 'team' && role === 'viewer') {
+      const currentView = modulePerms.view === true;
+      setPermissions((prev) => ({
+        ...prev,
+        [module]: {
+          ...modulePerms,
+          view: !currentView,
+        },
+      }));
+      return;
+    }
+
+    // Para outros casos, toggle de todas as ações
+    const allSelected = areAllModulePermissionsSelected(module);
+    const newModulePerms: any = {};
+    Object.keys(modulePerms).forEach((action) => {
+      newModulePerms[action] = !allSelected;
+    });
+
+    setPermissions((prev) => ({
+      ...prev,
+      [module]: newModulePerms,
+    }));
   };
 
   const getActionLabel = (action: string): string => {
@@ -192,11 +256,11 @@ export function InviteMemberModal({ open, onClose, operationId }: InviteMemberMo
                 <SelectTrigger id="role" className="bg-gray-800 border-gray-700 text-white mt-2">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  <SelectItem value="owner">Proprietário</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="viewer">Visualizador</SelectItem>
-                </SelectContent>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectItem value="owner">Proprietário</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value="viewer">Funcionário</SelectItem>
+              </SelectContent>
               </Select>
             </div>
 
@@ -224,36 +288,64 @@ export function InviteMemberModal({ open, onClose, operationId }: InviteMemberMo
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(Object.keys(permissions) as Array<keyof TeamPermissions>).map((module) => (
-                <Card key={module} className="bg-gray-800 border-gray-700">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-white">{getModuleLabel(module)}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {getModuleActions(module).map((action) => {
-                      const modulePerms = permissions[module] as any;
-                      const isChecked = modulePerms?.[action] === true;
-                      return (
-                        <div key={action} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`${module}-${action}`}
-                            checked={isChecked}
-                            onCheckedChange={(checked) =>
-                              handlePermissionChange(module, action, checked === true)
-                            }
-                          />
-                          <Label
-                            htmlFor={`${module}-${action}`}
-                            className="text-sm text-gray-300 cursor-pointer"
-                          >
-                            {getActionLabel(action)}
-                          </Label>
+              {(Object.keys(permissions) as Array<keyof TeamPermissions>).map((module) => {
+                const ModuleIcon = getModuleIcon(module);
+                const allModuleSelected = areAllModulePermissionsSelected(module);
+                return (
+                  <Card 
+                    key={module} 
+                    className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-black/30 transition-all duration-300 relative"
+                    style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ModuleIcon className="h-4 w-4 text-gray-400" />
+                          <CardTitle className="text-sm text-white">{getModuleLabel(module)}</CardTitle>
                         </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              ))}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleModulePermissions(module)}
+                          className="text-gray-400 hover:text-white transition-colors p-1"
+                          title={allModuleSelected ? "Desmarcar todas as permissões" : "Marcar todas as permissões"}
+                        >
+                          {allModuleSelected ? (
+                            <CheckSquare className="h-4 w-4" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {getModuleActions(module, role).map((action) => {
+                        const modulePerms = permissions[module] as any;
+                        const isChecked = modulePerms?.[action] === true;
+                        return (
+                          <div key={action} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${module}-${action}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) =>
+                                handlePermissionChange(module, action, checked === true)
+                              }
+                              className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                            />
+                            <Label
+                              htmlFor={`${module}-${action}`}
+                              className="text-sm text-gray-300 cursor-pointer"
+                            >
+                              {getActionLabel(action)}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </div>

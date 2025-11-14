@@ -51,7 +51,7 @@ interface PendingInvitation {
 export function TeamManagementTab() {
   const { selectedOperation } = useCurrentOperation();
   const { user } = useAuth();
-  const { canManageTeam, canInviteTeam } = useOperationPermissions();
+  const { canManageTeam, canInviteTeam, isLoading: permissionsLoading, role: userRole, permissions: userPermissions } = useOperationPermissions();
   const { toast } = useToast();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -125,6 +125,26 @@ export function TeamManagementTab() {
   const removeMemberMutation = useMutation({
     mutationFn: async (userId: string) => {
       if (!selectedOperation) throw new Error("Operação não selecionada");
+      
+      // CRITICAL: Double-check that we're not trying to remove the owner
+      // Get current team data to verify owner status
+      const currentTeamData = queryClient.getQueryData<{
+        ownerId: string | null;
+        members: TeamMember[];
+        invitations: PendingInvitation[];
+      }>(['/api/operations', selectedOperation, 'team']);
+      
+      const ownerId = currentTeamData?.ownerId || null;
+      const memberToRemove = currentTeamData?.members.find(m => m.id === userId);
+      
+      // Double check: use both isOwner flag and ownerId comparison
+      if (ownerId && ownerId === userId) {
+        throw new Error("Não é possível remover o proprietário criador da operação");
+      }
+      if (memberToRemove?.isOwner === true) {
+        throw new Error("Não é possível remover o proprietário criador da operação");
+      }
+      
       const res = await apiRequest(
         `/api/operations/${selectedOperation}/team/${userId}`,
         'DELETE'
@@ -145,6 +165,7 @@ export function TeamManagementTab() {
         description: error.message || "Erro ao remover membro",
         variant: "destructive",
       });
+      setMemberToRemove(null);
     },
   });
 
@@ -187,7 +208,8 @@ export function TeamManagementTab() {
     const roleMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
       owner: { label: "Proprietário", variant: "default" },
       admin: { label: "Administrador", variant: "default" },
-      viewer: { label: "Visualizador", variant: "secondary" },
+      viewer: { label: "Funcionário", variant: "secondary" },
+      employee: { label: "Funcionário", variant: "secondary" }, // Suporte para ambos durante transição
     };
     const roleInfo = roleMap[role] || { label: role, variant: "secondary" as const };
     return <Badge variant={roleInfo.variant}>{roleInfo.label}</Badge>;
@@ -230,13 +252,24 @@ export function TeamManagementTab() {
   // Ensure we always have data structure
   const members = Array.isArray(teamData?.members) ? teamData.members : [];
   const invitations = Array.isArray(teamData?.invitations) ? teamData.invitations : [];
+  const ownerId = teamData?.ownerId || null;
+
+  // Helper function to check if a member is the operation owner
+  const isOperationOwner = (memberId: string): boolean => {
+    // Double check: use both isOwner flag and ownerId comparison
+    if (ownerId && ownerId === memberId) {
+      return true;
+    }
+    const member = members.find(m => m.id === memberId);
+    return member?.isOwner === true;
+  };
 
   return (
     <div className="space-y-6 w-full">
       {/* Header with Invite Button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Membros da Equipe</h2>
+          <h2 className="text-[22px] font-bold text-white">Membros da Equipe</h2>
           <p className="text-gray-400 mt-1">
             Gerencie quem tem acesso a esta operação
           </p>
@@ -255,7 +288,7 @@ export function TeamManagementTab() {
       {/* Team Members */}
       <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-[20px] text-white flex items-center gap-2">
             <Users className="h-5 w-5" />
             Membros ({members.length})
           </CardTitle>
@@ -266,83 +299,99 @@ export function TeamManagementTab() {
         <CardContent>
           {members.length > 0 ? (
             <div className="space-y-4">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between p-4 bg-black/10 border border-white/5 rounded-lg hover:bg-black/20 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src={member.avatarUrl || undefined} />
-                      <AvatarFallback className="bg-blue-600 text-white">
-                        {getInitials(member.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium text-white">{member.name || 'Nome não disponível'}</p>
-                      <p className="text-sm text-gray-400">{member.email || 'Email não disponível'}</p>
+              {members.map((member) => {
+                // CRITICAL: Use helper function to determine if member is owner
+                const memberIsOwner = isOperationOwner(member.id);
+                
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between p-4 bg-black/10 border border-white/5 rounded-lg hover:bg-black/20 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarImage src={member.avatarUrl || undefined} />
+                        <AvatarFallback className="bg-blue-600 text-white">
+                          {getInitials(member.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-white">{member.name || 'Nome não disponível'}</p>
+                        <p className="text-sm text-gray-400">{member.email || 'Email não disponível'}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {getRoleBadge(member.role)}
-                    {member.isOwner && (
-                      <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
-                        Criador
-                      </Badge>
-                    )}
-                    <div className="flex items-center gap-2">
-                      {canManageTeam() && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setMemberToEdit(member);
-                              setShowEditModal(true);
-                            }}
-                            disabled={member.isOwner || (member.id === user?.id && !canManageTeam())}
-                            className="text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed"
-                            title={
-                              member.isOwner
-                                ? "O proprietário criador da operação não pode ser editado"
-                                : member.id === user?.id
-                                ? "Você não tem permissão para editar seu próprio acesso"
-                                : "Editar membro"
+                    <div className="flex items-center gap-4">
+                      {getRoleBadge(member.role)}
+                      {memberIsOwner && (
+                        <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                          Criador
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {/* CRITICAL: Only show edit/remove buttons if user has team.manage permission */}
+                        {/* For viewers, explicitly check if team.manage permission exists and is true */}
+                        {!permissionsLoading && (() => {
+                          // For viewers, explicitly check permissions object
+                          if (userRole === 'viewer') {
+                            const teamPermissions = userPermissions?.team;
+                            const hasManagePermission = teamPermissions?.manage === true;
+                            // Viewers without explicit manage permission should not see buttons
+                            if (!hasManagePermission) {
+                              return false;
                             }
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {!member.isOwner && (
+                          }
+                          // For owners and admins, or viewers with explicit permission, check canManageTeam
+                          return canManageTeam();
+                        })() && (
+                          <>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setMemberToRemove(member)}
-                              className="text-red-400 hover:text-red-500"
-                              title="Remover membro"
+                              onClick={() => {
+                                setMemberToEdit(member);
+                                setShowEditModal(true);
+                              }}
+                              disabled={memberIsOwner || (member.id === user?.id && !canManageTeam())}
+                              className="text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed"
+                              title={
+                                memberIsOwner
+                                  ? "O proprietário criador da operação não pode ser editado"
+                                  : member.id === user?.id
+                                  ? "Você não tem permissão para editar seu próprio acesso"
+                                  : "Editar membro"
+                              }
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          )}
-                          {member.isOwner && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled
-                              className="text-gray-600 cursor-not-allowed"
-                              title="O proprietário criador da operação não pode ser removido"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </>
-                      )}
-                      {!canManageTeam() && (
-                        <span className="text-xs text-gray-500">Sem permissão para gerenciar</span>
-                      )}
+                            {/* CRITICAL: Never show remove button for operation owner - absolute protection */}
+                            {memberIsOwner ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled
+                                className="text-gray-600 cursor-not-allowed opacity-50"
+                                title="O proprietário criador da operação não pode ser removido"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setMemberToRemove(member)}
+                                className="text-red-400 hover:text-red-500"
+                                title="Remover membro"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12">
@@ -353,18 +402,19 @@ export function TeamManagementTab() {
         </CardContent>
       </Card>
 
-      {/* Pending Invitations */}
-      <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Convites Pendentes ({invitations.length})
-          </CardTitle>
-          <CardDescription className="text-gray-400">
-            Convites aguardando aceitação
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Pending Invitations - Only visible for users with invite permission */}
+      {canInviteTeam() && (
+        <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Convites Pendentes ({invitations.length})
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Convites aguardando aceitação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
           {invitations.length > 0 ? (
             <div className="space-y-4">
               {invitations.map((invitation) => (
@@ -427,7 +477,8 @@ export function TeamManagementTab() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Invite Member Modal */}
       {showInviteModal && (
