@@ -180,7 +180,7 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Allow public routes without authentication check
-  const publicRoutes = ['/refund-form/', '/login'];
+  const publicRoutes = ['/refund-form/', '/login', '/accept-invitation/'];
   const isPublicRoute = publicRoutes.some(route => location.startsWith(route));
   
   if (isPublicRoute) {
