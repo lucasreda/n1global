@@ -75,7 +75,7 @@ export async function seedDatabase() {
           ownerId: storeOwner.id,
           settings: {},
         })
-        .returning();
+        .returning() as any[];
       
       defaultStore = storeResult[0];
       console.log("✅ Default store created:", defaultStore.name);
@@ -395,14 +395,20 @@ export async function seedDatabase() {
         console.log(`✅ Granted fresh user access to operation: ${operation.name}`);
       }
       
-      // Verify final state
+      // Verify final state (only select columns that exist)
       const finalAccess = await db
-        .select()
+        .select({
+          id: userOperationAccess.id,
+          userId: userOperationAccess.userId,
+          operationId: userOperationAccess.operationId,
+          role: userOperationAccess.role,
+          operationName: operations.name,
+        })
         .from(userOperationAccess)
         .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
         .where(eq(userOperationAccess.userId, freshUser.id));
       
-      console.log("🔍 Final fresh user operations:", finalAccess.map(item => item.operations.name));
+      console.log("🔍 Final fresh user operations:", finalAccess.map(item => item.operationName));
       
       // PRODUCTION DEBUG: Extra verification
       const verifyAccess = await db
@@ -677,8 +683,9 @@ Equipe de Suporte N1`,
     console.log("📧 Support system setup completed!");
 
     console.log("🌱 Database seeding completed!");
-  } catch (error) {
-    console.error("❌ Database seeding failed:", error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ Database seeding failed:", error.message || error);
+    // Don't throw - allow server to start even if seeding fails
+    console.log("⚠️ Server will continue to start despite seeding error");
   }
 }

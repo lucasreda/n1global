@@ -8,11 +8,62 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap } from "lucide-react";
+import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap, Send, Loader2 } from "lucide-react";
 import { cn, formatOperationCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
 import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
+
+// Helper para retornar ícone da plataforma baseado no dataSource ou ID do pedido
+const getPlatformIcon = (order: any) => {
+  // Verificar dataSource primeiro
+  if (order.dataSource === 'shopify' || order.shopifyOrderId) {
+    return (
+      <svg 
+        width="12" 
+        height="12" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        className="inline-block mr-1.5 flex-shrink-0"
+      >
+        <path 
+          d="M16.373 8.717c-.002-.03-.02-.057-.047-.068-.026-.011-1.028-.344-1.028-.344s-.676-.656-.745-.725c-.069-.069-.205-.048-.257-.034-.008.002-.145.045-.37.117-.223-1.004-.775-1.93-1.64-1.93h-.001c-.046 0-.092.003-.139.009-.022-.029-.045-.058-.069-.086-.346-.413-.785-.616-1.305-.616-1.012 0-2.018.754-2.831 2.122-.572.963-.997 2.168-1.127 3.197-1.006.311-1.71.529-1.717.531-.505.158-.519.173-.584.647-.05.362-1.338 10.313-1.338 10.313l10.063 1.74 4.464-1.103s-2.327-15.717-2.329-15.77zm-3.662-.863c-.191.06-.402.125-.63.196v-.155c0-.58-.079-1.049-.212-1.424.386.078.683.57.842 1.383zm-1.196.373c-.517.161-1.082.337-1.647.513.16-.612.465-1.218.831-1.61.121-.13.284-.284.478-.393.259.37.381.914.381 1.49v.001zm-.956-2.355c.119 0 .229.024.333.069-.172.11-.341.257-.494.426-.483.534-.856 1.363-1.019 2.276-.46.143-.91.284-1.339.418.319-1.307 1.177-3.189 2.519-3.189z" 
+          fill="white"
+        />
+      </svg>
+    );
+  }
+  
+  if (order.dataSource === 'cartpanda' || order.cartpandaOrderId) {
+    return (
+      <img 
+        src="/cartpanda-logo.png"
+        alt="CartPanda"
+        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
+  }
+  
+  if (order.dataSource === 'digistore24' || order.digistoreOrderId || order.id?.startsWith('DS-')) {
+    return (
+      <img
+        src="/digistore-logo.png"
+        alt="Digistore24"
+        className="w-3 h-3 inline-block mr-1.5 rounded flex-shrink-0"
+        decoding="async"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
+  }
+  
+  // Default: sem ícone para pedidos de fulfillment providers
+  return null;
+};
 
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -24,6 +75,50 @@ export default function Orders() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
+  const [sendingTrackingOrderId, setSendingTrackingOrderId] = useState<string | null>(null);
+  const handleSendDigistoreTracking = async (order: any) => {
+    if (!order?.id) return;
+    const operationToUse = selectedOperation || DSS_OPERATION_ID;
+
+    if (!operationToUse) {
+      toast({
+        title: "Operação não selecionada",
+        description: "Selecione uma operação antes de enviar o tracking.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSendingTrackingOrderId(order.id);
+      const response = await authenticatedApiRequest(
+        "POST",
+        `/api/integrations/digistore/test-tracking?operationId=${operationToUse}`,
+        { orderId: order.id }
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody?.error || "Falha ao enviar tracking");
+      }
+
+      const data = await response.json();
+      toast({
+        title: "Tracking enviado",
+        description: `Tracking ${data.trackingNumber} enviado para a Digistore24.`,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar tracking",
+        description: error?.message || "Não foi possível enviar o tracking.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTrackingOrderId(null);
+    }
+  };
   const [currentSyncState, setCurrentSyncState] = useState(false);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
   const queryClient = useQueryClient();
@@ -315,7 +410,8 @@ export default function Orders() {
                         <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
                           <span className="text-xs font-bold text-blue-400">📦</span>
                         </div>
-                        <div className="font-mono text-blue-400">
+                        <div className="font-mono text-blue-400 flex items-center">
+                          {getPlatformIcon(order)}
                           {(() => {
                             if (order.shopifyOrderNumber) {
                               return order.shopifyOrderNumber;
@@ -373,6 +469,28 @@ export default function Orders() {
                         >
                           <Eye size={16} />
                         </Button>
+                        {order.dataSource === 'digistore24' && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSendDigistoreTracking(order)}
+                                className="text-yellow-400 hover:text-yellow-300 transition-colors p-2 h-auto"
+                                disabled={sendingTrackingOrderId === order.id}
+                              >
+                                {sendingTrackingOrderId === order.id ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <Send size={16} />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span>Enviar tracking de teste</span>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -428,7 +546,8 @@ export default function Orders() {
                       >
                         <td className="py-4 px-4 text-sm text-white font-mono">
                           <div className="space-y-1">
-                            <div className="text-blue-400">
+                            <div className="text-blue-400 flex items-center">
+                              {getPlatformIcon(order)}
                               {(() => {
                                 // 1. Se tem shopify_order_number, exibe ele (#PDIT3732)
                                 if (order.shopifyOrderNumber) {
@@ -507,6 +626,28 @@ export default function Orders() {
                             >
                               <Eye size={16} />
                             </Button>
+                            {order.dataSource === 'digistore24' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleSendDigistoreTracking(order)}
+                                    className="text-yellow-400 hover:text-yellow-300 transition-colors p-2 h-auto"
+                                    disabled={sendingTrackingOrderId === order.id}
+                                  >
+                                    {sendingTrackingOrderId === order.id ? (
+                                      <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                      <Send size={16} />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span>Enviar tracking de teste</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"

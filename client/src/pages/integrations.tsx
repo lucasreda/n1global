@@ -41,7 +41,17 @@ const CartPandaIcon = ({ className, size }: { className?: string; size?: number 
 
 // Componente customizado para o ícone do Digistore24
 const DigistoreIcon = ({ className, size }: { className?: string; size?: number }) => (
-  <Store className={`${className} text-blue-400`} size={size || 30} />
+  <img
+    src="/digistore-logo.png"
+    alt="Digistore24"
+    width={size || 30}
+    height={size || 30}
+    className={`${className ? className + ' ' : ''}rounded`}
+    decoding="async"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none';
+    }}
+  />
 );
 
 export default function Integrations() {

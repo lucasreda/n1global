@@ -90,6 +90,11 @@ export const orders = pgTable("orders", {
   carrierOrderId: text("carrier_order_id"), // ID from carrier when matched
   carrierConfirmation: text("carrier_confirmation"), // Original confirmation status from carrier API ('confirmed', 'canceled', etc)
   
+  // E-commerce platform identifiers
+  cartpandaOrderId: text("cartpanda_order_id"), // ID original do CartPanda
+  digistoreOrderId: text("digistore_order_id"), // delivery_id da Digistore24
+  digistoreTransactionId: text("digistore_transaction_id"), // transaction_id da Digistore24
+  
   // Customer information
   customerId: text("customer_id"),
   customerName: text("customer_name"),
@@ -474,6 +479,41 @@ export const digistoreIntegrations = pgTable("digistore_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Digistore24 Orders Staging Table - raw orders before processing to operations
+export const digistoreOrders = pgTable("digistore_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").references(() => digistoreIntegrations.id, { onDelete: "set null" }),
+  
+  // Digistore24 order identifiers
+  orderId: text("order_id").notNull(), // Digistore24 order ID
+  transactionId: text("transaction_id").notNull(), // Transaction ID
+  
+  // Order data
+  status: text("status").notNull(), // Digistore24 delivery status
+  tracking: text("tracking"), // Tracking number
+  value: decimal("value", { precision: 10, scale: 2 }), // Order value
+  
+  // Structured data
+  recipient: jsonb("recipient"), // Customer information
+  items: jsonb("items"), // Order items
+  rawData: jsonb("raw_data").notNull(), // Complete Digistore24 order object
+  
+  // Processing tracking
+  processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  linkedOrderId: text("linked_order_id"), // ID of the linked order in orders table (null if not linked)
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicates
+  uniqueDigistoreOrder: unique().on(table.integrationId, table.orderId),
+  // Index for unprocessed orders
+  unprocessedIdx: index("digistore_orders_unprocessed_idx").on(table.processedToOrders),
+  // Index for order ID lookup
+  orderIdIdx: index("digistore_orders_order_id_idx").on(table.orderId),
+}));
+
 // Warehouse Providers - Catalog of available warehouse providers
 export const warehouseProviders = pgTable("warehouse_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -631,8 +671,29 @@ export const userOperationAccess = pgTable("user_operation_access", {
   role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
   permissions: jsonb("permissions"), // Custom permissions
   
+  invitedAt: timestamp("invited_at"), // Timestamp when invitation was accepted
+  invitedBy: varchar("invited_by").references(() => users.id), // User who sent the invitation
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Operation invitations table - tracks team member invitations
+export const operationInvitations = pgTable("operation_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  email: text("email").notNull(),
+  invitedBy: varchar("invited_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
+  permissions: jsonb("permissions"), // Granular permissions JSONB
+  token: varchar("token").notNull().unique(),
+  status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'expired', 'cancelled'
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tokenIdx: index("operation_invitations_token_idx").on(table.token),
+  operationStatusIdx: index("operation_invitations_operation_status_idx").on(table.operationId, table.status),
+}));
 
 // Products table
 export const products = pgTable("products", {
@@ -958,6 +1019,13 @@ export const insertUserOperationAccessSchema = createInsertSchema(userOperationA
   createdAt: true,
 });
 
+// Operation invitations schemas
+export const insertOperationInvitationSchema = createInsertSchema(operationInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Order schemas
 export const insertOrderSchema = createInsertSchema(orders).omit({
   createdAt: true,
@@ -1052,6 +1120,9 @@ export type InsertShopifyIntegration = z.infer<typeof insertShopifyIntegrationSc
 
 export type UserOperationAccess = typeof userOperationAccess.$inferSelect;
 export type InsertUserOperationAccess = z.infer<typeof insertUserOperationAccessSchema>;
+
+export type OperationInvitation = typeof operationInvitations.$inferSelect;
+export type InsertOperationInvitation = z.infer<typeof insertOperationInvitationSchema>;
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;

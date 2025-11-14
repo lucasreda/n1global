@@ -6,39 +6,34 @@ export interface DigistoreCredentials {
 }
 
 export interface DigistoreOrder {
-  order_id: string;
-  transaction_id: string;
-  product_id: string;
-  product_name: string;
-  buyer_email: string;
-  buyer_name: string;
-  billing_address: {
-    first_name: string;
-    last_name: string;
-    street: string;
-    street2?: string;
-    city: string;
+  id?: string;
+  delivery_id?: string;
+  purchase_id: string;
+  delivery_type: string;
+  product_name?: string;
+  
+  // Endereço de entrega (objeto aninhado na resposta da API)
+  delivery_address?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone_no?: string;
+    street?: string;
+    street_number?: string;
+    city?: string;
     state?: string;
-    zipcode: string;
-    country: string;
-    phone?: string;
+    zipcode?: string;
+    country?: string;
   };
-  shipping_address?: {
-    first_name: string;
-    last_name: string;
-    street: string;
-    street2?: string;
-    city: string;
-    state?: string;
-    zipcode: string;
-    country: string;
-    phone?: string;
-  };
-  amount: number;
-  currency: string;
-  payment_status: string; // 'paid', 'refunded', 'chargeback'
-  created_at: string;
-  updated_at: string;
+  
+  // Tracking
+  tracking?: Array<{
+    tracking_id?: string;
+    parcel_service?: string;
+  }>;
+  
+  // Datas
+  purchase_created_at?: string;
 }
 
 export interface DigistoreTrackingInfo {
@@ -48,19 +43,16 @@ export interface DigistoreTrackingInfo {
 }
 
 export class DigistoreService {
-  private baseUrl = "https://www.digistore24.com/api";
+  private baseUrl = "https://www.digistore24.com/api/call";
 
   constructor(private credentials: DigistoreCredentials) {}
 
   /**
-   * Testa a conexão com a API Digistore24
-   * NOTA: A API da Digistore24 não possui um endpoint de teste dedicado.
-   * Validamos apenas o formato da API Key por enquanto.
-   * A validação real acontecerá quando recebermos webhooks IPN.
+   * Testa a conexão com a API Digistore24 usando o endpoint /ping
    */
   async testConnection(): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      console.log(`🔗 Testando conexão Digistore24`);
+      console.log(`🔗 Testando conexão Digistore24 com /ping`);
       
       // Validar formato da API Key
       if (!this.credentials.apiKey || this.credentials.apiKey.trim().length === 0) {
@@ -70,18 +62,36 @@ export class DigistoreService {
         };
       }
 
-      // A API da Digistore24 funciona principalmente via webhooks IPN
-      // Não há endpoint REST tradicional para validação
-      // Aceitamos a API Key e validaremos quando recebermos os webhooks
+      const url = `${this.baseUrl}/ping`;
       
-      console.log(`✅ API Key Digistore24 aceita (validação completa via webhook IPN)`);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'X-DS-API-KEY': this.credentials.apiKey,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Erro no ping Digistore24: ${response.status} - ${errorText}`);
+        
+        return {
+          success: false,
+          error: `Erro na autenticação: HTTP ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      console.log(`✅ Conexão Digistore24 estabelecida:`, data);
       
       return {
         success: true,
         data: {
           testSuccess: true,
           apiConnected: true,
-          note: 'API Key salva. Configure o webhook IPN no painel da Digistore24 para receber pedidos.'
+          pingResponse: data
         }
       };
     } catch (error) {
@@ -95,24 +105,83 @@ export class DigistoreService {
   }
 
   /**
-   * Lista pedidos da Digistore24 com filtros opcionais
-   * NOTA: A API da Digistore24 funciona APENAS via webhooks IPN.
-   * Não há endpoint REST para buscar pedidos.
-   * Os pedidos são recebidos automaticamente via webhook quando ocorrem eventos.
+   * Lista entregas pendentes da Digistore24
+   * Endpoint: GET /listDeliveries
    */
   async listOrders(params?: {
-    limit?: number;
-    start_date?: string; // ISO 8601 format
-    end_date?: string; // ISO 8601 format
-    payment_status?: string;
-  }): Promise<DigistoreOrder[]> {
-    console.log(`ℹ️ Digistore24: Sincronização manual não disponível`);
-    console.log(`ℹ️ Os pedidos são recebidos automaticamente via webhook IPN`);
-    console.log(`ℹ️ Configure o webhook no painel da Digistore24: https://www.n1global.app/api/integrations/digistore/webhook`);
-    
-    // A API da Digistore24 não possui endpoint REST para listar pedidos
-    // Os pedidos chegam automaticamente via webhooks IPN
-    return [];
+      from?: string; // YYYY-MM-DD
+      to?: string; // YYYY-MM-DD
+      type?: string; // 'request,in_progress,delivery'
+      is_processed?: boolean;
+      order_id?: string;
+      delivery_id?: string;
+      purchase_id?: string;
+    }): Promise<any[]> {
+    try {
+      const url = new URL(`${this.baseUrl}/listDeliveries`);
+      
+      // Adicionar parâmetros de busca
+      const searchParams: any = {
+        type: params?.type || 'request,in_progress', // Entregas pendentes
+      };
+
+      if (params?.from) {
+        searchParams.from = params.from;
+      }
+
+      if (params?.order_id) {
+        searchParams.order_id = params.order_id;
+      }
+
+      if (params?.delivery_id) {
+        searchParams.delivery_id = params.delivery_id;
+      }
+
+      if (params?.purchase_id) {
+        searchParams.purchase_id = params.purchase_id;
+      }
+      
+      if (params?.to) {
+        searchParams.to = params.to;
+      }
+
+      if (params?.is_processed !== undefined) {
+        searchParams.is_processed = params.is_processed;
+      }
+
+      // Construir query string
+      Object.keys(searchParams).forEach(key => {
+        url.searchParams.append(key, searchParams[key]);
+      });
+
+      console.log(`📦 Buscando entregas Digistore24: ${url.toString()}`);
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'X-DS-API-KEY': this.credentials.apiKey,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(60000),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Erro ao buscar entregas: ${response.status} - ${errorText}`);
+        throw new Error(`Erro ao buscar entregas: HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // A resposta vem em { delivery: [...] }
+      const deliveries = data.delivery || [];
+      console.log(`✅ ${deliveries.length} entregas encontradas`);
+      
+      return deliveries;
+    } catch (error) {
+      console.error('❌ Erro ao listar entregas Digistore24:', error);
+      throw error;
+    }
   }
 
   /**
@@ -157,32 +226,40 @@ export class DigistoreService {
   /**
    * Atualiza o status de entrega de um pedido
    * Envia informações de rastreamento de volta para a Digistore24
+   * Endpoint: PUT /updateDelivery?delivery_id={id}&notify_via_email=true
    */
   async updateOrderStatus(
-    orderId: string,
-    status: string,
+    deliveryId: string,
+    status: 'shipped' | 'delivered' | 'cancelled',
     trackingInfo?: DigistoreTrackingInfo
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const url = `${this.baseUrl}/orders/${orderId}/fulfillment`;
-      console.log(`📤 Atualizando status do pedido Digistore24: ${orderId}`);
+      const url = new URL(`${this.baseUrl}/updateDelivery`);
+      url.searchParams.append('delivery_id', deliveryId);
+      url.searchParams.append('notify_via_email', 'true');
 
+      console.log(`📤 Atualizando entrega Digistore24: ${deliveryId} -> ${status}`);
+
+      // Construir payload conforme documentação
       const payload: any = {
-        status,
+        data: {
+          type: status === 'shipped' ? 'delivery' : 'request',
+          is_shipped: status === 'shipped',
+          quantity_delivered: status === 'shipped' ? 1 : 0,
+        }
       };
 
-      if (trackingInfo) {
-        payload.tracking_number = trackingInfo.tracking_number;
-        if (trackingInfo.tracking_url) {
-          payload.tracking_url = trackingInfo.tracking_url;
-        }
-        if (trackingInfo.carrier) {
-          payload.carrier = trackingInfo.carrier;
-        }
+      // Adicionar tracking se fornecido
+      if (trackingInfo && trackingInfo.tracking_number) {
+        payload.tracking = [{
+          parcel_service: trackingInfo.carrier || 'correios',
+          tracking_id: trackingInfo.tracking_number,
+          operation: 'create_or_update'
+        }];
       }
 
-      const response = await fetch(url, {
-        method: 'POST',
+      const response = await fetch(url.toString(), {
+        method: 'PUT',
         headers: {
           'X-DS-API-KEY': this.credentials.apiKey,
           'Accept': 'application/json',
@@ -194,7 +271,7 @@ export class DigistoreService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ Erro ao atualizar status Digistore24: ${response.status} - ${errorText}`);
+        console.error(`❌ Erro ao atualizar entrega: ${response.status} - ${errorText}`);
         
         return {
           success: false,
@@ -202,13 +279,14 @@ export class DigistoreService {
         };
       }
 
-      console.log(`✅ Status do pedido ${orderId} atualizado com sucesso`);
+      const result = await response.json();
+      console.log(`✅ Entrega ${deliveryId} atualizada:`, result);
       
       return {
         success: true
       };
     } catch (error) {
-      console.error(`❌ Erro ao atualizar status do pedido ${orderId}:`, error);
+      console.error(`❌ Erro ao atualizar entrega ${deliveryId}:`, error);
       
       return {
         success: false,

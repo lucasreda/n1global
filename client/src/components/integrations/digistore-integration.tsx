@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, RefreshCw, Store } from "lucide-react";
+import { Loader2, CheckCircle, RefreshCw, Store, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +29,7 @@ interface DigistoreIntegration {
 
 export function DigistoreIntegration() {
   const [apiKey, setApiKey] = useState("");
+  const [testOrderId, setTestOrderId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation: operationId } = useCurrentOperation();
@@ -138,6 +139,39 @@ export function DigistoreIntegration() {
       toast({
         title: "Erro na sincronização",
         description: error.message || "Erro ao sincronizar dados",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Testar webhook (TEMPORÁRIO - apenas para desenvolvimento)
+  const testWebhookMutation = useMutation({
+    mutationFn: async () => {
+      if (!operationId) {
+        throw new Error("Selecione uma operação antes de testar o webhook");
+      }
+
+      const params = new URLSearchParams();
+      params.append("operationId", operationId);
+      if (testOrderId.trim()) params.append("customOrderId", testOrderId.trim());
+
+      const response = await apiRequest(
+        `/api/integrations/digistore/test-webhook?${params.toString()}`,
+        "POST"
+      );
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Webhook de teste processado!",
+        description: `Order ID: ${data.orderId}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao testar webhook",
+        description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
     },
@@ -307,7 +341,7 @@ export function DigistoreIntegration() {
           <CardContent className="space-y-4">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <p className="text-sm text-gray-300">
-                ℹ️ A Digistore24 envia pedidos automaticamente via webhook IPN quando ocorrem eventos (pagamento, reembolso, chargeback).
+                ℹ️ A Digistore24 envia pedidos automaticamente via webhook IPN. Você também pode sincronizar manualmente para buscar entregas pendentes.
               </p>
               <p className="text-sm text-gray-300 mt-2">
                 <strong>URL do Webhook:</strong><br />
@@ -315,18 +349,52 @@ export function DigistoreIntegration() {
                   https://www.n1global.app/api/integrations/digistore/webhook
                 </code>
               </p>
-              <p className="text-sm text-gray-300 mt-2">
-                Configure esta URL no painel da Digistore24 para receber pedidos em tempo real.
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="custom-order-id" className="text-sm text-gray-200">
+                ID personalizado para teste (opcional)
+              </Label>
+              <Input
+                id="custom-order-id"
+                placeholder="Ex: DTA7ZZN9"
+                value={testOrderId}
+                onChange={(e) => setTestOrderId(e.target.value)}
+                className="bg-black/40 border-white/10 text-white"
+              />
+              <p className="text-xs text-gray-400">
+                Se preenchido, o webhook de teste usará este ID exatamente como fornecido. Deixe vazio para gerar um ID automático.
               </p>
             </div>
-            <Button
-              disabled
-              className="bg-gray-600 text-gray-400 cursor-not-allowed"
-              data-testid="button-sync-data"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Sincronização Manual Não Disponível
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                data-testid="button-sync-data"
+              >
+                {syncMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Sincronizar Entregas Pendentes
+              </Button>
+              
+              <Button
+                onClick={() => testWebhookMutation.mutate()}
+                disabled={testWebhookMutation.isPending}
+                variant="outline"
+                className="border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white"
+                data-testid="button-test-webhook"
+              >
+                {testWebhookMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Zap className="h-4 w-4 mr-2" />
+                )}
+                🧪 Testar Webhook
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
