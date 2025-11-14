@@ -1936,6 +1936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/invitations/:token", async (req: Request, res: Response) => {
     try {
       const { token } = req.params;
+      console.log(`[Get Invitation] Buscando convite com token: ${token?.substring(0, 20)}...`);
 
       const [invitation] = await db
         .select({
@@ -1951,17 +1952,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(operationInvitations.token, token))
         .limit(1);
 
+      console.log(`[Get Invitation] Convite encontrado:`, invitation ? { id: invitation.id, email: invitation.email, status: invitation.status } : 'null');
+
       if (!invitation) {
+        console.log(`[Get Invitation] Convite não encontrado para token`);
         return res.status(404).json({ message: "Convite não encontrado" });
       }
 
       if (invitation.status !== 'pending') {
+        console.log(`[Get Invitation] Convite não está pendente, status: ${invitation.status}`);
         return res.status(400).json({ 
           message: `Convite já foi ${invitation.status === 'accepted' ? 'aceito' : invitation.status === 'expired' ? 'expirado' : 'cancelado'}` 
         });
       }
 
       if (new Date(invitation.expiresAt) < new Date()) {
+        console.log(`[Get Invitation] Convite expirado`);
         await db
           .update(operationInvitations)
           .set({ status: 'expired' })
@@ -1977,15 +1983,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(operations.id, invitation.operationId))
         .limit(1);
 
+      console.log(`[Get Invitation] Retornando convite com operação:`, operation?.name);
+
       res.json({
         invitation: {
           ...invitation,
           operationName: operation?.name,
         },
       });
-    } catch (error) {
-      console.error("Get invitation error:", error);
-      res.status(500).json({ message: "Erro ao buscar convite" });
+    } catch (error: any) {
+      console.error("[Get Invitation] Erro ao buscar convite:", error);
+      console.error("[Get Invitation] Stack:", error.stack);
+      res.status(500).json({ 
+        message: "Erro ao buscar convite",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 

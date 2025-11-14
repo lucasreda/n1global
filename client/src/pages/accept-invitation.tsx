@@ -24,12 +24,31 @@ export default function AcceptInvitation() {
   const { data: invitationData, isLoading, error } = useQuery({
     queryKey: [`/api/invitations/${token}`],
     queryFn: async () => {
-      const res = await apiRequest(`/api/invitations/${token}`, 'GET');
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erro ao carregar convite');
+      try {
+        console.log('[Accept Invitation] Buscando convite com token:', token?.substring(0, 20));
+        const res = await fetch(`/api/invitations/${token}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        
+        console.log('[Accept Invitation] Resposta recebida:', res.status, res.statusText);
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error('[Accept Invitation] Erro na resposta:', errorData);
+          throw new Error(errorData.message || `Erro ao carregar convite: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        console.log('[Accept Invitation] Dados do convite recebidos:', data);
+        return data;
+      } catch (err: any) {
+        console.error('[Accept Invitation] Erro ao buscar convite:', err);
+        throw err;
       }
-      return res.json();
     },
     enabled: !!token,
     retry: false,
