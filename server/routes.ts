@@ -1457,7 +1457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invitedBy?: string | null;
       }> = [];
       try {
-        invitations = await db
+        const invitationsResult = await db
           .select({
             id: operationInvitations.id,
             email: operationInvitations.email,
@@ -1475,6 +1475,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(operationInvitations.status, 'pending')
             )
           );
+        
+        invitations = invitationsResult.map(inv => ({
+          ...inv,
+          expiresAt: inv.expiresAt?.toISOString() || '',
+          createdAt: inv.createdAt?.toISOString() || '',
+        }));
         console.log(`[Team API] Found ${invitations.length} pending invitations`);
       } catch (invitationError: any) {
         console.error("[Team API] Error fetching invitations:", invitationError);
