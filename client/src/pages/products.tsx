@@ -14,6 +14,7 @@ import { Plus, Package, DollarSign, TrendingUp, Calculator, Edit, Save, X, Searc
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -85,6 +86,7 @@ export default function ProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
+  const { canCreate: canCreateProducts, canEdit: canEditProducts, canDelete: canDeleteProducts } = useOperationPermissions();
 
   // Fetch linked products for current operation
   const { data: userProducts = [], isLoading } = useQuery({
@@ -233,10 +235,12 @@ export default function ProductsPage() {
         <h1 className="font-bold text-white" style={{ fontSize: '20px' }}>Produtos Vinculados</h1>
         <Dialog open={isLinking} onOpenChange={setIsLinking}>
           <DialogTrigger asChild>
-            <Button className="glassmorphism-light text-white border-blue-600" data-testid="button-link-product">
-              <Link2 className="h-4 w-4 mr-2" />
-              Vincular Produto
-            </Button>
+            {canCreateProducts('products') && (
+              <Button className="glassmorphism-light text-white border-blue-600" data-testid="button-link-product">
+                <Link2 className="h-4 w-4 mr-2" />
+                Vincular Produto
+              </Button>
+            )}
           </DialogTrigger>
           <DialogContent className="glassmorphism max-w-2xl">
             <DialogHeader>
@@ -387,15 +391,18 @@ export default function ProductsPage() {
                             </Badge>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleUnlinkProduct(userProduct.productId)}
-                          className="text-white/40 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
-                          data-testid={`button-unlink-${product.id}`}
-                        >
-                          <Unlink className="h-4 w-4" />
-                        </Button>
+                        {canDeleteProducts('products') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUnlinkProduct(userProduct.productId)}
+                            className="text-white/40 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                            data-testid={`button-unlink-${product.id}`}
+                            title="Desvincular produto"
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

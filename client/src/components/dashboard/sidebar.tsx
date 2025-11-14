@@ -48,40 +48,51 @@ import {
 } from "@/components/ui/collapsible";
 import { NewOperationDialog } from "./new-operation-dialog";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 
-const getNavigationForRole = (userRole: string, userPermissions: string[] = []) => {
-  // All possible navigation items with their permission IDs
+const getNavigationForRole = (
+  userRole: string, 
+  operationPermissions: {
+    canView: (module: 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team') => boolean;
+    isOwner?: boolean;
+    isAdmin?: boolean;
+  } | null
+) => {
+  // All possible navigation items with their permission modules
+  // Items marked with adminOnly: true are only visible to admins/owners
   const allNavigationItems = [
-    { id: 'dashboard', name: "Dashboard", href: "/", icon: Home },
-    { id: 'hub', name: "N1 Hub", href: "/hub", icon: Store },
-    { id: 'orders', name: "Pedidos", href: "/orders", icon: Package },
-    { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3 },
-    { id: 'ads', name: "Anúncios", href: "/ads", icon: Target },
-    { id: 'creatives', name: "Criativos", href: "/creatives", icon: Sparkles },
+    { id: 'dashboard', name: "Dashboard", href: "/", icon: Home, permissionModule: 'dashboard' },
+    { id: 'hub', name: "N1 Hub", href: "/hub", icon: Store, permissionModule: 'dashboard' }, // Hub uses dashboard permissions
+    { id: 'orders', name: "Pedidos", href: "/orders", icon: Package, permissionModule: 'orders' },
+    { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3, adminOnly: true }, // Only for admins
+    { id: 'ads', name: "Anúncios", href: "/ads", icon: Target, permissionModule: 'ads' },
+    { id: 'creatives', name: "Criativos", href: "/creatives", icon: Sparkles, adminOnly: true }, // Only for admins
     { 
       id: 'funnels',
       name: "Funis de Venda", 
       icon: Zap,
       isDropdown: true,
+      adminOnly: true, // Only for admins
       subItems: [
         { name: "Gerenciar Funis", href: "/funnels" },
         { name: "Preview & Validação", href: "/funnel-preview" }
       ]
     },
-    { name: "Produtos", href: "/products", icon: ShoppingCart }, // Always visible
+    { name: "Produtos", href: "/products", icon: ShoppingCart, permissionModule: 'products' },
     { 
       id: 'support',
       name: "Suporte", 
       icon: MessageSquare,
       isDropdown: true,
+      adminOnly: true, // Only for admins
       subItems: [
         { name: "Suporte de Clientes", href: "/customer-support" },
         { name: "Configurações", href: "/customer-support/settings" }
       ]
     },
-    { id: 'integrations', name: "Integrações", href: "/integrations", icon: Plug },
-    { id: 'tools', name: "Ferramentas", href: "/tools", icon: Wrench },
-    { name: "Configurações", href: "/settings", icon: Settings }, // Always visible
+    { id: 'integrations', name: "Integrações", href: "/integrations", icon: Plug, permissionModule: 'integrations' },
+    { id: 'tools', name: "Ferramentas", href: "/tools", icon: Wrench, adminOnly: true }, // Only for admins
+    { name: "Configurações", href: "/settings", icon: Settings, permissionModule: 'settings' },
   ];
 
   // For super_admin and admin roles, show all items
@@ -96,10 +107,28 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = []) 
     );
   }
 
-  // For regular users, filter by permissions
-  return allNavigationItems.filter(item => 
-    !item.id || userPermissions.includes(item.id)
-  );
+  // For regular users, filter by operation permissions
+  if (!operationPermissions) {
+    // If no operation permissions, show nothing (user might not have access to any operation)
+    return [];
+  }
+
+  // Filter items based on operation permissions
+  return allNavigationItems.filter(item => {
+    // Admin-only items: only show for admins/owners
+    if (item.adminOnly) {
+      return operationPermissions?.isOwner || operationPermissions?.isAdmin || false;
+    }
+    
+    // Items without permissionModule should not appear for non-admin users
+    if (!item.permissionModule) {
+      return false;
+    }
+    
+    // Check if user has view permission for this module
+    const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team';
+    return operationPermissions.canView(module);
+  });
 };
 
 export function Sidebar() {
@@ -108,11 +137,16 @@ export function Sidebar() {
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
+  const operationPermissions = useOperationPermissions();
   
   // Disabled debug logs
   // console.log("🔍 Sidebar Debug:", ...);
   
-  const navigation = getNavigationForRole(user?.role || 'user', user?.permissions || []);
+  // Use operation permissions if available, otherwise fallback to user permissions for backwards compatibility
+  const navigation = getNavigationForRole(
+    user?.role || 'user', 
+    operationPermissions && !operationPermissions.isLoading ? operationPermissions : null
+  );
 
   // Handle operation change
   const handleOperationChange = (operationId: string) => {

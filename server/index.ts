@@ -218,10 +218,18 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
+  // reusePort não é suportado no Windows, então removemos para compatibilidade multiplataforma
+  const listenOptions: any = {
     port,
     host: "0.0.0.0",
-  }, () => {
+  };
+  
+  // Apenas adiciona reusePort em sistemas que suportam (Linux/macOS)
+  if (process.platform !== 'win32') {
+    listenOptions.reusePort = true;
+  }
+  
+  server.listen(listenOptions, () => {
     log(`serving on port ${port}`);
   }).on('error', (err: any) => {
     if (err.code === 'EADDRINUSE') {

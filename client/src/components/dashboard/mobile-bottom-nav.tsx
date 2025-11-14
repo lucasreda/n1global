@@ -2,16 +2,24 @@ import { Link, useLocation } from "wouter";
 import { Home, Package, Target, BarChart3, Sparkles, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 
 const getAllNavigationItems = () => [
-  { id: 'dashboard', name: "Dashboard", href: "/", icon: Home },
-  { id: 'hub', name: "Hub", href: "/hub", icon: Store },
-  { id: 'orders', name: "Pedidos", href: "/orders", icon: Package },
-  { id: 'ads', name: "Anúncios", href: "/ads", icon: Target },
-  { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3 },
+  { id: 'dashboard', name: "Dashboard", href: "/", icon: Home, permissionModule: 'dashboard' },
+  { id: 'hub', name: "Hub", href: "/hub", icon: Store, permissionModule: 'dashboard' },
+  { id: 'orders', name: "Pedidos", href: "/orders", icon: Package, permissionModule: 'orders' },
+  { id: 'ads', name: "Anúncios", href: "/ads", icon: Target, permissionModule: 'ads' },
+  { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3, adminOnly: true },
 ];
 
-const getFilteredNavigationItems = (userRole: string, userPermissions: string[] = []) => {
+const getFilteredNavigationItems = (
+  userRole: string, 
+  operationPermissions: {
+    canView: (module: 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team') => boolean;
+    isOwner?: boolean;
+    isAdmin?: boolean;
+  } | null
+) => {
   const allItems = getAllNavigationItems();
   
   // For super_admin and admin roles, show all items
@@ -24,15 +32,37 @@ const getFilteredNavigationItems = (userRole: string, userPermissions: string[] 
     return allItems.filter(item => ['dashboard', 'hub', 'orders'].includes(item.id));
   }
 
-  // For regular users, filter by permissions
-  return allItems.filter(item => userPermissions.includes(item.id));
+  // For regular users, filter by operation permissions
+  if (!operationPermissions) {
+    return [];
+  }
+
+  return allItems.filter(item => {
+    // Admin-only items: only show for admins/owners
+    if (item.adminOnly) {
+      return operationPermissions.isOwner || operationPermissions.isAdmin || false;
+    }
+    
+    // Items without permissionModule should not appear for non-admin users
+    if (!item.permissionModule) {
+      return false;
+    }
+    
+    // Check if user has view permission for this module
+    const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team';
+    return operationPermissions.canView(module);
+  });
 };
 
 export function MobileBottomNav() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const operationPermissions = useOperationPermissions();
   
-  const navigationItems = getFilteredNavigationItems(user?.role || 'user', user?.permissions || []);
+  const navigationItems = getFilteredNavigationItems(
+    user?.role || 'user', 
+    operationPermissions && !operationPermissions.isLoading ? operationPermissions : null
+  );
 
   const isActive = (href: string) => {
     if (href === "/" && location === "/") return true;

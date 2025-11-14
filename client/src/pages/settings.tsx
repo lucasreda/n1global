@@ -1,8 +1,9 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Briefcase, PlayCircle, Clock, Hash, Globe } from "lucide-react";
+import { Briefcase, PlayCircle, Clock, Hash, Globe, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -10,6 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTourContext } from "@/contexts/tour-context";
 import { useLocation } from "wouter";
+import { TeamManagementTab } from "@/components/settings/team-management-tab";
 
 // Common European timezones
 const TIMEZONES = [
@@ -65,6 +67,7 @@ const LANGUAGES = [
 ];
 
 export default function Settings() {
+  const [activeTab, setActiveTab] = useState<string>("settings");
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
   const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
   const [timezone, setTimezone] = useState<string>("Europe/Madrid");
@@ -101,7 +104,6 @@ export default function Settings() {
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
-      console.log('📋 Settings - Current operation data:', operation);
       if (operation?.operationType) {
         setOperationType(operation.operationType);
         setOriginalOperationType(operation.operationType);
@@ -119,7 +121,6 @@ export default function Settings() {
         setOriginalLanguage(operation.language);
       }
       if (operation?.shopifyOrderPrefix !== undefined) {
-        console.log('🏷️ Setting prefix from backend:', operation.shopifyOrderPrefix);
         setShopifyPrefix(operation.shopifyOrderPrefix || "");
         setOriginalShopifyPrefix(operation.shopifyOrderPrefix || "");
       }
@@ -165,8 +166,6 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'language:', language, 'shopifyPrefix:', shopifyPrefix);
-    
     if (!selectedOperation) {
       toast({
         title: "Erro",
@@ -178,11 +177,7 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
-      
-      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
-      
-      console.log('✅ API response received:', response);
+      await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
 
       setOriginalOperationType(operationType);
       setOriginalTimezone(timezone);
@@ -216,27 +211,40 @@ export default function Settings() {
         title="Configurações do Sistema" 
         subtitle="Personalize e configure suas preferências" 
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card Negócio */}
-        <div 
-          className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-        >
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
-              <Briefcase className="text-green-400" size={20} />
-            </div>
-            <div>
-              <h3 className="text-white font-semibold">Negócio</h3>
-              <p className="text-gray-400 text-sm">Configure o tipo de operação do seu negócio</p>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-              <label className="text-gray-300 text-sm mb-3 block">Tipo de Operação</label>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-black/20 border border-white/10 backdrop-blur-sm">
+          <TabsTrigger value="settings" className="data-[state=active]:bg-blue-600">
+            <Briefcase className="h-4 w-4 mr-2" />
+            Configurações
+          </TabsTrigger>
+          <TabsTrigger value="team" className="data-[state=active]:bg-blue-600">
+            <Users className="h-4 w-4 mr-2" />
+            Equipe
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="settings" className="space-y-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card Negócio */}
+            <div 
+              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
+                  <Briefcase className="text-green-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Negócio</h3>
+                  <p className="text-gray-400 text-sm">Configure o tipo de operação do seu negócio</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+                  <label className="text-gray-300 text-sm mb-3 block">Tipo de Operação</label>
               <Select value={operationType} onValueChange={handleOperationTypeChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
@@ -253,9 +261,9 @@ export default function Settings() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+                </div>
 
-            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+                <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Clock className="mr-2" size={16} />
                 Fuso Horário da Operação
@@ -344,9 +352,9 @@ export default function Settings() {
               <p className="text-gray-400 text-xs mt-2">
                 Digite os 3 caracteres do prefixo (# é adicionado automaticamente). Ex: 52 vira #52, BG vira #BG
               </p>
-            </div>
-            
-            <Button 
+                </div>
+                
+                <Button 
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
               className={`w-full transition-all duration-200 ${
@@ -357,17 +365,17 @@ export default function Settings() {
               data-testid="button-save-settings"
             >
               {isSaving ? 'Salvando...' : 'Salvar Configurações'}
-            </Button>
-          </div>
-        </div>
-        
-        {/* Tour Interativo */}
-        <div 
-          className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-        >
+                </Button>
+              </div>
+            </div>
+            
+            {/* Tour Interativo */}
+            <div 
+              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center">
               <PlayCircle className="text-purple-400" size={20} />
@@ -405,30 +413,36 @@ export default function Settings() {
             </div>
           </div>
         </div>
-      </div>
-      
-      <div 
-        className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-        style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-      >
-        <h3 className="text-xl font-semibold text-white mb-4">Sobre o Sistema</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <h4 className="text-white font-medium">Versão</h4>
-            <p className="text-gray-400 text-sm">v1.0.0</p>
           </div>
-          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <h4 className="text-white font-medium">Última Atualização</h4>
-            <p className="text-gray-400 text-sm">15/12/2024</p>
+          
+          <div 
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+          >
+            <h3 className="text-xl font-semibold text-white mb-4">Sobre o Sistema</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+                <h4 className="text-white font-medium">Versão</h4>
+                <p className="text-gray-400 text-sm">v1.0.0</p>
+              </div>
+              <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+                <h4 className="text-white font-medium">Última Atualização</h4>
+                <p className="text-gray-400 text-sm">15/12/2024</p>
+              </div>
+              <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+                <h4 className="text-white font-medium">Suporte</h4>
+                <p className="text-gray-400 text-sm">24/7 Online</p>
+              </div>
+            </div>
           </div>
-          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <h4 className="text-white font-medium">Suporte</h4>
-            <p className="text-gray-400 text-sm">24/7 Online</p>
-          </div>
-        </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-6 space-y-6 w-full">
+          <TeamManagementTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
