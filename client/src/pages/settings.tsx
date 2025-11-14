@@ -1,8 +1,9 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Briefcase, PlayCircle, Clock, Hash, Globe } from "lucide-react";
+import { Briefcase, PlayCircle, Clock, Hash, Globe, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -67,6 +68,7 @@ const LANGUAGES = [
 
 export default function Settings() {
   const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<string>("settings");
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
   const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
   const [timezone, setTimezone] = useState<string>("Europe/Madrid");
@@ -103,7 +105,6 @@ export default function Settings() {
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
-      console.log('📋 Settings - Current operation data:', operation);
       if (operation?.operationType) {
         setOperationType(operation.operationType);
         setOriginalOperationType(operation.operationType);
@@ -121,7 +122,6 @@ export default function Settings() {
         setOriginalLanguage(operation.language);
       }
       if (operation?.shopifyOrderPrefix !== undefined) {
-        console.log('🏷️ Setting prefix from backend:', operation.shopifyOrderPrefix);
         setShopifyPrefix(operation.shopifyOrderPrefix || "");
         setOriginalShopifyPrefix(operation.shopifyOrderPrefix || "");
       }
@@ -167,8 +167,6 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'language:', language, 'shopifyPrefix:', shopifyPrefix);
-    
     if (!selectedOperation) {
       toast({
         title: t('settings.error'),
@@ -180,11 +178,7 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
-      
-      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
-      
-      console.log('✅ API response received:', response);
+      await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
 
       setOriginalOperationType(operationType);
       setOriginalTimezone(timezone);
@@ -255,9 +249,9 @@ export default function Settings() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+                </div>
 
-            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+                <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Clock className="mr-2" size={16} />
                 {t('settings.timezone')}
@@ -346,9 +340,9 @@ export default function Settings() {
               <p className="text-gray-400 text-xs mt-2">
                 {t('settings.orderPrefixDescription')}
               </p>
-            </div>
-            
-            <Button 
+                </div>
+                
+                <Button 
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
               className={`w-full transition-all duration-200 ${
@@ -428,8 +422,12 @@ export default function Settings() {
             <h4 className="text-white font-medium">{t('settings.support')}</h4>
             <p className="text-gray-400 text-sm">{t('settings.support24_7')}</p>
           </div>
-        </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-6 space-y-6 w-full">
+          <TeamManagementTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

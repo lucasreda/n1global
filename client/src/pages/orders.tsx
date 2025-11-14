@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation, DSS_OPERATION_ID } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,7 @@ export default function Orders() {
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
   const [sendingTrackingOrderId, setSendingTrackingOrderId] = useState<string | null>(null);
+  const { canEdit: canEditOrders, canDelete: canDeleteOrders, canCreate: canCreateOrders } = useOperationPermissions();
   const handleSendDigistoreTracking = async (order: any) => {
     if (!order?.id) return;
     const operationToUse = selectedOperation || DSS_OPERATION_ID;
@@ -493,14 +495,17 @@ export default function Orders() {
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditOrder(order.id)}
-                          className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
-                        >
-                          <Edit size={16} />
-                        </Button>
+                        {canEditOrders('orders') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditOrder(order.id)}
+                            className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
+                            title="Editar pedido"
+                          >
+                            <Edit size={16} />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -650,14 +655,17 @@ export default function Orders() {
                                 </TooltipContent>
                               </Tooltip>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditOrder(order.id)}
-                              className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
-                            >
-                              <Edit size={16} />
-                            </Button>
+                            {canEditOrders('orders') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditOrder(order.id)}
+                                className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
+                                title="Editar pedido"
+                              >
+                                <Edit size={16} />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -25,6 +25,7 @@ import Tools from "@/pages/tools";
 import CostCalculator from "@/pages/cost-calculator";
 import Funnels from "@/pages/funnels";
 import Settings from "@/pages/settings";
+import AcceptInvitation from "@/pages/accept-invitation";
 import Profile from "@/pages/profile";
 import Ads from "@/pages/ads";
 import Creatives from "@/pages/creatives";
@@ -235,7 +236,7 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Allow public routes without authentication check
-  const publicRoutes = ['/refund-form/', '/login'];
+  const publicRoutes = ['/refund-form/', '/login', '/accept-invitation/'];
   const isPublicRoute = publicRoutes.some(route => location.startsWith(route));
   
   if (isPublicRoute) {
@@ -386,6 +387,7 @@ function Router() {
         <Route path="/tools" component={Tools} />
         <Route path="/cost-calculator" component={CostCalculator} />
         <Route path="/settings" component={Settings} />
+        <Route path="/accept-invitation/:token" component={AcceptInvitation} />
         <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
@@ -541,6 +543,15 @@ function AppContent() {
 
   // Public refund form (must be before authentication check)
   if (location.startsWith('/refund-form/')) {
+    return (
+      <div className="min-h-screen">
+        <Router />
+      </div>
+    );
+  }
+
+  // Public invitation acceptance page (must be before authentication check)
+  if (location.startsWith('/accept-invitation/')) {
     return (
       <div className="min-h-screen">
         <Router />

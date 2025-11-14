@@ -64,6 +64,7 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = [], 
       name: t('sidebar.funnels'), 
       icon: Zap,
       isDropdown: true,
+      adminOnly: true, // Only for admins
       subItems: [
         { name: t('sidebar.manageFunnels'), href: "/funnels" },
         { name: t('sidebar.previewValidation'), href: "/funnel-preview" }
@@ -75,6 +76,7 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = [], 
       name: t('sidebar.support'), 
       icon: MessageSquare,
       isDropdown: true,
+      adminOnly: true, // Only for admins
       subItems: [
         { name: t('sidebar.customerSupport'), href: "/customer-support" },
         { name: t('sidebar.supportSettings'), href: "/customer-support/settings" }
@@ -97,10 +99,28 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = [], 
     );
   }
 
-  // For regular users, filter by permissions
-  return allNavigationItems.filter(item => 
-    !item.id || userPermissions.includes(item.id)
-  );
+  // For regular users, filter by operation permissions
+  if (!operationPermissions) {
+    // If no operation permissions, show nothing (user might not have access to any operation)
+    return [];
+  }
+
+  // Filter items based on operation permissions
+  return allNavigationItems.filter(item => {
+    // Admin-only items: only show for admins/owners
+    if (item.adminOnly) {
+      return operationPermissions?.isOwner || operationPermissions?.isAdmin || false;
+    }
+    
+    // Items without permissionModule should not appear for non-admin users
+    if (!item.permissionModule) {
+      return false;
+    }
+    
+    // Check if user has view permission for this module
+    const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team';
+    return operationPermissions.canView(module);
+  });
 };
 
 export function Sidebar() {
@@ -110,6 +130,7 @@ export function Sidebar() {
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
+  const operationPermissions = useOperationPermissions();
   
   // Disabled debug logs
   // console.log("🔍 Sidebar Debug:", ...);

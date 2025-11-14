@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Circle, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 
 interface IntegrationStatus {
   hasPlatform: boolean;
@@ -31,6 +32,7 @@ export function OnboardingCard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { isOwner } = useOperationPermissions();
   
   // Get current operation ID from localStorage
   const currentOperationId = localStorage.getItem("current_operation_id");
@@ -126,6 +128,11 @@ export function OnboardingCard() {
 
   if (isLoading) {
     return null; // Don't show anything while loading
+  }
+
+  // Only show card to operation owners
+  if (!isOwner) {
+    return null;
   }
 
   // Debug: Log userData to see what we're receiving

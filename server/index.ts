@@ -252,6 +252,26 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen(port, "0.0.0.0", () => {
+  // reusePort não é suportado no Windows, então removemos para compatibilidade multiplataforma
+  const listenOptions: any = {
+    port,
+    host: "0.0.0.0",
+  };
+  
+  // Apenas adiciona reusePort em sistemas que suportam (Linux/macOS)
+  if (process.platform !== 'win32') {
+    listenOptions.reusePort = true;
+  }
+  
+  server.listen(listenOptions, () => {
     log(`serving on port ${port}`);
+  }).on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Porta ${port} já está em uso. Por favor, libere a porta ou use outra porta.`);
+      console.error(`💡 Para liberar a porta no Windows, use: Get-Process -Id (Get-NetTCPConnection -LocalPort ${port}).OwningProcess | Stop-Process -Force`);
+    } else {
+      console.error(`❌ Erro ao iniciar servidor na porta ${port}:`, err);
+    }
+    process.exit(1);
   });
 })();

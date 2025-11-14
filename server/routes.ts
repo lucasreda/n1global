@@ -5,6 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
+import crypto from "crypto";
 import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations, pollingExecutions } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
@@ -16,6 +17,8 @@ import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 import { validateOperationAccess as operationAccess } from "./middleware/operation-access";
+import { requireTeamManagementPermission, hasPermission, getDefaultPermissions, requirePermission } from "./middleware/team-permissions";
+import { teamInvitationEmailService } from "./services/team-invitation-email-service";
 import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
@@ -714,7 +717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes - using real database data
-  app.get("/api/dashboard/metrics", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/metrics", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = req.query.period as string;
       const dateFrom = req.query.dateFrom as string;
@@ -735,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = req.query.period as string;
       const dateFrom = req.query.dateFrom as string;
@@ -779,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;
@@ -1375,6 +1378,878 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Erro ao atualizar configurações" });
+    }
+  });
+
+  // ============================================================================
+  // TEAM MANAGEMENT ROUTES
+  // ============================================================================
+
+  // Get team members and pending invitations
+  app.get("/api/operations/:operationId/team", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      console.log(`[Team API] Fetching team for operation: ${operationId}`);
+
+      // Get operation ownerId
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      const ownerId = operation?.ownerId || null;
+      console.log(`[Team API] Operation ownerId: ${ownerId}`);
+
+      // Get all team members - handle case where invitedAt/invitedBy might not exist
+      let members;
+      try {
+        members = await db
+          .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            avatarUrl: users.avatarUrl,
+            role: userOperationAccess.role,
+            permissions: userOperationAccess.permissions,
+            invitedAt: userOperationAccess.invitedAt,
+            invitedBy: userOperationAccess.invitedBy,
+          })
+          .from(userOperationAccess)
+          .innerJoin(users, eq(userOperationAccess.userId, users.id))
+          .where(eq(userOperationAccess.operationId, operationId));
+        console.log(`[Team API] Found ${members.length} members`);
+      } catch (memberError: any) {
+        console.error("[Team API] Error fetching members:", memberError);
+        // If columns don't exist, try without them
+        if (memberError.message?.includes('column') && memberError.message?.includes('invited')) {
+          console.log("[Team API] Retrying without invitedAt/invitedBy columns");
+          members = await db
+            .select({
+              id: users.id,
+              name: users.name,
+              email: users.email,
+              avatarUrl: users.avatarUrl,
+              role: userOperationAccess.role,
+              permissions: userOperationAccess.permissions,
+            })
+            .from(userOperationAccess)
+            .innerJoin(users, eq(userOperationAccess.userId, users.id))
+            .where(eq(userOperationAccess.operationId, operationId));
+          // Add null values for missing columns
+          members = members.map(m => ({ ...m, invitedAt: null, invitedBy: null }));
+        } else {
+          throw memberError;
+        }
+      }
+
+      // Add isOwner field to each member
+      const membersWithOwnerFlag = members.map(member => {
+        const isOwner = ownerId !== null && member.id === ownerId;
+        console.log(`[Team API] Member ${member.id} (${member.email}): ownerId=${ownerId}, member.id=${member.id}, isOwner=${isOwner}`);
+        return {
+          ...member,
+          isOwner,
+        };
+      });
+
+      // Get pending invitations - handle case where table might not exist
+      let invitations: Array<{
+        id: string;
+        email: string;
+        role: string;
+        permissions: any;
+        status: string;
+        expiresAt: string;
+        createdAt: string;
+        invitedBy?: string | null;
+      }> = [];
+      try {
+        const invitationsResult = await db
+          .select({
+            id: operationInvitations.id,
+            email: operationInvitations.email,
+            role: operationInvitations.role,
+            permissions: operationInvitations.permissions,
+            status: operationInvitations.status,
+            expiresAt: operationInvitations.expiresAt,
+            createdAt: operationInvitations.createdAt,
+            invitedBy: operationInvitations.invitedBy,
+          })
+          .from(operationInvitations)
+          .where(
+            and(
+              eq(operationInvitations.operationId, operationId),
+              eq(operationInvitations.status, 'pending')
+            )
+          );
+        
+        invitations = invitationsResult.map(inv => ({
+          ...inv,
+          expiresAt: inv.expiresAt?.toISOString() || '',
+          createdAt: inv.createdAt?.toISOString() || '',
+        }));
+        console.log(`[Team API] Found ${invitations.length} pending invitations`);
+      } catch (invitationError: any) {
+        console.error("[Team API] Error fetching invitations:", invitationError);
+        // If table doesn't exist, return empty array
+        if (invitationError.message?.includes('does not exist') || invitationError.message?.includes('relation')) {
+          console.log("[Team API] operation_invitations table doesn't exist, returning empty array");
+          invitations = [] as typeof invitations;
+        } else {
+          throw invitationError;
+        }
+      }
+
+      res.json({
+        ownerId,
+        members: membersWithOwnerFlag,
+        invitations,
+      });
+    } catch (error: any) {
+      console.error("Get team error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        message: "Erro ao buscar membros da equipe",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Send invitation
+  app.post("/api/operations/:operationId/team/invite", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { email, role, permissions, userExists } = req.body;
+
+      console.log(`[Team Invite] Received request:`, {
+        operationId,
+        email,
+        role,
+        hasPermissions: !!permissions,
+        userExists,
+        userId: req.user?.id
+      });
+
+      if (!email || !role) {
+        return res.status(400).json({ message: "Email e role são obrigatórios" });
+      }
+
+      // Validate role
+      if (!['owner', 'admin', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Role inválido" });
+      }
+
+      // Check if user already has access
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingUser) {
+        const [existingAccess] = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.userId, existingUser.id),
+              eq(userOperationAccess.operationId, operationId)
+            )
+          )
+          .limit(1);
+
+        if (existingAccess) {
+          return res.status(400).json({ message: "Usuário já faz parte desta operação" });
+        }
+      }
+
+      // Check for existing pending invitation
+      const [existingInvitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(
+          and(
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.email, email),
+            eq(operationInvitations.status, 'pending')
+          )
+        )
+        .limit(1);
+
+      if (existingInvitation) {
+        return res.status(400).json({ message: "Já existe um convite pendente para este email" });
+      }
+
+      // Generate token - usando import crypto (não require)
+      console.log('[Team Invite] Generating token using crypto module...');
+      const token = crypto.randomBytes(32).toString('hex');
+      console.log('[Team Invite] Token generated successfully, length:', token.length);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+      // Use default permissions if not provided
+      let finalPermissions;
+      try {
+        finalPermissions = permissions || getDefaultPermissions(role);
+        console.log(`[Team Invite] Permissions for role ${role}:`, JSON.stringify(finalPermissions));
+      } catch (permError: any) {
+        console.error("[Team Invite] Error getting default permissions:", permError);
+        // Fallback to basic permissions
+        finalPermissions = {
+          dashboard: { view: true },
+          orders: { view: true },
+          products: { view: true },
+          ads: { view: true },
+          integrations: { view: true },
+          settings: { view: true },
+          team: { view: true }
+        };
+      }
+
+      console.log(`[Team Invite] Creating invitation for ${email} in operation ${operationId}`);
+
+      // Create invitation
+      let invitation;
+      try {
+        const invitationData: any = {
+          operationId,
+          email,
+          invitedBy: req.user.id,
+          role,
+          permissions: finalPermissions,
+          token,
+          status: 'pending',
+          expiresAt,
+        };
+        
+        console.log(`[Team Invite] Inserting invitation with data:`, {
+          operationId: invitationData.operationId,
+          email: invitationData.email,
+          invitedBy: invitationData.invitedBy,
+          role: invitationData.role,
+          token: invitationData.token.substring(0, 10) + '...',
+          status: invitationData.status,
+          expiresAt: invitationData.expiresAt.toISOString(),
+          hasPermissions: !!invitationData.permissions
+        });
+
+        [invitation] = await db
+          .insert(operationInvitations)
+          .values(invitationData)
+          .returning();
+        
+        if (!invitation) {
+          throw new Error("Failed to create invitation - no data returned");
+        }
+        
+        console.log(`[Team Invite] Invitation created successfully:`, invitation.id);
+      } catch (insertError: any) {
+        console.error("[Team Invite] Error inserting invitation:", insertError);
+        console.error("[Team Invite] Insert error details:", {
+          message: insertError.message,
+          code: insertError.code,
+          constraint: insertError.constraint,
+          detail: insertError.detail,
+          name: insertError.name,
+          stack: insertError.stack?.substring(0, 500)
+        });
+        
+        // Se for erro de constraint ou campo não encontrado, fornecer mensagem mais útil
+        if (insertError.code === '23503') {
+          return res.status(400).json({ 
+            message: "Erro ao criar convite: operação ou usuário inválido",
+            error: process.env.NODE_ENV === 'development' ? insertError.detail : undefined
+          });
+        }
+        
+        if (insertError.code === '23505') {
+          return res.status(400).json({ 
+            message: "Já existe um convite com este token (erro interno)",
+            error: process.env.NODE_ENV === 'development' ? insertError.detail : undefined
+          });
+        }
+        
+        throw insertError;
+      }
+
+      // Get operation details for email (não bloquear se falhar)
+      let operation = null;
+      let inviter = null;
+      
+      try {
+        [operation] = await db
+          .select({ name: operations.name, language: operations.language })
+          .from(operations)
+          .where(eq(operations.id, operationId))
+          .limit(1);
+        
+        if (!operation) {
+          console.warn(`[Team Invite] Operation ${operationId} not found for email`);
+        }
+      } catch (opError: any) {
+        console.error("[Team Invite] Error fetching operation:", opError);
+      }
+
+      try {
+        [inviter] = await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, req.user.id))
+          .limit(1);
+        
+        if (!inviter) {
+          console.warn(`[Team Invite] Inviter user ${req.user.id} not found`);
+        }
+      } catch (inviterError: any) {
+        console.error("[Team Invite] Error fetching inviter:", inviterError);
+      }
+
+      // Send invitation email (não bloquear se falhar)
+      if (operation && inviter) {
+        try {
+          console.log(`[Team Invite] Tentando enviar email para ${email}...`);
+          await teamInvitationEmailService.sendInvitationEmail({
+            email,
+            operationName: operation.name,
+            inviterName: inviter.name,
+            role,
+            invitationToken: token,
+            language: operation.language || 'pt',
+          });
+          console.log(`✅ [Team Invite] Email de convite enviado com sucesso para ${email}`);
+        } catch (emailError: any) {
+          console.error("⚠️ [Team Invite] Erro ao enviar email de convite (mas convite foi criado):", {
+            error: emailError.message,
+            email,
+            operationName: operation.name,
+            hasMailgunApiKey: !!process.env.MAILGUN_API_KEY,
+            hasMailgunDomain: !!process.env.MAILGUN_DOMAIN
+          });
+          // Não bloquear a resposta se o email falhar - o convite já foi criado
+          // Mas logar o erro para debug
+        }
+      } else {
+        console.warn("⚠️ [Team Invite] Operação ou inviter não encontrado, email não enviado");
+        console.warn(`[Team Invite] Operation found: ${!!operation}, Inviter found: ${!!inviter}`);
+        if (!operation) {
+          console.warn(`[Team Invite] Operation ${operationId} não encontrada no banco de dados`);
+        }
+        if (!inviter) {
+          console.warn(`[Team Invite] Inviter user ${req.user.id} não encontrado no banco de dados`);
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        invitation,
+        message: "Convite enviado com sucesso",
+      });
+    } catch (error: any) {
+      console.error("Send invitation error:", error);
+      console.error("Error stack:", error.stack);
+      console.error("Error details:", {
+        operationId: req.params.operationId,
+        email: req.body.email,
+        role: req.body.role,
+        userId: req.user?.id
+      });
+      res.status(500).json({ 
+        message: "Erro ao enviar convite",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Update team member role and permissions
+  app.patch("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requirePermission('team', 'manage'), requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, userId } = req.params;
+      const { role, permissions } = req.body;
+      const currentUserId = req.user?.id;
+
+      // Check if user is trying to edit themselves
+      if (userId === currentUserId) {
+        // Check if user has permission to manage team
+        const hasManagePermission = await hasPermission(currentUserId!, operationId, 'team', 'manage');
+        if (!hasManagePermission) {
+          console.log(`[Team API] Usuário ${currentUserId} tentou editar a si mesmo sem permissão team.manage`);
+          return res.status(403).json({ 
+            message: "Você não tem permissão para editar seu próprio acesso. Contate um administrador." 
+          });
+        }
+      }
+
+      // Check if user is the operation creator (ownerId)
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      if (operation?.ownerId === userId) {
+        console.log(`[Team API] Tentativa de editar proprietário criador da operação bloqueada: userId=${userId}, operationId=${operationId}`);
+        return res.status(403).json({ 
+          message: "Não é possível editar o proprietário criador da operação" 
+        });
+      }
+
+      // Validate role
+      if (role && !['owner', 'admin', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Role inválido" });
+      }
+
+      // Check if user is the last owner
+      if (role && role !== 'owner') {
+        const owners = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.operationId, operationId),
+              eq(userOperationAccess.role, 'owner')
+            )
+          );
+
+        const [currentAccess] = await db
+          .select({ role: userOperationAccess.role })
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.userId, userId),
+              eq(userOperationAccess.operationId, operationId)
+            )
+          )
+          .limit(1);
+
+        if (currentAccess?.role === 'owner' && owners.length === 1) {
+          return res.status(400).json({ message: "Não é possível remover o último owner da operação" });
+        }
+      }
+
+      // Build update object
+      const updates: any = {};
+      if (role) updates.role = role;
+      if (permissions !== undefined) updates.permissions = permissions;
+
+      await db
+        .update(userOperationAccess)
+        .set(updates)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Membro da equipe atualizado com sucesso",
+      });
+    } catch (error) {
+      console.error("Update team member error:", error);
+      res.status(500).json({ message: "Erro ao atualizar membro da equipe" });
+    }
+  });
+
+  // Remove team member
+  app.delete("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requirePermission('team', 'manage'), requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, userId } = req.params;
+
+      // CRITICAL: Check if user is the operation creator (ownerId) - ABSOLUTE PROTECTION
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      if (!operation) {
+        console.log(`[Team API] Operação não encontrada: operationId=${operationId}`);
+        return res.status(404).json({ 
+          message: "Operação não encontrada" 
+        });
+      }
+
+      // ABSOLUTE PROTECTION: Never allow removal of the operation creator
+      if (operation.ownerId && operation.ownerId === userId) {
+        console.log(`[Team API] BLOQUEADO: Tentativa de remover proprietário criador da operação - userId=${userId}, operationId=${operationId}, ownerId=${operation.ownerId}`);
+        return res.status(403).json({ 
+          message: "Não é possível remover o proprietário criador da operação. Esta ação é permanentemente bloqueada." 
+        });
+      }
+
+      // Check if user is the last owner
+      const [currentAccess] = await db
+        .select({ role: userOperationAccess.role })
+        .from(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        )
+        .limit(1);
+
+      if (currentAccess?.role === 'owner') {
+        const owners = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.operationId, operationId),
+              eq(userOperationAccess.role, 'owner')
+            )
+          );
+
+        if (owners.length === 1) {
+          return res.status(400).json({ message: "Não é possível remover o último owner da operação" });
+        }
+      }
+
+      await db
+        .delete(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Membro removido da equipe com sucesso",
+      });
+    } catch (error) {
+      console.error("Remove team member error:", error);
+      res.status(500).json({ message: "Erro ao remover membro da equipe" });
+    }
+  });
+
+  // Resend invitation
+  app.post("/api/operations/:operationId/team/invite/:invitationId/resend", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, invitationId } = req.params;
+
+      const [invitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(
+          and(
+            eq(operationInvitations.id, invitationId),
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.status, 'pending')
+          )
+        )
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado ou já aceito" });
+      }
+
+      // Check if expired
+      if (new Date(invitation.expiresAt) < new Date()) {
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitationId));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Get operation and inviter details
+      const [operation] = await db
+        .select({ name: operations.name, language: operations.language })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      const [inviter] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, invitation.invitedBy))
+        .limit(1);
+
+      if (operation && inviter) {
+        await teamInvitationEmailService.sendInvitationEmail({
+          email: invitation.email,
+          operationName: operation.name,
+          inviterName: inviter.name,
+          role: invitation.role,
+          invitationToken: invitation.token,
+          language: operation.language || 'pt',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Convite reenviado com sucesso",
+      });
+    } catch (error) {
+      console.error("Resend invitation error:", error);
+      res.status(500).json({ message: "Erro ao reenviar convite" });
+    }
+  });
+
+  // Cancel invitation
+  app.delete("/api/operations/:operationId/team/invite/:invitationId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, invitationId } = req.params;
+
+      await db
+        .update(operationInvitations)
+        .set({ status: 'cancelled' })
+        .where(
+          and(
+            eq(operationInvitations.id, invitationId),
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.status, 'pending')
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Convite cancelado com sucesso",
+      });
+    } catch (error) {
+      console.error("Cancel invitation error:", error);
+      res.status(500).json({ message: "Erro ao cancelar convite" });
+    }
+  });
+
+  // ============================================================================
+  // INVITATION ACCEPTANCE ROUTES
+  // ============================================================================
+
+  // Get invitation details by token
+  app.get("/api/invitations/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      console.log(`[Get Invitation] Buscando convite com token: ${token?.substring(0, 20)}...`);
+
+      const [invitation] = await db
+        .select({
+          id: operationInvitations.id,
+          email: operationInvitations.email,
+          role: operationInvitations.role,
+          permissions: operationInvitations.permissions,
+          status: operationInvitations.status,
+          expiresAt: operationInvitations.expiresAt,
+          operationId: operationInvitations.operationId,
+        })
+        .from(operationInvitations)
+        .where(eq(operationInvitations.token, token))
+        .limit(1);
+
+      console.log(`[Get Invitation] Convite encontrado:`, invitation ? { id: invitation.id, email: invitation.email, status: invitation.status } : 'null');
+
+      if (!invitation) {
+        console.log(`[Get Invitation] Convite não encontrado para token`);
+        return res.status(404).json({ message: "Convite não encontrado" });
+      }
+
+      if (invitation.status !== 'pending') {
+        console.log(`[Get Invitation] Convite não está pendente, status: ${invitation.status}`);
+        return res.status(400).json({ 
+          message: `Convite já foi ${invitation.status === 'accepted' ? 'aceito' : invitation.status === 'expired' ? 'expirado' : 'cancelado'}` 
+        });
+      }
+
+      if (new Date(invitation.expiresAt) < new Date()) {
+        console.log(`[Get Invitation] Convite expirado`);
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitation.id));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Get operation name
+      const [operation] = await db
+        .select({ name: operations.name })
+        .from(operations)
+        .where(eq(operations.id, invitation.operationId))
+        .limit(1);
+
+      console.log(`[Get Invitation] Retornando convite com operação:`, operation?.name);
+
+      res.json({
+        invitation: {
+          ...invitation,
+          operationName: operation?.name,
+        },
+      });
+    } catch (error: any) {
+      console.error("[Get Invitation] Erro ao buscar convite:", error);
+      console.error("[Get Invitation] Stack:", error.stack);
+      res.status(500).json({ 
+        message: "Erro ao buscar convite",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Accept invitation
+  app.post("/api/invitations/:token/accept", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const { name, password } = req.body;
+
+      const [invitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(eq(operationInvitations.token, token))
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Convite já foi ${invitation.status === 'accepted' ? 'aceito' : invitation.status === 'expired' ? 'expirado' : 'cancelado'}` 
+        });
+      }
+
+      if (new Date(invitation.expiresAt) < new Date()) {
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitation.id));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Check if user already exists
+      let [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, invitation.email))
+        .limit(1);
+
+      let userId: string;
+      let isNewUser = false;
+      let userToken: string | undefined;
+      let userData: any | undefined;
+
+      if (existingUser) {
+        userId = existingUser.id;
+        
+        // Se usuário já existe, verificar se email corresponde ao convite
+        if (existingUser.email !== invitation.email) {
+          return res.status(400).json({ 
+            message: "Este convite é para outro email. Faça logout para aceitar este convite." 
+          });
+        }
+      } else {
+        // Create new user - conta para membro de equipe (não cliente comum)
+        if (!name || !password) {
+          return res.status(400).json({ message: "Nome e senha são obrigatórios para criar conta" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Criar conta adequada para membro de equipe:
+        // - role: 'user' (padrão, mas sem storeId e sem características de cliente)
+        // - onboardingCompleted: true (pular onboarding de cliente)
+        // - sem storeId (não é cliente)
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            name,
+            email: invitation.email,
+            password: hashedPassword,
+            role: 'user', // Role padrão, mas sem storeId = membro de equipe
+            storeId: null, // Importante: não ter storeId = não é cliente comum
+            onboardingCompleted: true, // Pular onboarding de cliente
+            onboardingSteps: {
+              step1_operation: true,
+              step2_shopify: true,
+              step3_shipping: true,
+              step4_ads: true,
+              step5_sync: true
+            },
+          })
+          .returning();
+
+        userId = newUser.id;
+        isNewUser = true;
+
+        // Gerar token JWT para login automático
+        userToken = jwt.sign(
+          { id: newUser.id, email: newUser.email, role: newUser.role },
+          JWT_SECRET,
+          { expiresIn: "24h" }
+        );
+
+        // Preparar dados do usuário para retornar
+        userData = {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          permissions: newUser.permissions || [],
+        };
+      }
+
+      // Check if user already has access
+      const [existingAccess] = await db
+        .select()
+        .from(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, invitation.operationId)
+          )
+        )
+        .limit(1);
+
+      if (existingAccess) {
+        return res.status(400).json({ message: "Você já faz parte desta operação" });
+      }
+
+      // Create user operation access
+      await db.insert(userOperationAccess).values({
+        userId,
+        operationId: invitation.operationId,
+        role: invitation.role,
+        permissions: invitation.permissions,
+        invitedAt: new Date(),
+        invitedBy: invitation.invitedBy,
+      });
+
+      // Update invitation status
+      await db
+        .update(operationInvitations)
+        .set({ 
+          status: 'accepted',
+          updatedAt: new Date(),
+        })
+        .where(eq(operationInvitations.id, invitation.id));
+
+      // Se for novo usuário, retornar token para login automático
+      if (isNewUser && userToken && userData) {
+        res.json({
+          success: true,
+          message: "Convite aceito com sucesso",
+          userId,
+          isNewUser: true,
+          token: userToken,
+          user: userData,
+        });
+      } else {
+        // Usuário existente - não retornar token (já está logado ou deve fazer login)
+        res.json({
+          success: true,
+          message: "Convite aceito com sucesso",
+          userId,
+          isNewUser: false,
+        });
+      }
+    } catch (error) {
+      console.error("Accept invitation error:", error);
+      res.status(500).json({ message: "Erro ao aceitar convite" });
     }
   });
 
@@ -4048,7 +4923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Orders routes - fetch from database with filters and pagination
-  app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/orders", authenticateToken, requirePermission('orders', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       // CRITICAL: Get user's operation for data isolation
       const userOperations = await storage.getUserOperations(req.user.id);
@@ -4195,7 +5070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/orders/:id", authenticateToken, requirePermission('orders', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) {
@@ -4207,7 +5082,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/orders", authenticateToken, requirePermission('orders', 'create'), async (req: AuthRequest, res: Response) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
@@ -4223,7 +5098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/orders/:id", authenticateToken, requirePermission('orders', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const updates = updateOrderSchema.parse(req.body);
       const order = await storage.updateOrder(req.params.id, updates);
@@ -4236,7 +5111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.delete("/api/orders/:id", authenticateToken, requirePermission('orders', 'delete'), async (req: AuthRequest, res: Response) => {
     try {
       const deleted = await storage.deleteOrder(req.params.id);
       if (!deleted) {
@@ -4294,7 +5169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, apiUrl, operationId } = req.body;
       console.log("🔧 Iniciando salvamento de credenciais...", { email, operationId });
@@ -4371,7 +5246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get countries
-  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, operationAccess, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.validatedOperationId!;
       
@@ -4401,7 +5276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get stores
-  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.validatedOperationId!;
       
@@ -4431,7 +5306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create store
-  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { name, link } = req.body;
       const operationId = req.validatedOperationId!;
@@ -4668,7 +5543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/elogy/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/elogy/credentials", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, authHeader, warehouseId, apiUrl, operationId } = req.body;
       console.log("🔧 eLogy: Iniciando salvamento de credenciais...", { email, operationId });
@@ -4961,7 +5836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/fhb/:operationId/credentials", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/fhb/:operationId/credentials", authenticateToken, operationAccess, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { appId, secret, apiUrl } = req.body;
       const { operationId } = req.params;
@@ -5379,7 +6254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Products routes
-  app.get("/api/products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/products", authenticateToken, storeContext, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       // Get storeId from middleware context for data isolation
       const storeId = (req as any).storeId;
@@ -5391,7 +6266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get products by operation ID
-  app.get("/api/operations/:operationId/products", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/operations/:operationId/products", authenticateToken, operationAccess, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
       const products = await storage.getProductsByOperation(operationId);
@@ -5402,7 +6277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/products/:id", authenticateToken, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const product = await storage.getProduct(req.params.id);
       if (!product) {
@@ -5414,7 +6289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/products", authenticateToken, requirePermission('products', 'create'), async (req: AuthRequest, res: Response) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
@@ -5424,7 +6299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/products/:id", authenticateToken, requirePermission('products', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const updates = req.body;
       const product = await storage.updateProduct(req.params.id, updates);
@@ -6482,7 +7357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Shopify Integration Routes
   
   // Get Shopify integration for operation
-  app.get("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/shopify", authenticateToken, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;
       
@@ -6504,7 +7379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save/update Shopify integration
-  app.post("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/shopify", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId, shopName, accessToken } = req.body;
       

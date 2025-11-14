@@ -14,6 +14,7 @@ import { Plus, Package, DollarSign, TrendingUp, Calculator, Edit, Save, X, Searc
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -82,6 +83,7 @@ export default function ProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
+  const { canCreate: canCreateProducts, canEdit: canEditProducts, canDelete: canDeleteProducts } = useOperationPermissions();
 
   const skuSearchSchema = z.object({
     sku: z.string().min(1, t('products.skuRequired')),
@@ -391,15 +393,18 @@ export default function ProductsPage() {
                             </Badge>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleUnlinkProduct(userProduct.productId)}
-                          className="text-white/40 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
-                          data-testid={`button-unlink-${product.id}`}
-                        >
-                          <Unlink className="h-4 w-4" />
-                        </Button>
+                        {canDeleteProducts('products') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUnlinkProduct(userProduct.productId)}
+                            className="text-white/40 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                            data-testid={`button-unlink-${product.id}`}
+                            title="Desvincular produto"
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
