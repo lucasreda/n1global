@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
@@ -21,8 +21,10 @@ import { CalendarIcon, RefreshCw, X, Package } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function Dashboard() {
+  const { t, currentLanguage } = useTranslation();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
@@ -122,8 +124,8 @@ export default function Dashboard() {
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
           toast({
-            title: "Dados Atualizados",
-            description: "Sincronização automática concluída",
+            title: t('dashboard.dataUpdated'),
+            description: t('dashboard.autoSyncCompleted'),
           });
         } else {
           console.log('ℹ️ Auto-sync não necessário:', result.reason);
@@ -210,7 +212,7 @@ export default function Dashboard() {
   });
 
   // Calculate distribution data with 3 meaningful categories
-  const getDistributionData = () => {
+  const getDistributionData = useMemo(() => {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
@@ -230,33 +232,33 @@ export default function Dashboard() {
     // Always show delivered if exists
     if (delivered > 0) {
       data.push({
-        name: "Entregues",
+        name: t('dashboard.delivered'),
         value: delivered,
         percentage: ((delivered / total) * 100).toFixed(1),
         color: "#10B981", // Green
-        description: "Pedidos entregues com sucesso"
+        description: t('dashboard.deliveredDesc')
       });
     }
     
     // Always show pending if exists
     if (pending > 0) {
       data.push({
-        name: "Pendentes",
+        name: t('dashboard.pending'),
         value: pending,
         percentage: ((pending / total) * 100).toFixed(1),
         color: "#F59E0B", // Amber
-        description: "Aguardando processamento"
+        description: t('dashboard.pendingDesc')
       });
     }
     
     // Show others if exists
     if (others > 0) {
       data.push({
-        name: "Outros",
+        name: t('dashboard.others'),
         value: others,
         percentage: ((others / total) * 100).toFixed(1),
         color: "#8B5CF6", // Purple
-        description: "Enviados, cancelados e retornados"
+        description: t('dashboard.othersDesc')
       });
     }
     
@@ -266,26 +268,26 @@ export default function Dashboard() {
       
       if (delivered > 0) {
         data.push({
-          name: "Não Entregues",
+          name: t('dashboard.notDelivered'),
           value: remaining,
           percentage: ((remaining / total) * 100).toFixed(1),
           color: "#EF4444", // Red
-          description: "Pedidos ainda não entregues"
+          description: t('dashboard.notDeliveredDesc')
         });
       } else {
         // Complete fallback
         data.push({
-          name: "Total",
+          name: t('dashboard.total'),
           value: total,
           percentage: "100.0",
           color: "#6B7280", // Gray
-          description: "Todos os pedidos do período"
+          description: t('dashboard.totalDesc')
         });
       }
     }
     
     return data;
-  };
+  }, [metrics, t, currentLanguage]);
 
 
 
@@ -320,13 +322,13 @@ export default function Dashboard() {
               className="bg-gray-900/30 border-gray-700/50 hover:bg-gray-800/50 text-gray-300 text-xs sm:text-sm w-[140px] sm:w-[160px]"
               data-testid="select-product-filter"
             >
-              <SelectValue placeholder="Produto" />
+              <SelectValue placeholder={t('dashboard.product')} />
             </SelectTrigger>
             <SelectContent className="glassmorphism border-gray-600 max-w-[280px]">
               <SelectItem value="all" className="text-gray-300 text-xs">
                 <div className="flex items-center gap-2">
                   <Package className="h-3.5 w-3.5 text-gray-400" />
-                  <span>Todos</span>
+                  <span>{t('dashboard.all')}</span>
                 </div>
               </SelectItem>
               {products.map((product: any) => (
@@ -370,7 +372,7 @@ export default function Dashboard() {
                   {format(dateRange.from, "dd/MM/yy", { locale: pt })} - {format(dateRange.to, "dd/MM/yy", { locale: pt })}
                 </span>
               ) : (
-                <span>Selecionar período</span>
+                <span>{t('dashboard.selectPeriod')}</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -380,7 +382,7 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-400">
                   {tempDateRange?.from && tempDateRange?.to 
                     ? `${format(tempDateRange.from, "dd/MM/yy")} - ${format(tempDateRange.to, "dd/MM/yy")}`
-                    : "Selecione a data inicial e final"}
+                    : t('dashboard.selectDateRange')}
                 </p>
                 {tempDateRange?.from && tempDateRange?.to && (
                   <Button
@@ -390,7 +392,7 @@ export default function Dashboard() {
                     className="h-6 px-2 text-xs text-gray-400 hover:text-white"
                   >
                     <X className="h-3 w-3 mr-1" />
-                    Limpar
+                    {t('dashboard.clear')}
                   </Button>
                 )}
               </div>
@@ -404,7 +406,7 @@ export default function Dashboard() {
                   }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Hoje
+                  {t('dashboard.today')}
                 </Button>
                 <Button
                   variant="outline"
@@ -417,7 +419,7 @@ export default function Dashboard() {
                   }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Semana
+                  {t('dashboard.week')}
                 </Button>
                 <Button
                   variant="outline"
@@ -429,7 +431,7 @@ export default function Dashboard() {
                   }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Mês
+                  {t('dashboard.month')}
                 </Button>
                 <Button
                   variant="outline"
@@ -441,7 +443,7 @@ export default function Dashboard() {
                   }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Total
+                  {t('dashboard.total')}
                 </Button>
               </div>
               <Calendar
@@ -487,7 +489,7 @@ export default function Dashboard() {
                   }}
                   className="flex-1 text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Cancelar
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   size="sm"
@@ -500,7 +502,7 @@ export default function Dashboard() {
                   disabled={!tempDateRange?.from || !tempDateRange?.to}
                   className="flex-1 text-xs text-white"
                 >
-                  Aplicar
+                  {t('dashboard.apply')}
                 </Button>
               </div>
             </div>
@@ -524,14 +526,14 @@ export default function Dashboard() {
                 >
                   <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 ${isSyncingInBackground ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">
-                    {isSyncingInBackground ? 'Sincronizando...' : 'Sync Completo'}
+                    {isSyncingInBackground ? t('dashboard.syncing') : t('dashboard.syncComplete')}
                   </span>
                 </Button>
               </div>
             </TooltipTrigger>
             {!integrationsStatus?.hasPlatform && (
               <TooltipContent className="max-w-xs">
-                <p>É necessário conectar pelo menos uma plataforma (Shopify) para realizar a sincronização completa</p>
+                <p>{t('dashboard.needPlatform')}</p>
               </TooltipContent>
             )}
           </Tooltip>
@@ -543,15 +545,16 @@ export default function Dashboard() {
       <OnboardingCard />
       
       <StatsCards 
+        key={currentLanguage}
         metrics={metrics} 
         isLoading={metricsLoading} 
-        period={dateRange?.from && dateRange?.to ? `${format(dateRange.from, 'dd/MM/yy')} - ${format(dateRange.to, 'dd/MM/yy')}` : 'Selecione um período'} 
+        period={dateRange?.from && dateRange?.to ? `${format(dateRange.from, 'dd/MM/yy')} - ${format(dateRange.to, 'dd/MM/yy')}` : t('dashboard.selectPeriod')} 
         currency={operationCurrency} 
       />
       
       <ChartsSection 
         revenueData={revenueData || []}
-        distributionData={getDistributionData()}
+        distributionData={getDistributionData}
         isLoading={revenueLoading}
         currency={operationCurrency}
       />
@@ -588,8 +591,8 @@ export default function Dashboard() {
           queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
           queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
           toast({
-            title: "✅ Sincronização Concluída!",
-            description: "Todos os dados foram atualizados com sucesso",
+            title: t('dashboard.syncCompleted'),
+            description: t('dashboard.allDataUpdated'),
           });
         }}
         operationId={selectedOperation}

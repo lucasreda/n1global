@@ -12,6 +12,7 @@ import { TourGuide } from "@/components/dashboard/tour-guide";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { changeLanguage } from "./lib/i18n";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
@@ -30,6 +31,7 @@ import Ads from "@/pages/ads";
 import Creatives from "@/pages/creatives";
 import CreativeDetails from "@/pages/creative-details";
 import Onboarding from "@/pages/onboarding";
+import LanguageSelection from "@/pages/language-selection";
 import InsidePage from "@/pages/inside";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminOrders from "@/pages/admin/orders";
@@ -92,6 +94,60 @@ interface OnboardingStatus {
     step4_ads: boolean;
     step5_sync: boolean;
   };
+}
+
+function LanguageSelectionGuard({ children }: { children: React.ReactNode }) {
+  const [location, setLocation] = useLocation();
+  const { user, isAuthenticated } = useAuth();
+
+  // Public routes that don't need language selection
+  const publicRoutes = ['/refund-form/', '/login', '/language-selection'];
+  const isPublicRoute = publicRoutes.some(route => location.startsWith(route));
+
+  // Sync language when user is loaded
+  useEffect(() => {
+    if (user && user.preferredLanguage && ['pt-BR', 'en', 'es'].includes(user.preferredLanguage)) {
+      changeLanguage(user.preferredLanguage as 'pt-BR' | 'en' | 'es');
+      localStorage.setItem('preferred_language', user.preferredLanguage);
+    }
+  }, [user?.preferredLanguage]);
+
+  // If not authenticated or public route, allow access
+  if (!isAuthenticated || !user || isPublicRoute) {
+    return <>{children}</>;
+  }
+
+  // Check if user has preferred language set
+  // Get from user object first, then from localStorage
+  const userPreferredLanguage = (user as any).preferredLanguage;
+  const localStorageLanguage = localStorage.getItem('preferred_language');
+  const hasLanguage = userPreferredLanguage || localStorageLanguage;
+
+  // If on language selection page, allow it
+  if (location === '/language-selection') {
+    return <>{children}</>;
+  }
+
+  // If user doesn't have language set, redirect to language selection
+  useEffect(() => {
+    if (!hasLanguage && location !== '/language-selection') {
+      setLocation('/language-selection');
+    }
+  }, [hasLanguage, location, setLocation]);
+
+  if (!hasLanguage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glassmorphism rounded-2xl p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-white">Redirecionando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // User has language set, allow access
+  return <>{children}</>;
 }
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -243,10 +299,12 @@ function Router() {
   }, [isSuperAdmin, isSupplier, isAdminFinanceiro, isInvestor, isAdminInvestimento, isAffiliate, location, setLocation]);
 
   return (
-    <OnboardingGuard>
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route path="/onboarding" component={Onboarding} />
+    <LanguageSelectionGuard>
+      <OnboardingGuard>
+        <Switch>
+          <Route path="/login" component={Login} />
+          <Route path="/language-selection" component={LanguageSelection} />
+          <Route path="/onboarding" component={Onboarding} />
         
         {/* Public Routes */}
         <Route path="/refund-form/:ticketNumber" component={RefundFormPage} />
@@ -334,6 +392,7 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
     </OnboardingGuard>
+    </LanguageSelectionGuard>
   );
 }
 

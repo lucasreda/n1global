@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/use-translation';
 
 // European countries with flags
 const EUROPEAN_COUNTRIES = [
@@ -54,6 +55,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
   const [selectedCurrency, setSelectedCurrency] = useState('');
   const [operationType, setOperationType] = useState('Cash on Delivery');
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -94,8 +96,8 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     },
     onSuccess: (response: any) => {
       toast({
-        title: "Operação criada com sucesso!",
-        description: `A operação "${operationName}" foi criada.`,
+        title: t('newOperation.success'),
+        description: t('newOperation.successDescription', { name: operationName }),
       });
       queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
       onOperationCreated?.(response.id);
@@ -105,8 +107,8 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       console.error('Erro ao criar operação:', error);
       toast({
         variant: "destructive",
-        title: "Erro ao criar operação",
-        description: error.message || "Ocorreu um erro inesperado.",
+        title: t('newOperation.error'),
+        description: error.message || t('newOperation.errorDescription'),
       });
     },
   });
@@ -116,16 +118,16 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     if (!operationName.trim()) {
       toast({
         variant: "destructive",
-        title: "Nome obrigatório",
-        description: "Por favor, insira um nome para a operação.",
+        title: t('newOperation.nameRequired'),
+        description: t('newOperation.nameRequiredDescription'),
       });
       return;
     }
     if (!selectedCountry || !selectedCurrency) {
       toast({
         variant: "destructive",
-        title: "Seleções obrigatórias",
-        description: "Por favor, selecione o país e a moeda.",
+        title: t('newOperation.selectionsRequired'),
+        description: t('newOperation.selectionsRequiredDescription'),
       });
       return;
     }
@@ -144,16 +146,16 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       <DialogContent className="max-w-lg bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle className="text-xl text-white">
-            Criar Nova Operação
+            {t('newOperation.title')}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-white">Nome da Operação</Label>
+            <Label className="text-white">{t('newOperation.operationName')}</Label>
             <Input
               type="text"
-              placeholder="Ex: Loja Europa"
+              placeholder={t('newOperation.operationNamePlaceholder')}
               value={operationName}
               onChange={(e) => setOperationName(e.target.value)}
               className="bg-gray-800 border-gray-700 text-white"
@@ -162,27 +164,27 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
           </div>
 
           <div className="space-y-2">
-            <Label className="text-white">Tipo de Operação</Label>
+            <Label className="text-white">{t('newOperation.operationType')}</Label>
             <Select value={operationType} onValueChange={setOperationType}>
               <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                <SelectValue placeholder="Selecione o tipo" />
+                <SelectValue placeholder={t('newOperation.selectOperationType')} />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700">
                 <SelectItem value="Cash on Delivery" className="text-white hover:bg-gray-700">
-                  💵 Cash on Delivery
+                  💵 {t('newOperation.cashOnDelivery')}
                 </SelectItem>
-                <SelectItem value="Pagamento no Cartão" className="text-white hover:bg-gray-700">
-                  💳 Pagamento no Cartão
+                <SelectItem value="Card Payment" className="text-white hover:bg-gray-700">
+                  💳 {t('newOperation.cardPayment')}
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-white">País</Label>
+            <Label className="text-white">{t('newOperation.country')}</Label>
             <Select value={selectedCountry} onValueChange={handleCountryChange}>
               <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                <SelectValue placeholder="Selecione o país" />
+                <SelectValue placeholder={t('newOperation.selectCountry')} />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700">
                 {EUROPEAN_COUNTRIES.map((country) => (
@@ -199,10 +201,10 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
           </div>
           
           <div className="space-y-2">
-            <Label className="text-white">Moeda</Label>
+            <Label className="text-white">{t('newOperation.currency')}</Label>
             <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
               <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                <SelectValue placeholder="Selecione a moeda" />
+                <SelectValue placeholder={t('newOperation.selectCurrency')} />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700">
                 {EUROPEAN_CURRENCIES.map((currency) => (
@@ -227,10 +229,10 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
             {createOperationMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Criando operação...
+                {t('newOperation.creating')}
               </>
             ) : (
-              'Criar Operação'
+              t('newOperation.createButton')
             )}
           </Button>
         </div>

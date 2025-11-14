@@ -11,7 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTourContext } from "@/contexts/tour-context";
 import { useLocation } from "wouter";
-import { TeamManagementTab } from "@/components/settings/team-management-tab";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Common European timezones
 const TIMEZONES = [
@@ -67,6 +67,7 @@ const LANGUAGES = [
 ];
 
 export default function Settings() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string>("settings");
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
   const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
@@ -168,8 +169,8 @@ export default function Settings() {
   const handleSave = async () => {
     if (!selectedOperation) {
       toast({
-        title: "Erro",
-        description: "Nenhuma operação selecionada",
+        title: t('settings.error'),
+        description: t('settings.noOperationSelected'),
         variant: "destructive",
       });
       return;
@@ -190,14 +191,14 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
       
       toast({
-        title: "Sucesso",
-        description: "Configurações atualizadas com sucesso",
+        title: t('settings.success'),
+        description: t('settings.settingsUpdatedSuccess'),
       });
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao atualizar configurações",
+        title: t('settings.error'),
+        description: t('settings.errorUpdatingSettings'),
         variant: "destructive",
       });
     } finally {
@@ -208,56 +209,43 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <DashboardHeader 
-        title="Configurações do Sistema" 
-        subtitle="Personalize e configure suas preferências" 
+        title={t('settings.title')} 
+        subtitle={t('settings.subtitle')} 
       />
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-black/20 border border-white/10 backdrop-blur-sm">
-          <TabsTrigger value="settings" className="data-[state=active]:bg-blue-600">
-            <Briefcase className="h-4 w-4 mr-2" />
-            Configurações
-          </TabsTrigger>
-          <TabsTrigger value="team" className="data-[state=active]:bg-blue-600">
-            <Users className="h-4 w-4 mr-2" />
-            Equipe
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="settings" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Card Negócio */}
-            <div 
-              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-            >
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
-                  <Briefcase className="text-green-400" size={20} />
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold">Negócio</h3>
-                  <p className="text-gray-400 text-sm">Configure o tipo de operação do seu negócio</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-                  <label className="text-gray-300 text-sm mb-3 block">Tipo de Operação</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Card Negócio */}
+        <div 
+          className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+        >
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
+              <Briefcase className="text-green-400" size={20} />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">{t('settings.business')}</h3>
+              <p className="text-gray-400 text-sm">{t('settings.businessDescription')}</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+              <label className="text-gray-300 text-sm mb-3 block">{t('settings.operationType')}</label>
               <Select value={operationType} onValueChange={handleOperationTypeChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-operation-type"
                 >
-                  <SelectValue placeholder="Selecione o tipo de operação" />
+                  <SelectValue placeholder={t('settings.selectOperationType')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   <SelectItem value="Cash on Delivery" data-testid="option-cash-on-delivery">
-                    Cash on Delivery
+                    {t('settings.cashOnDelivery')}
                   </SelectItem>
                   <SelectItem value="Pagamento no Cartão" data-testid="option-pagamento-cartao">
-                    Pagamento no Cartão
+                    {t('settings.cardPayment')}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -266,14 +254,14 @@ export default function Settings() {
                 <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Clock className="mr-2" size={16} />
-                Fuso Horário da Operação
+                {t('settings.timezone')}
               </label>
               <Select value={timezone} onValueChange={handleTimezoneChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-timezone"
                 >
-                  <SelectValue placeholder="Selecione o fuso horário" />
+                  <SelectValue placeholder={t('settings.selectTimezone')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   {TIMEZONES.map((tz) => (
@@ -284,18 +272,18 @@ export default function Settings() {
                 </SelectContent>
               </Select>
               <p className="text-gray-400 text-xs mt-2">
-                Este fuso horário será usado para calcular as métricas e relatórios do dashboard
+                {t('settings.timezoneDescription')}
               </p>
             </div>
 
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-              <label className="text-gray-300 text-sm mb-3 block">Moeda da Operação</label>
+              <label className="text-gray-300 text-sm mb-3 block">{t('settings.currency')}</label>
               <Select value={currency} onValueChange={handleCurrencyChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-currency"
                 >
-                  <SelectValue placeholder="Selecione a moeda" />
+                  <SelectValue placeholder={t('settings.selectCurrency')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   {CURRENCIES.map((curr) => (
@@ -306,21 +294,21 @@ export default function Settings() {
                 </SelectContent>
               </Select>
               <p className="text-gray-400 text-xs mt-2">
-                Moeda em que os valores serão exibidos no dashboard
+                {t('settings.currencyDescription')}
               </p>
             </div>
 
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Globe className="mr-2" size={16} />
-                Idioma da Operação
+                {t('settings.language')}
               </label>
               <Select value={language} onValueChange={handleLanguageChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-language"
                 >
-                  <SelectValue placeholder="Selecione o idioma" />
+                  <SelectValue placeholder={t('settings.selectLanguage')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   {LANGUAGES.map((lang) => (
@@ -331,26 +319,26 @@ export default function Settings() {
                 </SelectContent>
               </Select>
               <p className="text-gray-400 text-xs mt-2">
-                Idioma usado nos emails de boas-vindas e comunicações automáticas
+                {t('settings.languageDescription')}
               </p>
             </div>
 
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Hash className="mr-2" size={16} />
-                Prefixo dos Pedidos
+                {t('settings.orderPrefix')}
               </label>
               <Input
                 type="text"
                 value={shopifyPrefix}
                 onChange={(e) => handleShopifyPrefixChange(e.target.value)}
-                placeholder="Ex: 52, BG, CR (# será adicionado automaticamente)"
+                placeholder={t('settings.orderPrefixPlaceholder')}
                 maxLength={4}
                 className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 hover:bg-black/30"
                 data-testid="input-shopify-prefix"
               />
               <p className="text-gray-400 text-xs mt-2">
-                Digite os 3 caracteres do prefixo (# é adicionado automaticamente). Ex: 52 vira #52, BG vira #BG
+                {t('settings.orderPrefixDescription')}
               </p>
                 </div>
                 
@@ -364,33 +352,32 @@ export default function Settings() {
               }`}
               data-testid="button-save-settings"
             >
-              {isSaving ? 'Salvando...' : 'Salvar Configurações'}
-                </Button>
-              </div>
-            </div>
-            
-            {/* Tour Interativo */}
-            <div 
-              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-            >
+              {isSaving ? t('settings.saving') : t('settings.saveSettings')}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Tour Interativo */}
+        <div 
+          className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+        >
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center">
               <PlayCircle className="text-purple-400" size={20} />
             </div>
             <div>
-              <h3 className="text-white font-semibold">Tour Interativo</h3>
-              <p className="text-gray-400 text-sm">Conheça todas as funcionalidades do dashboard</p>
+              <h3 className="text-white font-semibold">{t('settings.interactiveTour')}</h3>
+              <p className="text-gray-400 text-sm">{t('settings.interactiveTourDescription')}</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="bg-black/10 border border-white/5 rounded-lg p-4">
               <p className="text-gray-300 text-sm mb-4">
-                O tour guiado mostra os principais recursos do sistema, incluindo métricas, integrações e anúncios. 
-                Perfeito para novos usuários ou para relembrar funcionalidades.
+                {t('settings.tourDescription')}
               </p>
               <Button 
                 onClick={handleRestartTour}
@@ -401,41 +388,39 @@ export default function Settings() {
                 {isResettingTour ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                    Iniciando...
+                    {t('settings.starting')}
                   </>
                 ) : (
                   <>
                     <PlayCircle className="mr-2" size={18} />
-                    Refazer Tour Guiado
+                    {t('settings.restartTour')}
                   </>
                 )}
               </Button>
             </div>
           </div>
         </div>
+      </div>
+      
+      <div 
+        className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+        style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+      >
+        <h3 className="text-xl font-semibold text-white mb-4">{t('settings.aboutSystem')}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+            <h4 className="text-white font-medium">{t('settings.version')}</h4>
+            <p className="text-gray-400 text-sm">v1.0.0</p>
           </div>
-          
-          <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-          >
-            <h3 className="text-xl font-semibold text-white mb-4">Sobre o Sistema</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-                <h4 className="text-white font-medium">Versão</h4>
-                <p className="text-gray-400 text-sm">v1.0.0</p>
-              </div>
-              <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-                <h4 className="text-white font-medium">Última Atualização</h4>
-                <p className="text-gray-400 text-sm">15/12/2024</p>
-              </div>
-              <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-                <h4 className="text-white font-medium">Suporte</h4>
-                <p className="text-gray-400 text-sm">24/7 Online</p>
-              </div>
-            </div>
+          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+            <h4 className="text-white font-medium">{t('settings.lastUpdate')}</h4>
+            <p className="text-gray-400 text-sm">15/12/2024</p>
+          </div>
+          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+            <h4 className="text-white font-medium">{t('settings.support')}</h4>
+            <p className="text-gray-400 text-sm">{t('settings.support24_7')}</p>
           </div>
         </TabsContent>
 

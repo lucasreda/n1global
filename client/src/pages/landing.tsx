@@ -9,15 +9,18 @@ import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
 import openLogo from "@assets/open-logo_1757013744090.png";
 import shopifyLogo from "@assets/shopify-logo_1757013744091.png";
 import logoPath from "@assets/logo_1756142152045.png";
+import { useTranslation } from "@/hooks/use-translation";
+import { LanguageSelector } from "@/components/ui/language-selector";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
   const [logoVisible, setLogoVisible] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  const fullText = "Venda seus produtos físicos na Europa\nsem burocracia";
+  const fullText = t('landing.heroTitle');
 
   useEffect(() => {
     // Start logo animation after component mounts
@@ -86,106 +89,95 @@ export default function Landing() {
 
   const howItWorksSteps = [
     {
-      number: "01",
-      title: "Análise & Consultoria",
-      description: "Sessão estratégica gratuita. Analisamos seus produtos, mercado-alvo e definimos o roadmap completo para Europa.",
+      number: t('landing.steps.step1.number'),
+      title: t('landing.steps.step1.title'),
+      description: t('landing.steps.step1.description'),
       icon: MessageSquare
     },
     {
-      number: "02", 
-      title: "Setup Regulatório",
-      description: "Nossa equipe cuida de todas as aprovações, registros sanitários, estrutura fiscal e compliance em todos os países europeus.",
+      number: t('landing.steps.step2.number'), 
+      title: t('landing.steps.step2.title'),
+      description: t('landing.steps.step2.description'),
       icon: Shield
     },
     {
-      number: "03",
-      title: "Lançamento & Escala",
-      description: "Você foca em marketing e vendas enquanto operamos toda a infraestrutura. Crescimento sem fricção de 0 a €10M+.",
+      number: t('landing.steps.step3.number'),
+      title: t('landing.steps.step3.title'),
+      description: t('landing.steps.step3.description'),
       icon: TrendingUp
     }
   ];
 
   const testimonials = [
     {
-      name: "Carlos Mendes",
-      company: "VitaMax Suplementos",
-      content: "Em 3 meses já estávamos vendendo em 12 países europeus. A N1 cuidou de toda complexidade regulatória dos nossos nutracêuticos.",
-      revenue: "€2.1M em 8 meses"
+      name: t('landing.testimonials.testimonial1.name'),
+      company: t('landing.testimonials.testimonial1.company'),
+      content: t('landing.testimonials.testimonial1.content'),
+      revenue: t('landing.testimonials.testimonial1.revenue'),
+      revenueLabel: t('landing.testimonials.testimonial1.revenueLabel')
     },
     {
-      name: "Ana Silva", 
-      company: "EcoBeauty Brasil",
-      content: "Tentamos por 1 ano entrar na Europa sozinhos. Com a N1, em 45 dias já tínhamos a primeira venda. Estrutura completa e profissional.",
-      revenue: "€850K em 6 meses"
+      name: t('landing.testimonials.testimonial2.name'), 
+      company: t('landing.testimonials.testimonial2.company'),
+      content: t('landing.testimonials.testimonial2.content'),
+      revenue: t('landing.testimonials.testimonial2.revenue'),
+      revenueLabel: t('landing.testimonials.testimonial2.revenueLabel')
     }
   ];
 
   const solutions = [
     {
       icon: Building,
-      title: "Estrutura Fiscal Completa",
-      description: "Gestão fiscal e jurídica em todos os países europeus. Você não precisa abrir empresa ou lidar com papelada.",
+      key: 'fiscal',
       color: "text-blue-500"
     },
     {
       icon: FileCheck,
-      title: "Conformidade Regulatória",
-      description: "Expertise em regulamentações para nutracêuticos e produtos físicos diversos. Todas as aprovações necessárias.",
+      key: 'regulatory',
       color: "text-green-500"
     },
     {
       icon: Globe,
-      title: "Operação Pan-Europeia",
-      description: "Acesso direto a 28 países europeus com uma única estrutura. Logística, vendas e suporte unificados.",
+      key: 'panEuropean',
       color: "text-purple-500"
     },
     {
       icon: Zap,
-      title: "Zero Burocracia",
-      description: "Nossa equipe cuida de toda complexidade operacional. Você foca exclusivamente no seu produto e marketing.",
+      key: 'zeroBureaucracy',
       color: "text-yellow-500"
     },
     {
       icon: Scale,
-      title: "Escalabilidade Instantânea",
-      description: "Infraestrutura pronta para crescimento exponencial. De 100 a 100.000 pedidos sem fricção operacional.",
+      key: 'scalability',
       color: "text-orange-500"
     },
     {
       icon: Shield,
-      title: "Gestão de Riscos",
-      description: "Proteção total contra riscos fiscais, regulatórios e operacionais. Compliance garantido em todos os mercados.",
+      key: 'riskManagement',
       color: "text-red-500"
     }
   ];
 
-  const stats = [
-    { number: "28", label: "países europeus", sublabel: "cobertura completa" },
-    { number: "€127M", label: "processados", sublabel: "em vendas anuais" },
-    { number: "847+", label: "produtos ativos", sublabel: "diversos segmentos" },
-    { number: "99.8%", label: "compliance", sublabel: "aprovação regulatória" }
-  ];
-
   const faqItems = [
     {
-      question: "Quanto custa para usar a estrutura da N1?",
-      answer: "Nossos planos começam a partir de €2.500/mês com taxa de performance variável. Inclui toda estrutura fiscal, jurídica, logística e compliance. Sem custos ocultos ou surpresas."
+      question: t('landing.faq.q1'),
+      answer: t('landing.faq.a1')
     },
     {
-      question: "A N1 trabalha com que tipos de produtos?",
-      answer: "Especializamos em produtos físicos diversos e nutracêuticos. Nossa expertise regulatória cobre desde suplementos alimentares até produtos de consumo geral, sempre garantindo compliance total."
+      question: t('landing.faq.q2'),
+      answer: t('landing.faq.a2')
     },
     {
-      question: "Como vocês lidam com regulamentações de nutracêuticos?",
-      answer: "Temos especialistas dedicados em regulamentações europeias para nutracêuticos. Cuidamos de todas as aprovações necessárias, registros sanitários, EFSA compliance e conformidade com as normas específicas de cada país."
+      question: t('landing.faq.q3'),
+      answer: t('landing.faq.a3')
     },
     {
-      question: "Qual o prazo típico para começar a vender?",
-      answer: "Produtos físicos gerais: 7-14 dias. Nutracêuticos: 21-30 dias devido às aprovações regulatórias específicas. Produtos complexos: até 45 dias. Todo processo é transparente com updates semanais."
+      question: t('landing.faq.q4'),
+      answer: t('landing.faq.a4')
     },
     {
-      question: "Preciso me preocupar com questões fiscais na Europa?",
-      answer: "Absolutamente não. Nossa estrutura fiscal está estabelecida em todos os países onde operamos. Você vende do Brasil e nós cuidamos de toda gestão fiscal, jurídica e compliance europeu."
+      question: t('landing.faq.q5'),
+      answer: t('landing.faq.a5')
     }
   ];
 
@@ -212,16 +204,19 @@ export default function Landing() {
                   : '-translate-y-12 opacity-0'
               }`} 
             />
-            <Button 
-              onClick={handleLoginClick}
-              variant="outline"
-              className="border-white/50 bg-white/10 text-white hover:bg-white/20 px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200 backdrop-blur-md"
-              data-testid="button-login-header"
-            >
-              <LogIn className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Entrar</span>
-              <span className="sm:hidden">Entrar</span>
-            </Button>
+            <div className="flex items-center gap-3">
+              <LanguageSelector />
+              <Button 
+                onClick={handleLoginClick}
+                variant="outline"
+                className="border-white/50 bg-white/10 text-white hover:bg-white/20 px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200 backdrop-blur-md"
+                data-testid="button-login-header"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">{t('landing.enter')}</span>
+                <span className="sm:hidden">{t('landing.enter')}</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -256,24 +251,46 @@ export default function Landing() {
                       const result = [];
                       let i = 0;
                       
+                      // Palavras a destacar com gradiente por idioma
+                      const sellWords = ['Venda', 'Vende', 'Sell'];
+                      const bureaucracyPhrases = [
+                        { first: 'sem', second: 'burocracia' },      // PT-BR
+                        { first: 'sin', second: 'burocracia' },      // ES
+                        { first: 'without', second: 'bureaucracy' }   // EN
+                      ];
+                      
                       while (i < words.length) {
                         const word = words[i];
+                        let processed = false;
                         
-                        if (word === 'Venda') {
+                        // Verificar se é palavra de "vender/venda/sell"
+                        if (sellWords.includes(word)) {
                           result.push(
                             <span key={`${index}-${i}`} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                               {word}
                             </span>
                           );
-                        } else if (word === 'sem' && i + 1 < words.length && words[i + 1] === 'burocracia') {
-                          // Apply gradient to "sem burocracia" as a single unit
-                          result.push(
-                            <span key={`${index}-${i}`} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                              {word} {words[i + 1]}
-                            </span>
-                          );
-                          i++; // Skip next word since we've processed both
-                        } else {
+                          processed = true;
+                        } 
+                        // Verificar se é frase de "sem/sin/without burocracia/bureaucracy"
+                        else {
+                          for (const phrase of bureaucracyPhrases) {
+                            if (word === phrase.first && i + 1 < words.length && words[i + 1] === phrase.second) {
+                              // Apply gradient to phrase as a single unit
+                              result.push(
+                                <span key={`${index}-${i}`} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                                  {word} {words[i + 1]}
+                                </span>
+                              );
+                              i++; // Skip next word since we've processed both
+                              processed = true;
+                              break;
+                            }
+                          }
+                        }
+                        
+                        // Se não foi processado, adicionar palavra normal
+                        if (!processed) {
                           result.push(
                             <span key={`${index}-${i}`}>
                               {word}
@@ -296,10 +313,7 @@ export default function Landing() {
                 ))}
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
-              <p className="text-base sm:text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-8 sm:mb-12 max-w-4xl mx-auto px-4">
-                Estrutura completa para <strong className="text-foreground">produtos físicos diversos e nutracêuticos</strong>. 
-                Fiscal, jurídico, regulatório e logística — tudo resolvido para você focar no que importa: <strong className="text-foreground">suas vendas</strong>.
-              </p>
+              <p className="text-base sm:text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-8 sm:mb-12 max-w-4xl mx-auto px-4" dangerouslySetInnerHTML={{ __html: t('landing.heroSubtitle') }} />
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
                 <Button 
                   size="lg"
@@ -307,7 +321,7 @@ export default function Landing() {
                   className="bg-primary hover:bg-primary/90 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg w-full sm:w-auto"
                   data-testid="button-cta-hero"
                 >
-                  Consultoria Gratuita <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  {t('landing.ctaConsultation')} <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button 
                   size="lg"
@@ -315,7 +329,7 @@ export default function Landing() {
                   className="border-border/50 text-foreground hover:bg-background/80 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 w-full sm:w-auto"
                   data-testid="button-learn-more"
                 >
-                  Saiba Mais
+                  {t('landing.learnMore')}
                 </Button>
               </div>
             </div>
@@ -326,10 +340,15 @@ export default function Landing() {
         <section className="py-12 sm:py-20">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="mb-10 sm:mb-16 text-center">
-              <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-4">Infraestrutura consolidada e resultados comprovados no mercado europeu</p>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-4">{t('landing.statsSubtitle')}</p>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-              {stats.map((stat, index) => (
+              {[
+                { number: "28", label: t('landing.stats.countries'), sublabel: t('landing.stats.countriesSub') },
+                { number: "€127M", label: t('landing.stats.processed'), sublabel: t('landing.stats.processedSub') },
+                { number: "847+", label: t('landing.stats.products'), sublabel: t('landing.stats.productsSub') },
+                { number: "99.8%", label: t('landing.stats.compliance'), sublabel: t('landing.stats.complianceSub') }
+              ].map((stat, index) => (
                 <Card key={index} className="glassmorphism border-border/30 text-center group hover:border-primary/50 transition-all duration-300">
                   <CardContent className="p-4 sm:p-6 lg:p-8">
                     <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent mb-2 sm:mb-3">
@@ -348,7 +367,7 @@ export default function Landing() {
         <section className="py-12 sm:py-16 bg-gradient-to-b from-background to-primary/5">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center">
-              <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12 px-4">Integrações com as principais plataformas</p>
+              <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12 px-4">{t('landing.integrationsTitle')}</p>
               <div className="grid grid-cols-2 gap-8 justify-items-center max-w-xs mx-auto sm:flex sm:justify-center sm:items-center sm:gap-8 lg:gap-12 xl:gap-16 px-4">
                 <img 
                   src={cartLogo} 
@@ -384,51 +403,34 @@ export default function Landing() {
           <div className="container mx-auto px-4 sm:px-6">
             <div className="max-w-5xl mx-auto text-center">
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-foreground mb-6 sm:mb-8 mt-5 px-2">
-                Vender na Europa deveria ser simples...
+                {t('landing.problemTitle')}
               </h2>
-              <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-12 sm:mb-16 px-4">
-                Mas você sabe quantas <strong className="text-foreground">barreiras complexas</strong> existem
-              </p>
+              <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-12 sm:mb-16 px-4" dangerouslySetInnerHTML={{ __html: t('landing.problemSubtitle') }} />
               
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 text-left mb-8 sm:mb-12 px-2">
                 {[
-                  {
-                    title: "Complexidade Regulatória",
-                    desc: "Especialmente para nutracêuticos: registros sanitários, conformidade com EFSA, rotulagem específica por país"
-                  },
-                  {
-                    title: "Estrutura Fiscal Fragmentada",
-                    desc: "28 países, 28 sistemas fiscais diferentes. VAT, EORI, representação fiscal obrigatória"
-                  },
-                  {
-                    title: "Logística Internacional",
-                    desc: "Alfândega, armazenagem local, gestão de devoluções, prazos longos e custos imprevisíveis"
-                  },
-                  {
-                    title: "Conformidade Legal",
-                    desc: "GDPR, direitos do consumidor, políticas de reembolso locais, termos de uso específicos"
-                  },
-                  {
-                    title: "Suporte Multilíngue",
-                    desc: "Atendimento em 28+ idiomas, conhecimento local, gestão de fusos horários diferentes"
-                  },
-                  {
-                    title: "Risco Operacional",
-                    desc: "Zero previsibilidade, cash flow instável, exposição a mudanças regulatórias"
-                  }
-                ].map((problem, index) => (
+                  { key: 'regulatory' },
+                  { key: 'fiscal' },
+                  { key: 'logistics' },
+                  { key: 'legal' },
+                  { key: 'support' },
+                  { key: 'risk' }
+                ].map((problem, index) => {
+                  const problemData = t(`landing.problems.${problem.key}`, { returnObjects: true }) as { title: string; desc: string };
+                  return (
                   <Card key={index} className="glassmorphism border-destructive/20 hover:border-destructive/40 transition-all duration-300">
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 bg-destructive rounded-full mt-2 flex-shrink-0"></div>
                         <div>
-                          <h3 className="font-semibold text-foreground mb-2">{problem.title}</h3>
-                          <p className="text-sm text-muted-foreground leading-relaxed">{problem.desc}</p>
+                          <h3 className="font-semibold text-foreground mb-2">{problemData.title}</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{problemData.desc}</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
               
               <div 
@@ -436,12 +438,9 @@ export default function Landing() {
                 style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
               >
                 <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">
-                  O resultado? Meses de planejamento, milhares em consultoria e risco de não conformidade.
+                  {t('landing.problemResult')}
                 </h3>
-                <p className="text-red-300 leading-relaxed">
-                  <strong className="text-white">95% das empresas brasileiras</strong> que tentam entrar na Europa por conta própria 
-                  abandonam o projeto ou operam fora da conformidade legal — expondo-se a multas de até €20 milhões.
-                </p>
+                <p className="text-red-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: t('landing.problemResultDesc') }} />
               </div>
             </div>
           </div>
@@ -452,10 +451,10 @@ export default function Landing() {
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-                Como Funciona
+                {t('landing.howItWorksTitle')}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Processo simples e transparente para levar seus produtos à Europa
+                {t('landing.howItWorksSubtitle')}
               </p>
             </div>
 
@@ -485,11 +484,9 @@ export default function Landing() {
         <section className="py-16 sm:py-20">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-                Resultados Reais<br className="sm:hidden" /> de Clientes
-              </h2>
+              <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4" dangerouslySetInnerHTML={{ __html: t('landing.testimonialsTitle') }} />
               <p className="text-lg text-muted-foreground">
-                Empresas brasileiras que já estão vendendo na Europa
+                {t('landing.testimonialsSubtitle')}
               </p>
             </div>
 
@@ -512,7 +509,7 @@ export default function Landing() {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold text-primary">{testimonial.revenue}</div>
-                        <div className="text-xs text-muted-foreground">faturamento Europa</div>
+                        <div className="text-xs text-muted-foreground">{testimonial.revenueLabel}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -526,30 +523,22 @@ export default function Landing() {
         <section className="py-20">
           <div className="container mx-auto px-6">
             <div className="text-center mb-20">
-              <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
-                A{" "}
-                <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                  N1 Global
-                </span>
-                {" "}oferece estrutura completa
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                <strong className="text-foreground">Especialistas em produtos físicos e nutracêuticos</strong>. 
-                Você vende do Brasil, nós operamos toda a Europa.
-              </p>
+              <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6" dangerouslySetInnerHTML={{ __html: t('landing.solutionTitle') }} />
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto" dangerouslySetInnerHTML={{ __html: t('landing.solutionSubtitle') }} />
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
               {solutions.map((solution, index) => {
                 const IconComponent = solution.icon;
+                const solutionData = t(`landing.solutions.${solution.key}`, { returnObjects: true }) as { title: string; description: string };
                 return (
                   <Card key={index} className="glassmorphism border-border/30 hover:border-primary/50 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 group">
                     <CardContent className="p-4 sm:p-8">
                       <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-chart-2/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                         <IconComponent className={`h-8 w-8 ${solution.color} group-hover:scale-110 transition-transform duration-300`} />
                       </div>
-                      <h3 className="text-xl font-semibold text-foreground mb-4 group-hover:text-primary transition-colors duration-300">{solution.title}</h3>
-                      <p className="text-muted-foreground leading-relaxed">{solution.description}</p>
+                      <h3 className="text-xl font-semibold text-foreground mb-4 group-hover:text-primary transition-colors duration-300">{solutionData.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed">{solutionData.description}</p>
                     </CardContent>
                   </Card>
                 );
@@ -559,24 +548,24 @@ export default function Landing() {
             {/* Key Differentiators */}
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-8">
-                <h3 className="text-2xl lg:text-[26px] font-bold text-foreground mb-3 mt-20">Por que escolher a N1?</h3>
-                <p className="text-muted-foreground">Somos os únicos com essa expertise específica no mercado</p>
+                <h3 className="text-2xl lg:text-[26px] font-bold text-foreground mb-3 mt-20">{t('landing.whyChooseTitle')}</h3>
+                <p className="text-muted-foreground">{t('landing.whyChooseSubtitle')}</p>
               </div>
               <div className="grid md:grid-cols-3 gap-6 text-center">
                 <div>
                   <Pill className="w-8 h-8 text-primary mx-auto mb-3" />
-                  <h4 className="font-semibold text-foreground mb-2 text-lg">Expertise em Nutracêuticos</h4>
-                  <p className="text-base text-muted-foreground">Únicos com aprovação regulatória para 500+ produtos</p>
+                  <h4 className="font-semibold text-foreground mb-2 text-lg">{t('landing.differentiators.nutraceuticals.title')}</h4>
+                  <p className="text-base text-muted-foreground">{t('landing.differentiators.nutraceuticals.description')}</p>
                 </div>
                 <div>
                   <TrendingUp className="w-8 h-8 text-primary mx-auto mb-3" />
-                  <h4 className="font-semibold text-foreground mb-2 text-lg">Crescimento Sem Limite</h4>
-                  <p className="text-base text-muted-foreground">Infraestrutura para escalar de 0 a €10M+ sem fricção</p>
+                  <h4 className="font-semibold text-foreground mb-2 text-lg">{t('landing.differentiators.growth.title')}</h4>
+                  <p className="text-base text-muted-foreground">{t('landing.differentiators.growth.description')}</p>
                 </div>
                 <div>
                   <Users className="w-8 h-8 text-primary mx-auto mb-3" />
-                  <h4 className="font-semibold text-foreground mb-2 text-lg">Time Especializado</h4>
-                  <p className="text-base text-muted-foreground">Regulatório, fiscal e jurídico dedicado ao seu sucesso</p>
+                  <h4 className="font-semibold text-foreground mb-2 text-lg">{t('landing.differentiators.team.title')}</h4>
+                  <p className="text-base text-muted-foreground">{t('landing.differentiators.team.description')}</p>
                 </div>
               </div>
             </div>
@@ -593,23 +582,17 @@ export default function Landing() {
               
               <CardContent className="p-6 sm:p-12 relative z-10">
                 <div className="text-center mb-12">
-                  <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-6">
-                    Comece a vender na Europa
-                    <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent"> sem burocracia</span>
-                  </h2>
-                  <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                    <strong className="text-foreground">Sessão estratégica 100% gratuita</strong> com nossos especialistas. 
-                    Saia da reunião com um roadmap completo para o mercado europeu.
-                  </p>
+                  <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-6" dangerouslySetInnerHTML={{ __html: t('landing.ctaTitle') }} />
+                  <p className="text-lg text-muted-foreground max-w-3xl mx-auto" dangerouslySetInnerHTML={{ __html: t('landing.ctaSubtitle') }} />
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-6 mb-10">
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-foreground mb-3">O que você recebe:</h3>
+                    <h3 className="font-semibold text-foreground mb-3">{t('landing.ctaWhatYouGet')}</h3>
                     {[
-                      "Análise de viabilidade para seus produtos",
-                      "Estratégia regulatória personalizada",
-                      "Roadmap de entrada no mercado europeu"
+                      t('landing.ctaBenefits.feasibility'),
+                      t('landing.ctaBenefits.strategy'),
+                      t('landing.ctaBenefits.roadmap')
                     ].map((item, index) => (
                       <div key={index} className="flex items-start space-x-3">
                         <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
@@ -618,11 +601,11 @@ export default function Landing() {
                     ))}
                   </div>
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-foreground mb-3">Especialistas dedicados:</h3>
+                    <h3 className="font-semibold text-foreground mb-3">{t('landing.ctaExperts')}</h3>
                     {[
-                      "Estrutura fiscal e operacional sob medida",
-                      "Timeline realista e próximos passos",
-                      "Sem compromisso e sem enrolação"
+                      t('landing.ctaExpertBenefits.structure'),
+                      t('landing.ctaExpertBenefits.timeline'),
+                      t('landing.ctaExpertBenefits.noCommitment')
                     ].map((item, index) => (
                       <div key={index} className="flex items-start space-x-3">
                         <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
@@ -639,10 +622,10 @@ export default function Landing() {
                     className="bg-gradient-to-r from-primary to-chart-2 hover:from-primary/90 hover:to-chart-2/90 text-white px-4 sm:px-10 py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-300 hover:scale-105 shadow-xl w-full sm:w-auto"
                     data-testid="button-cta-schedule"
                   >
-                    Agendar Consultoria Gratuita <Calendar className="ml-3 h-5 w-5" />
+                    {t('landing.ctaButton')} <Calendar className="ml-3 h-5 w-5" />
                   </Button>
                   <p className="text-sm text-muted-foreground mt-4">
-                    ⚡ Apenas 5 horários disponíveis esta semana - Agenda limitada
+                    {t('landing.ctaLimited')}
                   </p>
                 </div>
               </CardContent>
@@ -655,7 +638,7 @@ export default function Landing() {
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl lg:text-4xl font-bold text-foreground text-center mb-12">
-                Perguntas Frequentes
+                {t('landing.faqTitle')}
               </h2>
               
               <div className="space-y-4">
@@ -704,48 +687,47 @@ export default function Landing() {
                     <img src={logoPath} alt="N1 Global" className="h-6 w-auto" />
                   </div>
                   <p className="text-muted-foreground leading-relaxed mb-6">
-                    Especialistas em estrutura completa para vendas de produtos físicos e nutracêuticos na Europa. 
-                    Compliance, logística e operação sem burocracia.
+                    {t('landing.footer.description')}
                   </p>
                   <div className="flex items-center space-x-2">
                     <Globe className="h-4 w-4 text-primary" />
-                    <span className="text-sm text-muted-foreground">28 países europeus cobertos</span>
+                    <span className="text-sm text-muted-foreground">{t('landing.footer.countriesCovered')}</span>
                   </div>
                 </div>
 
                 {/* Services */}
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-6">Serviços</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-6">{t('landing.footer.services.title')}</h3>
                   <ul className="space-y-3">
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Estrutura Fiscal</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Conformidade Regulatória</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Logística Europeia</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Nutracêuticos</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Produtos Físicos</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Gestão de Riscos</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.services.fiscal')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.services.regulatory')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.services.logistics')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.services.nutraceuticals')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.services.physical')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.services.risk')}</a></li>
                   </ul>
                 </div>
 
                 {/* Company */}
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-6">Empresa</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-6">{t('landing.footer.company.title')}</h3>
                   <ul className="space-y-3">
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Sobre Nós</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Nossa Equipe</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Casos de Sucesso</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Parceiros</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Carreira</a></li>
-                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Imprensa</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.company.about')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.company.team')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.company.success')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.company.partners')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.company.career')}</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">{t('landing.footer.company.press')}</a></li>
                   </ul>
                 </div>
 
                 {/* Contact & Support */}
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-6">Contato</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-6">{t('landing.footer.contact.title')}</h3>
                   
                   {/* Europe Office */}
                   <div className="mb-6">
-                    <h4 className="font-medium text-foreground mb-3">Escritório Europa</h4>
+                    <h4 className="font-medium text-foreground mb-3">{t('landing.footer.contact.europeOffice')}</h4>
                     <div className="space-y-2">
                       <div className="flex items-start space-x-2">
                         <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
@@ -760,7 +742,7 @@ export default function Landing() {
 
                   {/* Brazil Office */}
                   <div className="mb-6">
-                    <h4 className="font-medium text-foreground mb-3">Escritório Brasil</h4>
+                    <h4 className="font-medium text-foreground mb-3">{t('landing.footer.contact.brazilOffice')}</h4>
                     <div className="space-y-2">
                       <div className="flex items-start space-x-2">
                         <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
@@ -781,7 +763,7 @@ export default function Landing() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Clock className="h-4 w-4 text-primary" />
-                      <span className="text-sm text-muted-foreground">Suporte 24/7 • 365 dias</span>
+                      <span className="text-sm text-muted-foreground">{t('landing.footer.contact.support')}</span>
                     </div>
                   </div>
                 </div>
@@ -794,17 +776,17 @@ export default function Landing() {
                 
                 {/* Legal Links */}
                 <div className="flex flex-wrap justify-center lg:justify-start items-center space-x-6 text-sm text-muted-foreground">
-                  <a href="#" className="hover:text-foreground transition-colors">Política de Privacidade</a>
-                  <a href="#" className="hover:text-foreground transition-colors">Termos de Uso</a>
-                  <a href="#" className="hover:text-foreground transition-colors">Política de Cookies</a>
-                  <a href="#" className="hover:text-foreground transition-colors">LGPD</a>
-                  <a href="#" className="hover:text-foreground transition-colors">Compliance</a>
+                  <a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.legal.privacy')}</a>
+                  <a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.legal.terms')}</a>
+                  <a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.legal.cookies')}</a>
+                  <a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.legal.lgpd')}</a>
+                  <a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.legal.compliance')}</a>
                 </div>
 
                 {/* Copyright */}
                 <div className="text-sm text-muted-foreground text-center lg:text-right">
-                  <p>© 2025 N1 Global Solutions. Todos os direitos reservados.</p>
-                  <p className="mt-1">CNPJ: 00.000.000/0001-00</p>
+                  <p>{t('landing.footer.copyright')}</p>
+                  <p className="mt-1">{t('landing.footer.cnpj')}</p>
                 </div>
               </div>
             </div>

@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useTourContext } from "@/contexts/tour-context";
 import { useLocation } from "wouter";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ShopifyIntegration {
   id: string;
@@ -31,6 +32,7 @@ interface ShopifyIntegration {
 }
 
 export function ShopifyIntegration() {
+  const { t } = useTranslation();
   const [shopName, setShopName] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [isConfiguring, setIsConfiguring] = useState(false);
@@ -99,14 +101,14 @@ export function ShopifyIntegration() {
       await queryClient.invalidateQueries({ queryKey: ["/api/onboarding/integrations-status"] });
       setIsConfiguring(false);
       toast({
-        title: "Sucesso",
-        description: "Integração Shopify configurada com sucesso!",
+        title: t('integrations.shopify.success'),
+        description: t('integrations.shopify.configuredSuccessfully'),
       });
 
       // Redirecionar para orders e iniciar tour
       toast({
-        title: "Pronto para Sincronizar!",
-        description: "Agora você pode importar seus pedidos.",
+        title: t('integrations.shopify.readyToSync'),
+        description: t('integrations.shopify.readyToSyncDescription'),
       });
       setTimeout(() => {
         setLocation('/orders');
@@ -117,8 +119,8 @@ export function ShopifyIntegration() {
     },
     onError: (error: any) => {
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao configurar integração Shopify",
+        title: t('integrations.shopify.error'),
+        description: error.message || t('integrations.shopify.errorConfiguring'),
         variant: "destructive",
       });
     },
@@ -135,14 +137,14 @@ export function ShopifyIntegration() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Conexão válida",
-        description: `Conectado com sucesso à loja: ${data.data.name}`,
+        title: t('integrations.shopify.validConnection'),
+        description: t('integrations.shopify.connectedSuccessfully', { name: data.data.name }),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro na conexão",
-        description: error.message || "Erro ao conectar com a loja Shopify",
+        title: t('integrations.shopify.connectionError'),
+        description: error.message || t('integrations.shopify.errorConnecting'),
         variant: "destructive",
       });
     },
@@ -157,14 +159,14 @@ export function ShopifyIntegration() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/shopify"] });
       toast({
-        title: "Sincronização concluída",
+        title: t('integrations.shopify.syncCompleted'),
         description: data.message,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro na sincronização",
-        description: error.message || "Erro ao sincronizar dados",
+        title: t('integrations.shopify.syncError'),
+        description: error.message || t('integrations.shopify.errorSyncing'),
         variant: "destructive",
       });
     },
@@ -182,14 +184,14 @@ export function ShopifyIntegration() {
       setShopName("");
       setAccessToken("");
       toast({
-        title: "Integração removida",
-        description: "Integração Shopify removida com sucesso",
+        title: t('integrations.shopify.integrationRemoved'),
+        description: t('integrations.shopify.integrationRemovedSuccess'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao remover integração",
+        title: t('integrations.shopify.error'),
+        description: error.message || t('integrations.shopify.errorRemoving'),
         variant: "destructive",
       });
     },
@@ -204,8 +206,8 @@ export function ShopifyIntegration() {
   const handleConfigure = () => {
     if (!shopName || !accessToken) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha o nome da loja e token de acesso",
+        title: t('integrations.shopify.requiredFields'),
+        description: t('integrations.shopify.fillShopNameAndToken'),
         variant: "destructive",
       });
       return;
@@ -217,8 +219,8 @@ export function ShopifyIntegration() {
   const handleTest = () => {
     if (!shopName || !accessToken) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha o nome da loja e token de acesso",
+        title: t('integrations.shopify.requiredFields'),
+        description: t('integrations.shopify.fillShopNameAndToken'),
         variant: "destructive",
       });
       return;
@@ -230,11 +232,11 @@ export function ShopifyIntegration() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Ativo</Badge>;
+        return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />{t('integrations.statusActive')}</Badge>;
       case "error":
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Erro</Badge>;
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />{t('integrations.statusError')}</Badge>;
       default:
-        return <Badge variant="secondary">Pendente</Badge>;
+        return <Badge variant="secondary">{t('integrations.statusPending')}</Badge>;
     }
   };
 
@@ -256,10 +258,10 @@ export function ShopifyIntegration() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2" style={{ fontSize: '20px' }}>
             <Store className="w-5 h-5" />
-            Integração Shopify
+            {t('integrations.shopify.title')}
           </CardTitle>
           <CardDescription>
-            Conecte sua loja Shopify para importar pedidos e produtos automaticamente
+            {t('integrations.shopify.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -276,20 +278,20 @@ export function ShopifyIntegration() {
               {integration.metadata && (
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <Label className="text-muted-foreground">Plano</Label>
+                    <Label className="text-muted-foreground">{t('integrations.shopify.plan')}</Label>
                     <p>{integration.metadata.plan}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Moeda</Label>
+                    <Label className="text-muted-foreground">{t('integrations.shopify.currency')}</Label>
                     <p>{integration.metadata.currency}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Email</Label>
+                    <Label className="text-muted-foreground">{t('integrations.shopify.email')}</Label>
                     <p>{integration.metadata.storeEmail}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Última sincronização</Label>
-                    <p>{integration.lastSyncAt ? new Date(integration.lastSyncAt).toLocaleString('pt-BR') : 'Nunca'}</p>
+                    <Label className="text-muted-foreground">{t('integrations.shopify.lastSync')}</Label>
+                    <p>{integration.lastSyncAt ? new Date(integration.lastSyncAt).toLocaleString('pt-BR') : t('integrations.shopify.never')}</p>
                   </div>
                 </div>
               )}
@@ -312,13 +314,13 @@ export function ShopifyIntegration() {
                   ) : (
                     <RefreshCw className="w-4 h-4 mr-2" />
                   )}
-                  Sincronizar Shopify
+                  {t('integrations.shopify.syncShopify')}
                 </Button>
                 <Button
                   onClick={() => setIsConfiguring(true)}
                   variant="outline"
                 >
-                  Reconfigurar
+                  {t('integrations.shopify.reconfigure')}
                 </Button>
                 <Button
                   onClick={() => removeMutation.mutate()}
@@ -328,19 +330,19 @@ export function ShopifyIntegration() {
                   {removeMutation.isPending ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : null}
-                  Remover
+                  {t('integrations.shopify.remove')}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="text-center py-8">
               <Store className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-medium mb-2">Nenhuma loja conectada</h3>
+              <h3 className="font-medium mb-2">{t('integrations.shopify.noStoreConnected')}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Configure sua integração Shopify para começar
+                {t('integrations.shopify.configureToStart')}
               </p>
               <Button onClick={() => setIsConfiguring(true)}>
-                Configurar Shopify
+                {t('integrations.shopify.configureShopify')}
               </Button>
             </div>
           )}
@@ -350,9 +352,9 @@ export function ShopifyIntegration() {
       {(isConfiguring || !integration) && (
         <Card>
           <CardHeader>
-            <CardTitle style={{ fontSize: '20px' }}>Configurar Integração</CardTitle>
+            <CardTitle style={{ fontSize: '20px' }}>{t('integrations.shopify.configureTitle')}</CardTitle>
             <CardDescription>
-              Configure as credenciais da sua loja Shopify
+              {t('integrations.shopify.configureDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -363,21 +365,21 @@ export function ShopifyIntegration() {
                   <div className="p-4 bg-muted/50 border border-border rounded-lg">
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Carregando informações do webhook...</span>
+                      <span className="text-sm text-muted-foreground">{t('integrations.shopify.loadingWebhookInfo')}</span>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3 p-4 bg-muted/50 border border-border rounded-lg">
                     <div className="flex-1">
                       <h4 className="font-medium text-foreground mb-2">
-                        Configurar Webhook (Opcional)
+                        {t('integrations.shopify.webhookOptional')}
                       </h4>
                       <p className="text-sm text-muted-foreground mb-3">
-                        Para sincronização em tempo real, configure o webhook na sua conta Shopify antes de preencher as credenciais abaixo.
+                        {t('integrations.shopify.webhookDescription')}
                       </p>
                       <div className="space-y-3">
                         <div>
-                          <Label className="text-sm text-muted-foreground">URL do Webhook</Label>
+                          <Label className="text-sm text-muted-foreground">{t('integrations.shopify.webhookUrl')}</Label>
                           <div className="flex items-center gap-2 mt-1">
                             <Input
                               value={webhookInfo.webhookUrl || ''}
@@ -393,8 +395,8 @@ export function ShopifyIntegration() {
                                   setWebhookUrlCopied(true);
                                   setTimeout(() => setWebhookUrlCopied(false), 2000);
                                   toast({
-                                    title: "URL copiada!",
-                                    description: "Cole a URL na configuração do webhook da Shopify",
+                                    title: t('integrations.shopify.webhookUrlCopied'),
+                                    description: t('integrations.shopify.webhookUrlCopiedDescription'),
                                   });
                                 }
                               }}
@@ -408,7 +410,7 @@ export function ShopifyIntegration() {
                           </div>
                         </div>
                         <div>
-                          <Label className="text-sm text-muted-foreground">Tópicos Necessários</Label>
+                          <Label className="text-sm text-muted-foreground">{t('integrations.shopify.requiredTopics')}</Label>
                           <div className="mt-1 flex gap-2 flex-wrap">
                             {webhookInfo.topics?.map((topic: string) => (
                               <Badge key={topic} variant="secondary" className="mr-1">
@@ -435,31 +437,31 @@ export function ShopifyIntegration() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="shopName">Nome da Loja</Label>
+              <Label htmlFor="shopName">{t('integrations.shopify.shopName')}</Label>
               <Input
                 id="shopName"
                 data-testid="input-shop-name"
-                placeholder="minhaloja.myshopify.com"
+                placeholder={t('integrations.shopify.shopNamePlaceholder')}
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Digite o nome da loja: minhaloja.myshopify.com ou apenas minhaloja
+                {t('integrations.shopify.shopNameHint')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="accessToken">Token de Acesso</Label>
+              <Label htmlFor="accessToken">{t('integrations.shopify.accessToken')}</Label>
               <Input
                 id="accessToken"
                 data-testid="input-access-token"
                 type="password"
-                placeholder="shpat_..."
+                placeholder={t('integrations.shopify.accessTokenPlaceholder')}
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Token de acesso da Shopify Admin API
+                {t('integrations.shopify.accessTokenHint')}
               </p>
             </div>
 
@@ -474,7 +476,7 @@ export function ShopifyIntegration() {
                 {testMutation.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : null}
-                Testar Conexão
+                {t('integrations.shopify.testConnection')}
               </Button>
               <Button
                 onClick={handleConfigure}
@@ -485,7 +487,7 @@ export function ShopifyIntegration() {
                 {configureMutation.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : null}
-                {integration ? "Atualizar" : "Salvar"}
+                {integration ? t('integrations.shopify.update') : t('integrations.shopify.save')}
               </Button>
             </div>
 
@@ -495,7 +497,7 @@ export function ShopifyIntegration() {
                 variant="outline"
                 className="w-full"
               >
-                Cancelar
+                {t('integrations.shopify.cancel')}
               </Button>
             )}
           </CardContent>
@@ -506,44 +508,43 @@ export function ShopifyIntegration() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2" style={{ fontSize: '20px' }}>
             <Package className="w-5 h-5" />
-            Como configurar
+            {t('integrations.shopify.howToConfigure')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="bg-blue-50 p-3 rounded-md border-l-4 border-blue-500">
-            <h4 className="font-medium text-blue-800">🚀 Nova Arquitetura Shopify-First</h4>
+            <h4 className="font-medium text-blue-800">{t('integrations.shopify.newArchitectureTitle')}</h4>
             <p className="text-blue-700 text-sm mt-1">
-              Os pedidos agora são importados primeiro do Shopify e depois matched com a transportadora por nome do cliente. 
-              Isso garante que temos todos os dados do pedido, mesmo os que não estão na transportadora.
+              {t('integrations.shopify.newArchitectureDescription')}
             </p>
           </div>
           
           <div>
-            <h4 className="font-medium">1. Criar app privado na Shopify</h4>
+            <h4 className="font-medium">{t('integrations.shopify.step1Title')}</h4>
             <p className="text-muted-foreground">
-              Acesse Admin → Apps → Manage private apps → Create private app
+              {t('integrations.shopify.step1Description')}
             </p>
           </div>
           <div>
-            <h4 className="font-medium">2. Configurar permissões</h4>
+            <h4 className="font-medium">{t('integrations.shopify.step2Title')}</h4>
             <p className="text-muted-foreground">
-              Habilite: Read access para Orders, Products, Customers e Inventory
+              {t('integrations.shopify.step2Description')}
             </p>
           </div>
           <div>
-            <h4 className="font-medium">3. Obter token de acesso</h4>
+            <h4 className="font-medium">{t('integrations.shopify.step3Title')}</h4>
             <p className="text-muted-foreground">
-              Copie o "Admin API access token" gerado automaticamente
+              {t('integrations.shopify.step3Description')}
             </p>
           </div>
           
           <div className="bg-green-50 p-3 rounded-md border-l-4 border-green-500">
-            <h4 className="font-medium text-green-800">🔄 Fluxo de Sincronização</h4>
+            <h4 className="font-medium text-green-800">{t('integrations.shopify.syncFlowTitle')}</h4>
             <div className="text-green-700 text-sm mt-1 space-y-1">
-              <p>1. Importa pedidos do Shopify (fonte primária)</p>
-              <p>2. Faz match com transportadora por nome do cliente</p>
-              <p>3. Atualiza status/tracking baseado na transportadora</p>
-              <p>4. Marca pedidos como "Importado pela Transportadora"</p>
+              <p>{t('integrations.shopify.syncFlowStep1')}</p>
+              <p>{t('integrations.shopify.syncFlowStep2')}</p>
+              <p>{t('integrations.shopify.syncFlowStep3')}</p>
+              <p>{t('integrations.shopify.syncFlowStep4')}</p>
             </div>
           </div>
         </CardContent>

@@ -32,6 +32,13 @@ async function runMigrations() {
     
     console.log('✅ Migração add_platform_order_ids aplicada');
     
+    // Migração: Adicionar preferred_language aos usuários
+    console.log('📝 Aplicando: add_user_preferred_language');
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;
+    `);
+    console.log('✅ Migração add_user_preferred_language aplicada');
+    
     // Verificar se as colunas foram criadas
     const result = await pool.query(`
       SELECT column_name 
@@ -45,6 +52,18 @@ async function runMigrations() {
     result.rows.forEach(row => {
       console.log(`  ✓ ${row.column_name}`);
     });
+    
+    // Verificar coluna preferred_language
+    const userColResult = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' 
+      AND column_name = 'preferred_language';
+    `);
+    
+    if (userColResult.rows.length > 0) {
+      console.log('  ✓ preferred_language adicionada à tabela users');
+    }
     
     console.log('✅ Todas as migrações aplicadas com sucesso!');
     

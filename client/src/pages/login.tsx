@@ -10,35 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Mail, Lock, User, Eye, EyeOff, Check, X } from "lucide-react";
 import logoPath from "@assets/logo_1756142152045.png";
+import { useTranslation } from "@/hooks/use-translation";
+import { LanguageSelector } from "@/components/ui/language-selector";
 
-const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
-});
-
-const registerSchema = z.object({
-  name: z.string()
-    .min(2, "Nome deve ter no mínimo 2 caracteres")
-    .max(50, "Nome deve ter no máximo 50 caracteres")
-    .regex(/^[A-Za-zÀ-ÿ\s]+$/, "Nome deve conter apenas letras e espaços"),
-  email: z.string()
-    .email("Email inválido")
-    .min(5, "Email deve ter no mínimo 5 caracteres")
-    .max(100, "Email deve ter no máximo 100 caracteres"),
-  password: z.string()
-    .min(8, "Senha deve ter no mínimo 8 caracteres")
-    .max(128, "Senha deve ter no máximo 128 caracteres")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Senha deve conter ao menos: 1 letra minúscula, 1 maiúscula e 1 número"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "As senhas não coincidem",
-  path: ["confirmPassword"],
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
-type RegisterForm = z.infer<typeof registerSchema>;
+// Schemas will be created inside component to use translations
 
 export default function Login() {
+  const { t } = useTranslation();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
@@ -46,6 +24,34 @@ export default function Login() {
   const { login, register, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  // Create schemas with translations
+  const loginSchema = z.object({
+    email: z.string().email(t('login.validation.invalidEmail')),
+    password: z.string().min(6, t('login.validation.passwordMin')),
+  });
+
+  const registerSchema = z.object({
+    name: z.string()
+      .min(2, t('login.validation.nameMin'))
+      .max(50, t('login.validation.nameMax'))
+      .regex(/^[A-Za-zÀ-ÿ\s]+$/, t('login.validation.nameLettersOnly')),
+    email: z.string()
+      .email(t('login.validation.invalidEmail'))
+      .min(5, t('login.validation.emailMin'))
+      .max(100, t('login.validation.emailMax')),
+    password: z.string()
+      .min(8, t('login.validation.passwordMin8'))
+      .max(128, t('login.validation.passwordMax'))
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, t('login.validation.passwordRequirements')),
+    confirmPassword: z.string(),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t('login.validation.passwordsDontMatch'),
+    path: ["confirmPassword"],
+  });
+
+  type LoginForm = z.infer<typeof loginSchema>;
+  type RegisterForm = z.infer<typeof registerSchema>;
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -67,7 +73,7 @@ export default function Login() {
     return { checks, score };
   };
 
-  const fullText = "Descomplicando suas vendas por todo o mundo.";
+  const fullText = t('login.title');
 
   // Typewriting effect
   useEffect(() => {
@@ -127,13 +133,13 @@ export default function Login() {
       }
       
       toast({
-        title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao COD Dashboard",
+        title: t('login.toast.loginSuccess'),
+        description: t('login.toast.loginSuccessDesc'),
       });
     } catch (error) {
       toast({
-        title: "Erro no login",
-        description: "Credenciais inválidas. Tente novamente.",
+        title: t('login.toast.loginError'),
+        description: t('login.toast.loginErrorDesc'),
         variant: "destructive",
       });
     }
@@ -148,13 +154,13 @@ export default function Login() {
       setLocation('/');
       
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Bem-vindo ao COD Dashboard",
+        title: t('login.toast.registerSuccess'),
+        description: t('login.toast.registerSuccessDesc'),
       });
     } catch (error) {
       toast({
-        title: "Erro no cadastro",
-        description: "Não foi possível criar a conta. Tente novamente.",
+        title: t('login.toast.registerError'),
+        description: t('login.toast.registerErrorDesc'),
         variant: "destructive",
       });
     }
@@ -186,8 +192,9 @@ export default function Login() {
         </button>
       </div>
 
-      {/* Close Button - Top Right */}
-      <div className="absolute top-2 right-2 z-50">
+      {/* Language Selector and Close Button - Top Right */}
+      <div className="absolute top-2 right-2 z-50 flex items-center gap-2">
+        <LanguageSelector />
         <button 
           onClick={(e) => {
             e.preventDefault();
@@ -228,7 +235,7 @@ export default function Login() {
                 <p className={`text-xl text-muted-foreground leading-relaxed max-w-lg transition-opacity duration-500 ${
                   displayedText === fullText ? 'opacity-100' : 'opacity-0'
                 }`}>
-                  Gerencie seus pedidos, analise métricas em tempo real e integre com as principais plataformas de vendas.
+                  {t('login.subtitle')}
                 </p>
               </div>
             </div>
@@ -250,10 +257,10 @@ export default function Login() {
               <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl">
                 <div className="text-center mb-4 mt-4">
                   <h2 className="text-3xl font-bold text-foreground mb-2">
-                    {isLoginMode ? "Bem-vindo" : "Criar Conta"}
+                    {isLoginMode ? t('login.welcome') : t('login.createAccount')}
                   </h2>
                   <p className="text-muted-foreground">
-                    {isLoginMode ? "Acesse seu Dashboard" : "Configure seu acesso ao dashboard"}
+                    {isLoginMode ? t('login.accessDashboard') : t('login.setupDashboard')}
                   </p>
                 </div>
 
@@ -265,14 +272,14 @@ export default function Login() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-foreground">E-mail</FormLabel>
+                        <FormLabel className="text-sm font-medium text-foreground">{t('login.email')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                               {...field}
                               type="email"
-                              placeholder="seu@email.com"
+                              placeholder={t('login.emailPlaceholder')}
                               className="glassmorphism-light pl-10 h-12 text-foreground placeholder-muted-foreground border-border focus:border-primary transition-colors"
                               data-testid="input-email"
                             />
@@ -287,14 +294,14 @@ export default function Login() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-foreground">Senha</FormLabel>
+                        <FormLabel className="text-sm font-medium text-foreground">{t('login.password')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                               {...field}
                               type={showPassword ? "text" : "password"}
-                              placeholder="••••••••"
+                              placeholder={t('login.passwordPlaceholder')}
                               className="glassmorphism-light pl-10 pr-10 h-12 text-foreground placeholder-muted-foreground border-border focus:border-primary transition-colors"
                               data-testid="input-password"
                             />
@@ -318,7 +325,7 @@ export default function Login() {
                     disabled={loginForm.formState.isSubmitting}
                     data-testid="button-login"
                   >
-                    {loginForm.formState.isSubmitting ? "Entrando..." : "Entrar"}
+                    {loginForm.formState.isSubmitting ? t('login.entering') : t('login.enter')}
                   </Button>
                 </form>
               </Form>
@@ -326,12 +333,12 @@ export default function Login() {
               <Form {...registerForm}>
                 <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Nome Completo</label>
+                    <label className="text-sm font-medium text-foreground">{t('login.fullName')}</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         {...registerForm.register("name")}
-                        placeholder="Seu nome"
+                        placeholder={t('login.namePlaceholder')}
                         className="pl-10 h-12"
                         data-testid="input-name"
                       />
@@ -341,13 +348,13 @@ export default function Login() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">E-mail</label>
+                    <label className="text-sm font-medium text-foreground">{t('login.email')}</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         {...registerForm.register("email")}
                         type="email"
-                        placeholder="seu@email.com"
+                        placeholder={t('login.emailPlaceholder')}
                         className="pl-10 h-12"
                         data-testid="input-email-register"
                       />
@@ -361,7 +368,7 @@ export default function Login() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-foreground">Senha</FormLabel>
+                        <FormLabel className="text-sm font-medium text-foreground">{t('login.password')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -372,7 +379,7 @@ export default function Login() {
                               onChange={field.onChange}
                               onBlur={field.onBlur}
                               type={showPassword ? "text" : "password"}
-                              placeholder="••••••••"
+                              placeholder={t('login.passwordPlaceholder')}
                               className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
                               data-testid="input-password-register"
                             />
@@ -412,10 +419,10 @@ export default function Login() {
                                 <div key={key} className={`flex items-center space-x-1.5 ${valid ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
                                   {valid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                                   <span>
-                                    {key === 'length' ? '8+ caracteres' :
-                                     key === 'lowercase' ? 'Minúscula' :
-                                     key === 'uppercase' ? 'Maiúscula' :
-                                     'Número'}
+                                    {key === 'length' ? t('login.passwordStrength.length') :
+                                     key === 'lowercase' ? t('login.passwordStrength.lowercase') :
+                                     key === 'uppercase' ? t('login.passwordStrength.uppercase') :
+                                     t('login.passwordStrength.number')}
                                   </span>
                                 </div>
                               ))}
@@ -433,7 +440,7 @@ export default function Login() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-foreground">Confirmar Senha</FormLabel>
+                        <FormLabel className="text-sm font-medium text-foreground">{t('login.confirmPassword')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -444,7 +451,7 @@ export default function Login() {
                               onChange={field.onChange}
                               onBlur={field.onBlur}
                               type={showPassword ? "text" : "password"}
-                              placeholder="••••••••"
+                              placeholder={t('login.passwordPlaceholder')}
                               className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
                               data-testid="input-confirm-password"
                             />
@@ -462,7 +469,7 @@ export default function Login() {
                     disabled={registerForm.formState.isSubmitting}
                     data-testid="button-register"
                   >
-                    {registerForm.formState.isSubmitting ? "Criando..." : "Criar Conta"}
+                    {registerForm.formState.isSubmitting ? t('login.creating') : t('login.create')}
                   </Button>
                 </form>
               </Form>

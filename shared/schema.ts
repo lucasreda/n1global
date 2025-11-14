@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   phone: text("phone"), // Phone number for contact
   avatarUrl: text("avatar_url"), // URL for profile picture/avatar
+  preferredLanguage: text("preferred_language"), // User's preferred language: 'en', 'pt-BR', 'es'
   role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor', 'admin_investimento', 'affiliate'
   storeId: varchar("store_id"), // For product_seller role - links to parent store
   onboardingCompleted: boolean("onboarding_completed").default(false),
@@ -274,6 +275,26 @@ export const syncJobs = pgTable("sync_jobs", {
   
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Polling Executions - track automatic polling executions
+export const pollingExecutions = pgTable("polling_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").references(() => operations.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(), // 'shopify', 'cartpanda', 'digistore24'
+  executedAt: timestamp("executed_at").notNull().defaultNow(),
+  ordersFound: integer("orders_found").default(0),
+  ordersProcessed: integer("orders_processed").default(0),
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Índice composto para buscar última execução por operação e provider
+  operationProviderIdx: index("polling_executions_operation_provider_idx").on(
+    table.operationId,
+    table.provider,
+    table.executedAt
+  ),
+}));
 
 // Facebook Ads integrations - per operation
 export const facebookAdsIntegrations = pgTable("facebook_ads_integrations", {
