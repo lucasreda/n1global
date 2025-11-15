@@ -6,6 +6,10 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Use process.cwd() as fallback for Railway compatibility
+const projectRoot = process.cwd();
+const clientDir = path.resolve(projectRoot, "client");
+
 export default defineConfig({
   plugins: [
     react(),
@@ -21,17 +25,17 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "client", "src"),
-      "@shared": path.resolve(__dirname, "shared"),
-      "@assets": path.resolve(__dirname, "attached_assets"),
+      "@": path.resolve(clientDir, "src"),
+      "@shared": path.resolve(projectRoot, "shared"),
+      "@assets": path.resolve(projectRoot, "attached_assets"),
     },
   },
-  root: "./client",
+  root: clientDir,
   build: {
-    outDir: path.resolve(__dirname, "dist/public"),
+    outDir: path.resolve(projectRoot, "dist/public"),
     emptyOutDir: true,
   },
-  publicDir: "./public",
+  publicDir: path.resolve(clientDir, "public"),
   server: {
     fs: {
       strict: true,
