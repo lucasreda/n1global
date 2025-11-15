@@ -86,13 +86,18 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // In production, after esbuild bundling, import.meta.dirname will be the dist/ directory
+  // The Vite build outputs files directly to dist/, so we need to use process.cwd() 
+  // to get the project root, then resolve to dist/
+  const distPath = path.resolve(process.cwd(), "dist");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+
+  console.log(`📁 Serving static files from: ${distPath}`);
 
   app.use(express.static(distPath));
 
