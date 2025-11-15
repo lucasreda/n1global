@@ -87,9 +87,9 @@ export async function setupVite(app: Express, server: Server) {
 
 export function serveStatic(app: Express) {
   // In production, after esbuild bundling, import.meta.dirname will be the dist/ directory
-  // The Vite build outputs files directly to dist/, so we need to use process.cwd() 
-  // to get the project root, then resolve to dist/
-  const distPath = path.resolve(process.cwd(), "dist");
+  // The Vite build outputs files to dist/public/, so we need to use process.cwd() 
+  // to get the project root, then resolve to dist/public/
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
