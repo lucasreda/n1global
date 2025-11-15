@@ -155,10 +155,16 @@ export function serveStatic(app: Express) {
         res.setHeader("Content-Type", "text/css; charset=utf-8");
         // Prevent CSS from being blocked
         res.setHeader("X-Content-Type-Options", "nosniff");
+        // Force revalidation to prevent stale cache
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        res.setHeader("Vary", "Accept-Encoding");
         console.log(`✅ [STATIC] Serving CSS: ${filePath}`);
       } else if (filePath.endsWith(".js")) {
         res.setHeader("Content-Type", "application/javascript; charset=utf-8");
         res.setHeader("X-Content-Type-Options", "nosniff");
+        // Force revalidation to prevent stale cache
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        res.setHeader("Vary", "Accept-Encoding");
         console.log(`✅ [STATIC] Serving JS: ${filePath}`);
       } else if (filePath.endsWith(".json")) {
         res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -251,8 +257,10 @@ export function serveStatic(app: Express) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     // Ensure assets can be loaded
     res.setHeader("X-Content-Type-Options", "nosniff");
-    // Remove CSP that might block assets (if any)
+    // Explicitly allow loading of assets (no CSP restrictions)
     // Don't set strict CSP - let browser load assets normally
+    // Ensure CORS is enabled for assets
+    res.setHeader("Access-Control-Allow-Origin", "*");
     
     res.sendFile(indexPath, (err) => {
       if (err) {
