@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { CheckCircle, Loader2, Circle, Store, Package } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ShopifyProgress {
   processedOrders: number;
@@ -32,11 +33,13 @@ export function SyncTimeline({
   stagingProgress,
   phase
 }: SyncTimelineProps) {
+  const { t } = useTranslation();
+  
   const steps = [
     {
       id: 'shopify',
-      title: 'Importar Pedidos Shopify',
-      description: 'Buscando e importando pedidos da loja Shopify',
+      title: t('dashboard.syncTimeline.importShopifyOrders'),
+      description: t('dashboard.syncTimeline.importShopifyDescription'),
       icon: Store,
       status: currentStep === 'shopify' 
         ? (phase === 'completed' ? 'completed' : 'running')
@@ -45,12 +48,12 @@ export function SyncTimeline({
         : 'pending',
       progress: shopifyProgress,
       formatProgress: (p: ShopifyProgress) => 
-        `${p.processedOrders.toLocaleString()} / ${p.totalOrders.toLocaleString()} pedidos`
+        `${p.processedOrders.toLocaleString()} / ${p.totalOrders.toLocaleString()} ${t('dashboard.syncTimeline.orders')}`
     },
     {
       id: 'staging',
-      title: 'Matching com Transportadora',
-      description: 'Fazendo correspondência dos pedidos da transportadora',
+      title: t('dashboard.syncTimeline.matchingCarrier'),
+      description: t('dashboard.syncTimeline.matchingCarrierDescription'),
       icon: Package,
       status: currentStep === 'staging'
         ? (phase === 'completed' ? 'completed' : 'running')
@@ -60,8 +63,8 @@ export function SyncTimeline({
       progress: stagingProgress,
       formatProgress: (p: StagingProgress) =>
         p.totalLeads > 0
-          ? `${p.processedLeads.toLocaleString()} / ${p.totalLeads.toLocaleString()} matches`
-          : 'Nenhum pedido para matching'
+          ? `${p.processedLeads.toLocaleString()} / ${p.totalLeads.toLocaleString()} ${t('dashboard.syncTimeline.matches')}`
+          : t('dashboard.syncTimeline.noOrdersForMatching')
     }
   ];
 
@@ -214,7 +217,7 @@ export function SyncTimeline({
                         transition={{ duration: 0.3 }}
                         className="text-sm text-white italic py-2"
                       >
-                        Nenhum pedido teve o status atualizado na transportadora
+                        {t('dashboard.syncTimeline.noOrdersUpdated')}
                       </motion.div>
                     ) : (
                       <>
@@ -237,20 +240,20 @@ export function SyncTimeline({
                         {step.id === 'shopify' && (
                           <div className="flex gap-4 text-xs">
                             <div>
-                              <span className="text-muted-foreground">Novos: </span>
+                              <span className="text-muted-foreground">{t('dashboard.syncTimeline.new')}: </span>
                               <span className="font-medium text-green-600">
                                 +{shopifyProgress.newOrders.toLocaleString()}
                               </span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Atualizados: </span>
+                              <span className="text-muted-foreground">{t('dashboard.syncTimeline.updated')}: </span>
                               <span className="font-medium text-blue-600">
                                 ~{shopifyProgress.updatedOrders.toLocaleString()}
                               </span>
                             </div>
                             {shopifyProgress.totalPages > 0 && (
                               <div>
-                                <span className="text-muted-foreground">Página: </span>
+                                <span className="text-muted-foreground">{t('dashboard.syncTimeline.page')}: </span>
                                 <span className="font-medium">
                                   {shopifyProgress.currentPage}/{shopifyProgress.totalPages}
                                 </span>
@@ -262,13 +265,13 @@ export function SyncTimeline({
                         {step.id === 'staging' && stagingProgress.totalLeads > 0 && (
                           <div className="flex gap-4 text-xs">
                             <div>
-                              <span className="text-muted-foreground">Novos: </span>
+                              <span className="text-muted-foreground">{t('dashboard.syncTimeline.new')}: </span>
                               <span className="font-medium text-green-600">
                                 +{stagingProgress.newLeads.toLocaleString()}
                               </span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Atualizados: </span>
+                              <span className="text-muted-foreground">{t('dashboard.syncTimeline.updated')}: </span>
                               <span className="font-medium text-blue-600">
                                 ~{stagingProgress.updatedLeads.toLocaleString()}
                               </span>
@@ -287,7 +290,7 @@ export function SyncTimeline({
                     animate={{ opacity: 1 }}
                     className="flex gap-4 text-xs text-muted-foreground"
                   >
-                    <span>✓ Concluído</span>
+                    <span>✓ {t('dashboard.syncTimeline.completed')}</span>
                   </motion.div>
                 )}
               </div>

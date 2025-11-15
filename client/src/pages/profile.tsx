@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Phone, Mail, Camera, X, Loader2, Key } from "lucide-react";
+import { User, Phone, Mail, Camera, X, Loader2, Key, Globe } from "lucide-react";
 import { ChangePasswordDialog } from "@/components/dashboard/change-password-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTranslation } from "@/hooks/use-translation";
+import { changeLanguage } from "@/lib/i18n";
 
 interface UserProfile {
   id: string;
@@ -17,11 +20,13 @@ interface UserProfile {
   name: string;
   phone: string | null;
   avatarUrl: string | null;
+  preferredLanguage?: string | null;
 }
 
 export default function Profile() {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
+  const { t, currentLanguage } = useTranslation();
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -46,7 +51,7 @@ export default function Profile() {
         if (!res.ok) {
           const errorText = await res.text();
           console.error("❌ Erro na resposta:", res.status, errorText);
-          let errorMessage = `Erro ao buscar perfil: ${res.status}`;
+          let errorMessage = `${t('profile.errorFetchingProfile')}: ${res.status}`;
           try {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.message || errorJson.error || errorMessage;
@@ -90,14 +95,14 @@ export default function Profile() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       setIsEditing(false);
       toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso.",
+        title: t('profile.profileUpdated'),
+        description: t('profile.profileUpdatedDescription'),
       });
     },
     onError: (error: any) => {
-      const errorMessage = error?.message || "Erro ao atualizar perfil";
+      const errorMessage = error?.message || t('profile.errorUpdatingDescription');
       toast({
-        title: "Erro ao atualizar",
+        title: t('profile.errorUpdating'),
         description: errorMessage,
         variant: "destructive",
       });
@@ -124,7 +129,7 @@ export default function Profile() {
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Erro ao fazer upload");
+        throw new Error(error.message || t('profile.errorUploadingDescription'));
       }
 
       return res.json();
@@ -133,14 +138,14 @@ export default function Profile() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
-        title: "Foto atualizada",
-        description: "Sua foto de perfil foi atualizada com sucesso.",
+        title: t('profile.photoUpdated'),
+        description: t('profile.photoUpdatedDescription'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao fazer upload",
-        description: error?.message || "Falha ao fazer upload da imagem.",
+        title: t('profile.errorUploading'),
+        description: error?.message || t('profile.errorUploadingDescription'),
         variant: "destructive",
       });
     },
@@ -162,14 +167,14 @@ export default function Profile() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
-        title: "Foto removida",
-        description: "Sua foto de perfil foi removida.",
+        title: t('profile.photoRemoved'),
+        description: t('profile.photoRemovedDescription'),
       });
     },
     onError: () => {
       toast({
-        title: "Erro ao remover",
-        description: "Falha ao remover a foto de perfil.",
+        title: t('profile.errorRemoving'),
+        description: t('profile.errorRemovingDescription'),
         variant: "destructive",
       });
     },
@@ -178,8 +183,8 @@ export default function Profile() {
   const handleSave = () => {
     if (!formData.name.trim() || formData.name.trim().length < 2) {
       toast({
-        title: "Nome inválido",
-        description: "O nome deve ter pelo menos 2 caracteres.",
+        title: t('profile.invalidName'),
+        description: t('profile.invalidNameDescription'),
         variant: "destructive",
       });
       return;
@@ -211,8 +216,8 @@ export default function Profile() {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast({
-        title: "Formato inválido",
-        description: "Apenas imagens JPG, PNG e WEBP são permitidas.",
+        title: t('profile.invalidFormat'),
+        description: t('profile.invalidFormatDescription'),
         variant: "destructive",
       });
       return;
@@ -221,8 +226,8 @@ export default function Profile() {
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "Arquivo muito grande",
-        description: "A imagem deve ter no máximo 5MB.",
+        title: t('profile.fileTooLarge'),
+        description: t('profile.fileTooLargeDescription'),
         variant: "destructive",
       });
       return;
@@ -233,7 +238,7 @@ export default function Profile() {
   };
 
   const handleRemoveAvatar = () => {
-    if (confirm("Tem certeza que deseja remover sua foto de perfil?")) {
+    if (confirm(t('profile.confirmRemovePhoto'))) {
       removeAvatarMutation.mutate();
     }
   };
@@ -258,15 +263,15 @@ export default function Profile() {
   if (profileError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-        <p className="text-red-400">Erro ao carregar perfil</p>
+        <p className="text-red-400">{t('profile.errorLoadingProfile')}</p>
         <p className="text-gray-400 text-sm">
-          {profileError instanceof Error ? profileError.message : "Erro desconhecido"}
+          {profileError instanceof Error ? profileError.message : t('profile.unknownError')}
         </p>
         <Button
           onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] })}
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          Tentar Novamente
+          {t('profile.tryAgain')}
         </Button>
       </div>
     );
@@ -275,12 +280,12 @@ export default function Profile() {
   if (!profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-        <p className="text-white">Perfil não encontrado</p>
+        <p className="text-white">{t('profile.profileNotFound')}</p>
         <Button
           onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] })}
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          Recarregar
+          {t('profile.reload')}
         </Button>
       </div>
     );
@@ -289,17 +294,17 @@ export default function Profile() {
   return (
     <div className="space-y-6">
       <DashboardHeader 
-        title="Minha Conta" 
-        subtitle="Gerencie suas informações pessoais e preferências" 
+        title={t('profile.title')} 
+        subtitle={t('profile.subtitle')} 
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Avatar Section */}
         <Card className="bg-black/40 border-white/10">
           <CardHeader>
-            <CardTitle className="text-white">Foto de Perfil</CardTitle>
+            <CardTitle className="text-white">{t('profile.profilePhoto')}</CardTitle>
             <CardDescription className="text-gray-400">
-              Adicione uma foto para personalizar sua conta
+              {t('profile.addPhotoDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -344,7 +349,7 @@ export default function Profile() {
                   variant="default"
                 >
                   <Camera className="mr-2 h-4 w-4" />
-                  {isUploadingAvatar ? "Enviando..." : "Alterar Foto"}
+                  {isUploadingAvatar ? t('profile.uploading') : t('profile.changePhoto')}
                 </Button>
                 
                 {profile.avatarUrl && (
@@ -355,14 +360,14 @@ export default function Profile() {
                     variant="outline"
                   >
                     <X className="mr-2 h-4 w-4" />
-                    Remover Foto
+                    {t('profile.removePhoto')}
                   </Button>
                 )}
               </div>
 
               <p className="text-xs text-gray-400 text-center">
-                Formatos aceitos: JPG, PNG, WEBP<br />
-                Tamanho máximo: 5MB
+                {t('profile.acceptedFormats')}<br />
+                {t('profile.maxSize')}
               </p>
             </div>
           </CardContent>
@@ -371,16 +376,16 @@ export default function Profile() {
         {/* Profile Information */}
         <Card className="lg:col-span-2 bg-black/40 border-white/10">
           <CardHeader>
-            <CardTitle className="text-white">Informações Pessoais</CardTitle>
+            <CardTitle className="text-white">{t('profile.personalInfo')}</CardTitle>
             <CardDescription className="text-gray-400">
-              Atualize suas informações de contato
+              {t('profile.updateContactInfo')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-gray-300 flex items-center">
                 <User className="mr-2 h-4 w-4" />
-                Nome Completo
+                {t('profile.fullName')}
               </Label>
               <Input
                 id="name"
@@ -388,14 +393,14 @@ export default function Profile() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={!isEditing}
                 className="bg-black/20 border-white/10 text-white placeholder:text-gray-500"
-                placeholder="Seu nome completo"
+                placeholder={t('profile.fullNamePlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email" className="text-gray-300 flex items-center">
                 <Mail className="mr-2 h-4 w-4" />
-                Email
+                {t('profile.email')}
               </Label>
               <Input
                 id="email"
@@ -404,14 +409,14 @@ export default function Profile() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 disabled={!isEditing}
                 className="bg-black/20 border-white/10 text-white placeholder:text-gray-500"
-                placeholder="seu@email.com"
+                placeholder={t('profile.emailPlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-gray-300 flex items-center">
                 <Phone className="mr-2 h-4 w-4" />
-                Telefone
+                {t('profile.phone')}
               </Label>
               <Input
                 id="phone"
@@ -420,10 +425,10 @@ export default function Profile() {
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 disabled={!isEditing}
                 className="bg-black/20 border-white/10 text-white placeholder:text-gray-500"
-                placeholder="+55 11 99999-9999"
+                placeholder={t('profile.phonePlaceholder')}
               />
               <p className="text-xs text-gray-400">
-                Formato internacional opcional (ex: +55 11 99999-9999)
+                {t('profile.phoneFormatHint')}
               </p>
             </div>
 
@@ -433,7 +438,7 @@ export default function Profile() {
                   onClick={() => setIsEditing(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  Editar Informações
+                  {t('profile.editInfo')}
                 </Button>
               ) : (
                 <>
@@ -445,10 +450,10 @@ export default function Profile() {
                     {updateProfileMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
+                        {t('profile.saving')}
                       </>
                     ) : (
-                      "Salvar Alterações"
+                      t('profile.saveChanges')
                     )}
                   </Button>
                   <Button
@@ -457,7 +462,7 @@ export default function Profile() {
                     variant="outline"
                     className="border-white/10 text-gray-300 hover:bg-white/10"
                   >
-                    Cancelar
+                    {t('profile.cancel')}
                   </Button>
                 </>
               )}
@@ -466,12 +471,33 @@ export default function Profile() {
         </Card>
       </div>
 
+      {/* Language Preference Section */}
+      <Card className="bg-black/40 border-white/10">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            {t('profile.languagePreference')}
+          </CardTitle>
+          <CardDescription className="text-gray-400">
+            {t('profile.selectLanguage')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <LanguageSelector 
+            currentLanguage={profile?.preferredLanguage || currentLanguage || 'pt-BR'} 
+            onLanguageChange={(lang) => {
+              // Update will be handled by the component
+            }}
+          />
+        </CardContent>
+      </Card>
+
       {/* Security Section */}
       <Card className="bg-black/40 border-white/10">
         <CardHeader>
-          <CardTitle className="text-white">Segurança</CardTitle>
+          <CardTitle className="text-white">{t('profile.security')}</CardTitle>
           <CardDescription className="text-gray-400">
-            Gerencie sua senha e configurações de segurança
+            {t('profile.securityDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -481,7 +507,7 @@ export default function Profile() {
             className="border-white/10 text-gray-300 hover:bg-white/10"
           >
             <Key className="mr-2 h-4 w-4" />
-            Alterar Senha
+            {t('profile.changePasswordButton')}
           </Button>
         </CardContent>
       </Card>
@@ -491,6 +517,132 @@ export default function Profile() {
         open={showChangePasswordDialog}
         onOpenChange={setShowChangePasswordDialog}
       />
+    </div>
+  );
+}
+
+// Language Selector Component
+function LanguageSelector({ 
+  currentLanguage, 
+  onLanguageChange 
+}: { 
+  currentLanguage: string; 
+  onLanguageChange?: (lang: string) => void;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const languages = [
+    { code: 'pt-BR', label: t('language.portuguese') },
+    { code: 'en', label: t('language.english') },
+    { code: 'es', label: t('language.spanish') },
+  ];
+
+  const handleLanguageChange = async (newLanguage: string) => {
+    if (newLanguage === currentLanguage) return;
+    
+    setIsUpdating(true);
+    try {
+      const response = await fetch('/api/user/preferred-language', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify({
+          preferredLanguage: newLanguage,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Failed to update language preference';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+
+      // Update i18n immediately
+      changeLanguage(newLanguage as 'pt-BR' | 'en' | 'es');
+
+      // Update user in localStorage
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        user.preferredLanguage = newLanguage;
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+
+      toast({
+        title: t('common.success'),
+        description: result.message || t('language.changeLanguage'),
+      });
+
+      onLanguageChange?.(newLanguage);
+    } catch (error: any) {
+      console.error('Error updating language:', error);
+      const errorMessage = error?.message || 'Failed to update language preference';
+      toast({
+        title: t('common.error'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Ensure currentLanguage is valid
+  const validLanguage = currentLanguage && ['pt-BR', 'en', 'es'].includes(currentLanguage) 
+    ? currentLanguage 
+    : 'pt-BR';
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="language" className="text-gray-300 flex items-center">
+        <Globe className="mr-2 h-4 w-4" />
+        {t('language.select')}
+      </Label>
+      <Select
+        value={validLanguage}
+        onValueChange={handleLanguageChange}
+        disabled={isUpdating}
+      >
+        <SelectTrigger 
+          id="language"
+          className="bg-black/20 border-white/10 text-white"
+        >
+          <SelectValue placeholder={t('language.select')} />
+        </SelectTrigger>
+        <SelectContent className="bg-black/95 border-white/10">
+          {languages.map((lang) => (
+            <SelectItem 
+              key={lang.code} 
+              value={lang.code}
+              className="text-white hover:bg-white/10"
+            >
+              {lang.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {isUpdating && (
+        <p className="text-xs text-gray-400 flex items-center">
+          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          {t('common.loading')}
+        </p>
+      )}
     </div>
   );
 }

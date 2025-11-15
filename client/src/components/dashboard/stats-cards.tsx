@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock, Eye, EyeOff, Globe } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { formatOperationCurrency } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
 import facebookIcon from "@assets/meta-icon_1756415603759.png";
 import facebookIconMini from "@assets/metamini_1756416312919.png";
@@ -66,6 +67,7 @@ interface AdAccount {
 }
 
 export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR" }: StatsCardsProps) {
+  const { t, currentLanguage } = useTranslation();
   const [isOrdersVisible, setIsOrdersVisible] = useState(true);
   const operationId = localStorage.getItem("current_operation_id");
   
@@ -198,11 +200,11 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
   };
 
   // Métricas principais - Sem conversão de moedas
-  const primaryMetrics = [
+  const primaryMetrics = useMemo(() => [
     {
-      title: "Pedidos",
+      title: t('dashboard.orders'),
       value: shopifyOrders.toLocaleString(),
-      subtitle: "Importados da plataforma",
+      subtitle: t('dashboard.ordersImported'),
       icon: () => <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />,
       color: "green",
       growth: calculateGrowth(shopifyOrders),
@@ -212,9 +214,9 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
       isSingle: false
     },
     {
-      title: "CPA & Marketing",
+      title: t('dashboard.cpaMarketing'),
       value: formatOperationCurrency(avgCPA, currency),
-      subtitle: "Custo por aquisição",
+      subtitle: t('dashboard.cpaCost'),
       icon: Target,
       color: "orange",
       growth: calculateGrowth(avgCPA, avgCPA * 1.1),
@@ -223,30 +225,30 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
       isNegative: false,
       isCombined: true,
       marketingValue: formatOperationCurrency(marketingCosts, currency),
-      marketingSubtitle: marketingCosts > 0 ? "Investimento em anúncios" : "Sem campanhas",
+      marketingSubtitle: marketingCosts > 0 ? t('dashboard.adInvestment') : t('dashboard.noCampaigns'),
       isSingle: false
     }
-  ];
+  ], [shopifyOrders, avgCPA, marketingCosts, currency, t, currentLanguage]);
 
   // Métricas secundárias - Sem conversão de moedas
-  const secondaryMetrics = [
+  const secondaryMetrics = useMemo(() => [
     {
-      title: "Custos Envio",
+      title: t('dashboard.shippingCosts'),
       value: formatOperationCurrency(shippingCosts, currency),
-      subtitle: shippingCosts > 0 ? "Custos de envio" : "Sem custos",
+      subtitle: shippingCosts > 0 ? t('dashboard.shippingCostsDesc') : t('dashboard.noShippingCosts'),
       icon: Truck,
       color: "amber",
       testId: "card-shipping-costs"
     },
     {
-      title: "Custos Produtos",
+      title: t('dashboard.productCosts'),
       value: formatOperationCurrency(productCosts, currency),
-      subtitle: productCosts > 0 ? "Custos de produtos" : "Sem custos",
+      subtitle: productCosts > 0 ? t('dashboard.productCostsDesc') : t('dashboard.noProductCosts'),
       icon: DollarSign,
       color: "red",
       testId: "card-product-costs"
     }
-  ];
+  ], [shippingCosts, productCosts, currency, t, currentLanguage]);
 
   const getIconColors = (color: string) => {
     const colors = {
@@ -290,12 +292,12 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div className="flex items-start gap-[50px] mb-2">
               <div>
-                <p className="text-sm font-medium text-gray-400">Faturamento</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.billing')}</p>
                 <h3 className="text-[22px] font-semibold mt-1 text-white">{formatOperationCurrency(revenue, currency)}</h3>
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-gray-400">Pedidos</p>
+                  <p className="text-sm font-medium text-gray-400">{t('dashboard.orders')}</p>
                   <button 
                     onClick={() => setIsOrdersVisible(!isOrdersVisible)}
                     className="text-gray-500 hover:text-gray-300 transition-colors"
@@ -338,14 +340,14 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.cpaAds')}</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(cpaAds, currency)}</h3>
-                <p className="text-sm text-gray-500">Custo por aquisição</p>
+                <p className="text-sm text-gray-500">{t('dashboard.cpaCost')}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-400">Marketing</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.marketing')}</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(marketingCosts, currency)}</h3>
-                <p className="text-sm text-gray-500">{marketingCosts > 0 ? "Investimento em anúncios" : "Sem campanhas"}</p>
+                <p className="text-sm text-gray-500">{marketingCosts > 0 ? t('dashboard.adInvestment') : t('dashboard.noCampaigns')}</p>
               </div>
             </div>
           </div>
@@ -364,7 +366,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
               </div>
             </div>
             <div className="mb-2">
-              <p className="text-sm font-medium text-gray-400">Pedidos por Dia</p>
+              <p className="text-sm font-medium text-gray-400">{t('dashboard.ordersPerDay')}</p>
               <div className="h-[116px] mt-1">
                 {ordersTimelineData && ordersTimelineData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -389,7 +391,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
                           fontSize: '12px',
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
                         }}
-                        formatter={(value: number) => [`${value} pedidos`, '']}
+                        formatter={(value: number) => [`${value} ${t('dashboard.orders')}`, '']}
                         labelStyle={{ color: '#9CA3AF', fontSize: '11px' }}
                         labelFormatter={(label) => {
                           const date = new Date(label);
@@ -408,7 +410,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500 text-xs">Nenhum Pedido Carregado</p>
+                    <p className="text-gray-500 text-xs">{t('dashboard.noOrdersLoaded')}</p>
                   </div>
                 )}
               </div>
@@ -431,12 +433,12 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div className="flex items-start gap-[50px] mb-2">
               <div>
-                <p className="text-sm font-medium text-gray-400">Faturamento</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.billing')}</p>
                 <h3 className="text-[22px] font-semibold mt-1 text-white">{formatOperationCurrency(revenue, currency)}</h3>
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-gray-400">Pedidos</p>
+                  <p className="text-sm font-medium text-gray-400">{t('dashboard.orders')}</p>
                   <button 
                     onClick={() => setIsOrdersVisible(!isOrdersVisible)}
                     className="text-gray-500 hover:text-gray-300 transition-colors"
@@ -478,14 +480,14 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.cpaAds')}</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(cpaAds, currency)}</h3>
-                <p className="text-sm text-gray-500">Custo por aquisição</p>
+                <p className="text-sm text-gray-500">{t('dashboard.cpaCost')}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-400">Marketing</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.marketing')}</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(marketingCosts, currency)}</h3>
-                <p className="text-sm text-gray-500">{marketingCosts > 0 ? "Investimento em anúncios" : "Sem campanhas"}</p>
+                <p className="text-sm text-gray-500">{marketingCosts > 0 ? t('dashboard.adInvestment') : t('dashboard.noCampaigns')}</p>
               </div>
             </div>
           </div>
@@ -506,7 +508,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <ShoppingCart className="w-4 h-4 text-slate-400" />
-                <p className="text-sm font-medium text-gray-400">Pedidos N1</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.n1Orders')}</p>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-[#4ade80]" />
@@ -519,11 +521,11 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Confirmados</p>
+                <p className="text-xs text-gray-500">{t('dashboard.confirmed')}</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Entregues</p>
+                <p className="text-xs text-gray-500">{t('dashboard.delivered')}</p>
               </div>
             </div>
           </div>
@@ -545,7 +547,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div>
               <h4 className="text-base font-semibold text-white mb-1">{formatOperationCurrency(shippingCosts, currency)}</h4>
-              <p className="text-xs font-medium text-gray-400">Custos Envio</p>
+              <p className="text-xs font-medium text-gray-400">{t('dashboard.shippingCosts')}</p>
             </div>
           </div>
           
@@ -562,7 +564,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div>
               <h4 className="text-base font-semibold text-white mb-1">{formatOperationCurrency(returnedOrders * 2, currency)}</h4>
-              <p className="text-xs font-medium text-gray-400">Custos Retornados</p>
+              <p className="text-xs font-medium text-gray-400">{t('dashboard.returnedCosts')}</p>
             </div>
           </div>
         </div>
@@ -581,7 +583,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             <div className="flex items-center justify-between mb-3" style={{marginTop: '-3px'}}>
               <div className="flex items-center space-x-2">
                 <ShoppingCart className="w-4 h-4 text-slate-400" />
-                <p className="text-sm font-medium text-gray-400">Pedidos N1</p>
+                <p className="text-sm font-medium text-gray-400">{t('dashboard.n1Orders')}</p>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-[#4ade80]" />
@@ -594,11 +596,11 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             <div className="grid grid-cols-2 gap-6" style={{marginTop: '-6px'}}>
               <div className="text-center">
                 <h4 className="text-lg font-semibold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Confirmados</p>
+                <p className="text-xs text-gray-500">{t('dashboard.confirmed')}</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-semibold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Entregues</p>
+                <p className="text-xs text-gray-500">{t('dashboard.delivered')}</p>
               </div>
             </div>
           </div>
@@ -616,8 +618,8 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div>
               <h4 className="text-lg font-semibold text-white mb-1">{formatOperationCurrency(returnedOrders * 2, currency)}</h4>
-              <p className="text-xs font-medium text-gray-400">Custos Retornados</p>
-              <p className="text-xs text-gray-500 mt-1">{returnedOrders} retornos</p>
+              <p className="text-xs font-medium text-gray-400">{t('dashboard.returnedCosts')}</p>
+              <p className="text-xs text-gray-500 mt-1">{returnedOrders} {t('dashboard.returns')}</p>
             </div>
           </div>
           
@@ -660,8 +662,8 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
           </div>
           <div>
             <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(productCosts, currency)}</h3>
-            <p className="text-sm font-medium text-gray-400">Custos Produtos</p>
-            <p className="text-sm text-gray-500 mt-1">{productCosts > 0 ? `${totalOrders} pedidos` : "Sem custos"}</p>
+            <p className="text-sm font-medium text-gray-400">{t('dashboard.productCosts')}</p>
+            <p className="text-sm text-gray-500 mt-1">{productCosts > 0 ? `${totalOrders} ${t('dashboard.orders')}` : t('dashboard.noProductCosts')}</p>
           </div>
         </div>
       </div>
@@ -680,8 +682,8 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
           </div>
           <div>
             <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(paidRevenue, currency)}</h3>
-            <p className="text-sm font-medium text-gray-400">Receita Paga</p>
-            <p className="text-sm text-gray-500 mt-1">{totalPaidOrders} entregas</p>
+            <p className="text-sm font-medium text-gray-400">{t('dashboard.paidRevenue')}</p>
+            <p className="text-sm text-gray-500 mt-1">{totalPaidOrders} {t('dashboard.deliveries')}</p>
           </div>
         </div>
 
@@ -702,17 +704,17 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
           </div>
           <div>
             <h3 className={`text-xl font-semibold mb-1 ${totalProfit < 0 ? 'text-white' : 'text-white'}`}>{formatOperationCurrency(totalProfit, currency)}</h3>
-            <p className={`text-sm font-medium ${totalProfit < 0 ? 'text-red-300' : 'text-[#4ade80]'}`}>Lucro Total</p>
-            <p className={`text-sm mt-1 ${totalProfit < 0 ? 'text-red-400' : 'text-green-300'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
+            <p className={`text-sm font-medium ${totalProfit < 0 ? 'text-red-300' : 'text-[#4ade80]'}`}>{t('dashboard.totalProfit')}</p>
+            <p className={`text-sm mt-1 ${totalProfit < 0 ? 'text-red-400' : 'text-green-300'}`}>{profitMargin.toFixed(1)}% {t('dashboard.margin')} • {roi.toFixed(1)}% {t('dashboard.roi')}</p>
           </div>
         </div>
       </div>
 
       {/* Resumo da Operação - Seguindo padrão dos cards */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <Globe className="w-5 h-5 text-slate-400" />
-          Resumo da Operação
+          {t('dashboard.operationSummary')}
         </h3>
         
         {/* Grid com 2 cards por linha */}
@@ -730,8 +732,8 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(avgCPA, currency)}</h3>
-              <p className="text-sm font-medium text-gray-400">CPA Real</p>
-              <p className="text-sm text-gray-500 mt-1">{metrics?.deliveredOrders || 0} entregues</p>
+              <p className="text-sm font-medium text-gray-400">{t('dashboard.realCPA')}</p>
+              <p className="text-sm text-gray-500 mt-1">{metrics?.deliveredOrders || 0} {t('dashboard.delivered')}</p>
             </div>
           </div>
 
@@ -748,8 +750,8 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(averageOrderValue, currency)}</h3>
-              <p className="text-sm font-medium text-gray-400">Ticket Médio</p>
-              <p className="text-sm text-gray-500 mt-1">Ticket médio geral</p>
+              <p className="text-sm font-medium text-gray-400">{t('dashboard.averageTicket')}</p>
+              <p className="text-sm text-gray-500 mt-1">{t('dashboard.averageTicketDesc')}</p>
             </div>
           </div>
 
@@ -766,8 +768,8 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white mb-1">{deliveryRate.toFixed(1)}%</h3>
-              <p className="text-sm font-medium text-gray-400">Taxa de Entrega</p>
-              <p className="text-sm text-gray-500 mt-1">{deliveredOrders} de {totalOrders} pedidos</p>
+              <p className="text-sm font-medium text-gray-400">{t('dashboard.deliveryRate')}</p>
+              <p className="text-sm text-gray-500 mt-1">{deliveredOrders} {t('dashboard.of')} {totalOrders} {t('dashboard.orders')}</p>
             </div>
           </div>
 
@@ -784,7 +786,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white mb-1">{profitMargin.toFixed(1)}%</h3>
-              <p className="text-sm font-medium text-gray-400">Margem de Lucro</p>
+              <p className="text-sm font-medium text-gray-400">{t('dashboard.profitMargin')}</p>
             </div>
           </div>
 

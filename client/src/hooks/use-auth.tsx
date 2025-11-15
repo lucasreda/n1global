@@ -8,6 +8,7 @@ interface User {
   email: string;
   role: string;
   permissions?: string[];
+  preferredLanguage?: string | null;
 }
 
 interface AuthState {

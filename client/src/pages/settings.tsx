@@ -1,8 +1,9 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Briefcase, PlayCircle, Clock, Hash, Globe } from "lucide-react";
+import { Briefcase, PlayCircle, Clock, Hash, Globe, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -10,6 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTourContext } from "@/contexts/tour-context";
 import { useLocation } from "wouter";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Common European timezones
 const TIMEZONES = [
@@ -65,6 +67,8 @@ const LANGUAGES = [
 ];
 
 export default function Settings() {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<string>("settings");
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
   const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
   const [timezone, setTimezone] = useState<string>("Europe/Madrid");
@@ -101,7 +105,6 @@ export default function Settings() {
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
-      console.log('📋 Settings - Current operation data:', operation);
       if (operation?.operationType) {
         setOperationType(operation.operationType);
         setOriginalOperationType(operation.operationType);
@@ -119,7 +122,6 @@ export default function Settings() {
         setOriginalLanguage(operation.language);
       }
       if (operation?.shopifyOrderPrefix !== undefined) {
-        console.log('🏷️ Setting prefix from backend:', operation.shopifyOrderPrefix);
         setShopifyPrefix(operation.shopifyOrderPrefix || "");
         setOriginalShopifyPrefix(operation.shopifyOrderPrefix || "");
       }
@@ -165,12 +167,10 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone, 'currency:', currency, 'language:', language, 'shopifyPrefix:', shopifyPrefix);
-    
     if (!selectedOperation) {
       toast({
-        title: "Erro",
-        description: "Nenhuma operação selecionada",
+        title: t('settings.error'),
+        description: t('settings.noOperationSelected'),
         variant: "destructive",
       });
       return;
@@ -178,11 +178,7 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
-      
-      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
-      
-      console.log('✅ API response received:', response);
+      await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone, currency, language, shopifyOrderPrefix: shopifyPrefix });
 
       setOriginalOperationType(operationType);
       setOriginalTimezone(timezone);
@@ -195,14 +191,14 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
       
       toast({
-        title: "Sucesso",
-        description: "Configurações atualizadas com sucesso",
+        title: t('settings.success'),
+        description: t('settings.settingsUpdatedSuccess'),
       });
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao atualizar configurações",
+        title: t('settings.error'),
+        description: t('settings.errorUpdatingSettings'),
         variant: "destructive",
       });
     } finally {
@@ -213,8 +209,8 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <DashboardHeader 
-        title="Configurações do Sistema" 
-        subtitle="Personalize e configure suas preferências" 
+        title={t('settings.title')} 
+        subtitle={t('settings.subtitle')} 
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card Negócio */}
@@ -229,43 +225,43 @@ export default function Settings() {
               <Briefcase className="text-green-400" size={20} />
             </div>
             <div>
-              <h3 className="text-white font-semibold">Negócio</h3>
-              <p className="text-gray-400 text-sm">Configure o tipo de operação do seu negócio</p>
+              <h3 className="text-white font-semibold">{t('settings.business')}</h3>
+              <p className="text-gray-400 text-sm">{t('settings.businessDescription')}</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-              <label className="text-gray-300 text-sm mb-3 block">Tipo de Operação</label>
+              <label className="text-gray-300 text-sm mb-3 block">{t('settings.operationType')}</label>
               <Select value={operationType} onValueChange={handleOperationTypeChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-operation-type"
                 >
-                  <SelectValue placeholder="Selecione o tipo de operação" />
+                  <SelectValue placeholder={t('settings.selectOperationType')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   <SelectItem value="Cash on Delivery" data-testid="option-cash-on-delivery">
-                    Cash on Delivery
+                    {t('settings.cashOnDelivery')}
                   </SelectItem>
                   <SelectItem value="Pagamento no Cartão" data-testid="option-pagamento-cartao">
-                    Pagamento no Cartão
+                    {t('settings.cardPayment')}
                   </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+                </div>
 
-            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+                <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Clock className="mr-2" size={16} />
-                Fuso Horário da Operação
+                {t('settings.timezone')}
               </label>
               <Select value={timezone} onValueChange={handleTimezoneChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-timezone"
                 >
-                  <SelectValue placeholder="Selecione o fuso horário" />
+                  <SelectValue placeholder={t('settings.selectTimezone')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   {TIMEZONES.map((tz) => (
@@ -276,18 +272,18 @@ export default function Settings() {
                 </SelectContent>
               </Select>
               <p className="text-gray-400 text-xs mt-2">
-                Este fuso horário será usado para calcular as métricas e relatórios do dashboard
+                {t('settings.timezoneDescription')}
               </p>
             </div>
 
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-              <label className="text-gray-300 text-sm mb-3 block">Moeda da Operação</label>
+              <label className="text-gray-300 text-sm mb-3 block">{t('settings.currency')}</label>
               <Select value={currency} onValueChange={handleCurrencyChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-currency"
                 >
-                  <SelectValue placeholder="Selecione a moeda" />
+                  <SelectValue placeholder={t('settings.selectCurrency')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   {CURRENCIES.map((curr) => (
@@ -298,21 +294,21 @@ export default function Settings() {
                 </SelectContent>
               </Select>
               <p className="text-gray-400 text-xs mt-2">
-                Moeda em que os valores serão exibidos no dashboard
+                {t('settings.currencyDescription')}
               </p>
             </div>
 
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Globe className="mr-2" size={16} />
-                Idioma da Operação
+                {t('settings.language')}
               </label>
               <Select value={language} onValueChange={handleLanguageChange}>
                 <SelectTrigger 
                   className="bg-black/20 border-white/10 text-white hover:bg-black/30"
                   data-testid="select-language"
                 >
-                  <SelectValue placeholder="Selecione o idioma" />
+                  <SelectValue placeholder={t('settings.selectLanguage')} />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10">
                   {LANGUAGES.map((lang) => (
@@ -323,30 +319,30 @@ export default function Settings() {
                 </SelectContent>
               </Select>
               <p className="text-gray-400 text-xs mt-2">
-                Idioma usado nos emails de boas-vindas e comunicações automáticas
+                {t('settings.languageDescription')}
               </p>
             </div>
 
             <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
               <label className="text-gray-300 text-sm mb-3 block flex items-center">
                 <Hash className="mr-2" size={16} />
-                Prefixo dos Pedidos
+                {t('settings.orderPrefix')}
               </label>
               <Input
                 type="text"
                 value={shopifyPrefix}
                 onChange={(e) => handleShopifyPrefixChange(e.target.value)}
-                placeholder="Ex: 52, BG, CR (# será adicionado automaticamente)"
+                placeholder={t('settings.orderPrefixPlaceholder')}
                 maxLength={4}
                 className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 hover:bg-black/30"
                 data-testid="input-shopify-prefix"
               />
               <p className="text-gray-400 text-xs mt-2">
-                Digite os 3 caracteres do prefixo (# é adicionado automaticamente). Ex: 52 vira #52, BG vira #BG
+                {t('settings.orderPrefixDescription')}
               </p>
-            </div>
-            
-            <Button 
+                </div>
+                
+                <Button 
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
               className={`w-full transition-all duration-200 ${
@@ -356,7 +352,7 @@ export default function Settings() {
               }`}
               data-testid="button-save-settings"
             >
-              {isSaving ? 'Salvando...' : 'Salvar Configurações'}
+              {isSaving ? t('settings.saving') : t('settings.saveSettings')}
             </Button>
           </div>
         </div>
@@ -373,16 +369,15 @@ export default function Settings() {
               <PlayCircle className="text-purple-400" size={20} />
             </div>
             <div>
-              <h3 className="text-white font-semibold">Tour Interativo</h3>
-              <p className="text-gray-400 text-sm">Conheça todas as funcionalidades do dashboard</p>
+              <h3 className="text-white font-semibold">{t('settings.interactiveTour')}</h3>
+              <p className="text-gray-400 text-sm">{t('settings.interactiveTourDescription')}</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <div className="bg-black/10 border border-white/5 rounded-lg p-4">
               <p className="text-gray-300 text-sm mb-4">
-                O tour guiado mostra os principais recursos do sistema, incluindo métricas, integrações e anúncios. 
-                Perfeito para novos usuários ou para relembrar funcionalidades.
+                {t('settings.tourDescription')}
               </p>
               <Button 
                 onClick={handleRestartTour}
@@ -393,12 +388,12 @@ export default function Settings() {
                 {isResettingTour ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                    Iniciando...
+                    {t('settings.starting')}
                   </>
                 ) : (
                   <>
                     <PlayCircle className="mr-2" size={18} />
-                    Refazer Tour Guiado
+                    {t('settings.restartTour')}
                   </>
                 )}
               </Button>
@@ -413,22 +408,26 @@ export default function Settings() {
         onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
         onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
       >
-        <h3 className="text-xl font-semibold text-white mb-4">Sobre o Sistema</h3>
+        <h3 className="text-xl font-semibold text-white mb-4">{t('settings.aboutSystem')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
           <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <h4 className="text-white font-medium">Versão</h4>
+            <h4 className="text-white font-medium">{t('settings.version')}</h4>
             <p className="text-gray-400 text-sm">v1.0.0</p>
           </div>
           <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <h4 className="text-white font-medium">Última Atualização</h4>
+            <h4 className="text-white font-medium">{t('settings.lastUpdate')}</h4>
             <p className="text-gray-400 text-sm">15/12/2024</p>
           </div>
           <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <h4 className="text-white font-medium">Suporte</h4>
-            <p className="text-gray-400 text-sm">24/7 Online</p>
+            <h4 className="text-white font-medium">{t('settings.support')}</h4>
+            <p className="text-gray-400 text-sm">{t('settings.support24_7')}</p>
           </div>
-        </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-6 space-y-6 w-full">
+          <TeamManagementTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

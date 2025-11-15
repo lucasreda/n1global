@@ -14,9 +14,11 @@ import { Plus, Package, DollarSign, TrendingUp, Calculator, Edit, Save, X, Searc
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Product cost configuration schema
 const productCostSchema = z.object({
@@ -27,12 +29,7 @@ const productCostSchema = z.object({
   operationalCost: z.string().transform((val) => val === "" ? null : parseFloat(val)),
 });
 
-const skuSearchSchema = z.object({
-  sku: z.string().min(1, "SKU é obrigatório"),
-  customCostPrice: z.string().optional().transform((val) => val === "" || !val ? undefined : parseFloat(val)),
-  customShippingCost: z.string().optional().transform((val) => val === "" || !val ? undefined : parseFloat(val)),
-  customHandlingFee: z.string().optional().transform((val) => val === "" || !val ? undefined : parseFloat(val)),
-});
+// Schema será criado dentro do componente para usar tradução
 
 type Product = {
   id: string;
@@ -79,12 +76,21 @@ type StockInfo = {
 };
 
 export default function ProductsPage() {
+  const { t } = useTranslation();
   const [isLinking, setIsLinking] = useState(false);
   const [searchedProduct, setSearchedProduct] = useState<Product | null>(null);
   const [searchSku, setSearchSku] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
+  const { canCreate: canCreateProducts, canEdit: canEditProducts, canDelete: canDeleteProducts } = useOperationPermissions();
+
+  const skuSearchSchema = z.object({
+    sku: z.string().min(1, t('products.skuRequired')),
+    customCostPrice: z.string().optional().transform((val) => val === "" || !val ? undefined : parseFloat(val)),
+    customShippingCost: z.string().optional().transform((val) => val === "" || !val ? undefined : parseFloat(val)),
+    customHandlingFee: z.string().optional().transform((val) => val === "" || !val ? undefined : parseFloat(val)),
+  });
 
   // Fetch linked products for current operation
   const { data: userProducts = [], isLoading } = useQuery({
@@ -129,14 +135,14 @@ export default function ProductsPage() {
     onSuccess: (product) => {
       setSearchedProduct(product);
       toast({
-        title: "Produto encontrado",
-        description: `${product.name} (${product.sku}) disponível para vinculação`,
+        title: t('products.productFound'),
+        description: t('products.productFoundDescription', { name: product.name, sku: product.sku }),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Produto não encontrado",
-        description: error.message || "SKU não encontrado na base global",
+        title: t('products.productNotFound'),
+        description: error.message || t('products.skuNotFound'),
         variant: "destructive",
       });
       setSearchedProduct(null);
@@ -158,13 +164,13 @@ export default function ProductsPage() {
       setSearchedProduct(null);
       setSearchSku("");
       toast({
-        title: "Produto vinculado",
-        description: "Produto vinculado com sucesso à sua conta",
+        title: t('products.productLinked'),
+        description: t('products.productLinkedSuccess'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao vincular produto",
+        title: t('products.errorLinkingProduct'),
         description: error.message,
         variant: "destructive",
       });
@@ -180,13 +186,13 @@ export default function ProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user-products", selectedOperation] });
       toast({
-        title: "Produto desvinculado",
-        description: "Produto desvinculado com sucesso",
+        title: t('products.productUnlinked'),
+        description: t('products.productUnlinkedSuccess'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao desvincular produto",
+        title: t('products.errorUnlinkingProduct'),
         description: error.message,
         variant: "destructive",
       });
@@ -216,11 +222,11 @@ export default function ProductsPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Produtos</h1>
+          <h1 className="text-3xl font-bold text-white">{t('products.title')}</h1>
         </div>
         <Card className="glassmorphism">
           <CardContent className="flex items-center justify-center py-12">
-            <div className="text-white">Carregando produtos...</div>
+            <div className="text-white">{t('products.loadingProducts')}</div>
           </CardContent>
         </Card>
       </div>
@@ -230,22 +236,22 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-bold text-white" style={{ fontSize: '20px' }}>Produtos Vinculados</h1>
+        <h1 className="font-bold text-white" style={{ fontSize: '20px' }}>{t('products.linkedProducts')}</h1>
         <Dialog open={isLinking} onOpenChange={setIsLinking}>
           <DialogTrigger asChild>
             <Button className="glassmorphism-light text-white border-blue-600" data-testid="button-link-product">
               <Link2 className="h-4 w-4 mr-2" />
-              Vincular Produto
+              {t('products.linkProduct')}
             </Button>
           </DialogTrigger>
           <DialogContent className="glassmorphism max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-white flex items-center space-x-2">
                 <Search className="h-5 w-5" />
-                <span>Buscar e Vincular Produto</span>
+                <span>{t('products.searchAndLinkProduct')}</span>
               </DialogTitle>
               <DialogDescription className="text-gray-300">
-                Busque um produto pelo SKU na base global e configure custos personalizados
+                {t('products.searchProductBySku')}
               </DialogDescription>
             </DialogHeader>
 
@@ -255,7 +261,7 @@ export default function ProductsPage() {
                 <Input
                   value={searchSku}
                   onChange={(e) => setSearchSku(e.target.value)}
-                  placeholder="Digite o SKU do produto..."
+                  placeholder={t('products.enterProductSku')}
                   className="glassmorphism-light text-white flex-1"
                   data-testid="input-search-sku"
                 />
@@ -266,7 +272,7 @@ export default function ProductsPage() {
                   data-testid="button-search-product"
                 >
                   <Search className="h-4 w-4 mr-2" />
-                  {searchProductMutation.isPending ? "Buscando..." : "Buscar"}
+                  {searchProductMutation.isPending ? t('products.searching') : t('products.search')}
                 </Button>
               </div>
 
@@ -304,7 +310,7 @@ export default function ProductsPage() {
                             )}
                           </div>
                           <Badge className="bg-green-500/20 text-green-300 border-green-500/30 rounded-full px-3 py-1 text-xs font-medium ml-4">
-                            Disponível
+                            {t('products.available')}
                           </Badge>
                         </div>
                       </div>
@@ -326,7 +332,7 @@ export default function ProductsPage() {
                     }}
                     className="glassmorphism-light text-gray-200"
                   >
-                    Cancelar
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     onClick={handleLinkProduct}
@@ -335,7 +341,7 @@ export default function ProductsPage() {
                     data-testid="button-confirm-link"
                   >
                     <Link2 className="h-4 w-4 mr-2" />
-                    {linkProductMutation.isPending ? "Vinculando..." : "Vincular Produto"}
+                    {linkProductMutation.isPending ? t('products.linking') : t('products.linkProduct')}
                   </Button>
                 </div>
               )}
@@ -380,22 +386,25 @@ export default function ProductsPage() {
                           <p className="text-white/50 text-sm">SKU: {product.sku}</p>
                           <div className="flex items-center gap-2 mt-2">
                             <Badge className={`${product.isActive ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-gray-500/20 text-gray-300 border-gray-500/30'} rounded-full px-2 py-1 text-xs`}>
-                              {product.isActive ? "Ativo" : "Inativo"}
+                              {product.isActive ? t('products.active') : t('products.inactive')}
                             </Badge>
                             <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 rounded-full px-2 py-1 text-xs">
-                              Vinculado
+                              {t('products.linked')}
                             </Badge>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleUnlinkProduct(userProduct.productId)}
-                          className="text-white/40 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
-                          data-testid={`button-unlink-${product.id}`}
-                        >
-                          <Unlink className="h-4 w-4" />
-                        </Button>
+                        {canDeleteProducts('products') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUnlinkProduct(userProduct.productId)}
+                            className="text-white/40 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                            data-testid={`button-unlink-${product.id}`}
+                            title="Desvincular produto"
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -404,15 +413,15 @@ export default function ProductsPage() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="p-3 text-center">
                       <div className="text-lg font-semibold text-orange-300">€{product.price || "0.00"}</div>
-                      <div className="text-xs text-white/50">Preço B2B</div>
+                      <div className="text-xs text-white/50">{t('products.b2bPrice')}</div>
                     </div>
                     <div className="p-3 text-center">
                       <div className="text-lg font-semibold text-purple-300">€{userProduct.customShippingCost || product.shippingCost || "0.00"}</div>
-                      <div className="text-xs text-white/50">Envio</div>
+                      <div className="text-xs text-white/50">{t('products.shipping')}</div>
                     </div>
                     <div className="p-3 text-center">
                       <div className="text-lg font-semibold text-blue-300">{stockData[product.sku]?.availableStock ?? product.stock}</div>
-                      <div className="text-xs text-white/50">Stock</div>
+                      <div className="text-xs text-white/50">{t('products.stock')}</div>
                     </div>
                   </div>
 
@@ -426,7 +435,7 @@ export default function ProductsPage() {
                   {/* Link date */}
                   {userProduct.linkedAt && (
                     <div className="text-xs text-white/40">
-                      Vinculado em {new Date(userProduct.linkedAt).toLocaleDateString("pt-BR")}
+                      {t('products.linkedAt')} {new Date(userProduct.linkedAt).toLocaleDateString("pt-BR")}
                     </div>
                   )}
                 </div>
@@ -443,9 +452,9 @@ export default function ProductsPage() {
             <div className="bg-white/5 rounded-xl p-4 mb-6 border border-white/10">
               <Package className="h-16 w-16 text-white/40" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-3">Nenhum produto vinculado</h3>
+            <h3 className="text-xl font-semibold text-white mb-3">{t('products.noLinkedProducts')}</h3>
             <p className="text-white/60 mb-8 max-w-md">
-              Busque e vincule produtos da base global para começar a gerenciar seu inventário
+              {t('products.noLinkedProductsDescription')}
             </p>
             <Button 
               onClick={() => setIsLinking(true)}
@@ -453,7 +462,7 @@ export default function ProductsPage() {
               data-testid="button-link-first-product"
             >
               <Link2 className="h-4 w-4 mr-2" />
-              Vincular Primeiro Produto
+              {t('products.linkFirstProduct')}
             </Button>
           </CardContent>
         </Card>

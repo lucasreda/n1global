@@ -15,7 +15,7 @@ app.use(cors({
   origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-operation-id'],
 }));
 
 // Raw body middleware for webhook signature verification (must come before JSON parsing)
@@ -59,6 +59,39 @@ app.use('/api/webhooks/cartpanda/orders', (req: any, res: any, next: any) => {
 
 app.use(express.json({ limit: '10mb' })); // Increased limit for ElevenLabs audio
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Middleware de timeout para requisições (5 minutos padrão)
+// Rotas SSE e WebSocket devem definir seu próprio timeout
+app.use((req, res, next) => {
+  // Não aplicar timeout em rotas SSE, WebSocket ou webhooks
+  if (
+    req.path.includes('/stream') ||
+    req.path.includes('/sse') ||
+    req.path.includes('/websocket') ||
+    req.path.includes('/webhook') ||
+    req.path.includes('/voice') ||
+    req.headers['accept']?.includes('text/event-stream')
+  ) {
+    return next();
+  }
+
+  // Timeout de 5 minutos para requisições normais
+  const timeout = 5 * 60 * 1000; // 5 minutos
+  const timer = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(504).json({
+        message: 'Tempo de requisição esgotado. A operação está demorando mais que o esperado.',
+        error: 'Request timeout'
+      });
+    }
+  }, timeout);
+
+  // Limpar timeout quando a resposta for enviada
+  res.on('finish', () => clearTimeout(timer));
+  res.on('close', () => clearTimeout(timer));
+  
+  next();
+});
 
   // DEBUG: Log ALL requests to see what's being intercepted
   app.use((req, res, next) => {
@@ -280,11 +313,27 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
+  server.listen(port, "0.0.0.0", () => {
+  // reusePort não é suportado no Windows, então removemos para compatibilidade multiplataforma
+  const listenOptions: any = {
     port,
     host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  };
+  
+  // Apenas adiciona reusePort em sistemas que suportam (Linux/macOS)
+  if (process.platform !== 'win32') {
+    listenOptions.reusePort = true;
+  }
+  
+  server.listen(listenOptions, () => {
     log(`serving on port ${port}`);
+  }).on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Porta ${port} já está em uso. Por favor, libere a porta ou use outra porta.`);
+      console.error(`💡 Para liberar a porta no Windows, use: Get-Process -Id (Get-NetTCPConnection -LocalPort ${port}).OwningProcess | Stop-Process -Force`);
+    } else {
+      console.error(`❌ Erro ao iniciar servidor na porta ${port}:`, err);
+    }
+    process.exit(1);
   });
 })();

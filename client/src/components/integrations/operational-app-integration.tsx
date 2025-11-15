@@ -11,8 +11,10 @@ import { Loader2, CheckCircle, XCircle, Copy, RefreshCw, Eye, EyeOff } from "luc
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function OperationalAppIntegration() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { selectedOperation: operationId } = useCurrentOperation();
   const [webhookUrl, setWebhookUrl] = useState("");
@@ -66,14 +68,14 @@ export function OperationalAppIntegration() {
       }
       
       toast({
-        title: "Configuração salva",
-        description: "A integração foi configurada com sucesso",
+        title: t('integrations.operationalApp.configSaved'),
+        description: t('integrations.operationalApp.configSavedSuccess'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao salvar",
-        description: error.message || "Não foi possível salvar a configuração",
+        title: t('integrations.operationalApp.errorSaving'),
+        description: error.message || t('integrations.operationalApp.errorSavingDescription'),
         variant: "destructive",
       });
     },
@@ -91,12 +93,12 @@ export function OperationalAppIntegration() {
     onSuccess: (data: any) => {
       if (data.success) {
         toast({
-          title: "Conexão bem-sucedida",
+          title: t('integrations.operationalApp.connectionSuccess'),
           description: data.message,
         });
       } else {
         toast({
-          title: "Falha na conexão",
+          title: t('integrations.operationalApp.connectionFailed'),
           description: data.message,
           variant: "destructive",
         });
@@ -104,8 +106,8 @@ export function OperationalAppIntegration() {
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao testar",
-        description: error.message || "Não foi possível testar a conexão",
+        title: t('integrations.operationalApp.errorTesting'),
+        description: error.message || t('integrations.operationalApp.errorTestingDescription'),
         variant: "destructive",
       });
     },
@@ -129,8 +131,8 @@ export function OperationalAppIntegration() {
     
     if (!url) {
       toast({
-        title: "URL obrigatória",
-        description: "Por favor, informe a URL do webhook",
+        title: t('integrations.operationalApp.urlRequired'),
+        description: t('integrations.operationalApp.urlRequiredDescription'),
         variant: "destructive",
       });
       return;
@@ -151,8 +153,8 @@ export function OperationalAppIntegration() {
     const url = webhookUrl || config?.webhookUrl;
     if (!url) {
       toast({
-        title: "URL obrigatória",
-        description: "Por favor, informe a URL do webhook",
+        title: t('integrations.operationalApp.urlRequired'),
+        description: t('integrations.operationalApp.urlRequiredDescription'),
         variant: "destructive",
       });
       return;
@@ -160,8 +162,8 @@ export function OperationalAppIntegration() {
 
     if (!webhookSecret && !generatedSecret) {
       toast({
-        title: "Secret obrigatório",
-        description: "Por favor, salve a configuração primeiro para gerar o secret",
+        title: t('integrations.operationalApp.secretRequired'),
+        description: t('integrations.operationalApp.secretRequiredDescription'),
         variant: "destructive",
       });
       return;
@@ -173,8 +175,8 @@ export function OperationalAppIntegration() {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: "Copiado",
-      description: `${label} copiado para a área de transferência`,
+      title: t('integrations.operationalApp.copied'),
+      description: t('integrations.operationalApp.copiedToClipboard', { label }),
     });
   };
 
@@ -191,18 +193,18 @@ export function OperationalAppIntegration() {
       {/* Configuração */}
       <Card className="bg-black/40 border-white/10">
         <CardHeader>
-          <CardTitle className="text-white">Configuração do Webhook</CardTitle>
+          <CardTitle className="text-white">{t('integrations.operationalApp.webhookConfigTitle')}</CardTitle>
           <CardDescription>
-            Configure o webhook para receber notificações de novos pedidos
+            {t('integrations.operationalApp.webhookConfigDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="webhookUrl" className="text-gray-300">URL do Webhook</Label>
+            <Label htmlFor="webhookUrl" className="text-gray-300">{t('integrations.operationalApp.webhookUrl')}</Label>
             <div className="flex space-x-2">
               <Input
                 id="webhookUrl"
-                placeholder="https://seu-app.com/api/webhooks/orders"
+                placeholder={t('integrations.operationalApp.webhookUrlPlaceholder')}
                 value={webhookUrl || config?.webhookUrl || ""}
                 onChange={(e) => setWebhookUrl(e.target.value)}
                 className="bg-black/20 border-white/10 text-white"
@@ -222,13 +224,13 @@ export function OperationalAppIntegration() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="webhookSecret" className="text-gray-300">Webhook Secret</Label>
+            <Label htmlFor="webhookSecret" className="text-gray-300">{t('integrations.operationalApp.webhookSecret')}</Label>
             <div className="flex space-x-2">
               <div className="relative flex-1">
                 <Input
                   id="webhookSecret"
                   type={showSecret ? "text" : "password"}
-                  placeholder="Deixe em branco para gerar automaticamente"
+                  placeholder={t('integrations.operationalApp.webhookSecretPlaceholder')}
                   value={webhookSecret || (showSecret ? generatedSecret : "")}
                   onChange={(e) => setWebhookSecret(e.target.value)}
                   className="bg-black/20 border-white/10 text-white pr-10"
@@ -256,30 +258,30 @@ export function OperationalAppIntegration() {
               )}
             </div>
             <p className="text-xs text-gray-400">
-              Use este secret para validar a assinatura HMAC SHA-256 no header X-Webhook-Signature
+              {t('integrations.operationalApp.webhookSecretHint')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="appLoginUrl" className="text-gray-300">URL do Aplicativo</Label>
+            <Label htmlFor="appLoginUrl" className="text-gray-300">{t('integrations.operationalApp.appUrl')}</Label>
             <Input
               id="appLoginUrl"
-              placeholder="https://app.seu-app.com/login"
+              placeholder={t('integrations.operationalApp.appUrlPlaceholder')}
               value={appLoginUrl || config?.appLoginUrl || ""}
               onChange={(e) => setAppLoginUrl(e.target.value)}
               className="bg-black/20 border-white/10 text-white"
               data-testid="input-app-login-url"
             />
             <p className="text-xs text-gray-400">
-              URL para o botão "Acessar meu APP" no email de boas-vindas
+              {t('integrations.operationalApp.appUrlHint')}
             </p>
           </div>
 
           <div className="flex items-center justify-between p-4 bg-black/20 rounded-lg">
             <div className="space-y-0.5">
-              <Label className="text-gray-300">Enviar Email de Boas-Vindas</Label>
+              <Label className="text-gray-300">{t('integrations.operationalApp.welcomeEmail')}</Label>
               <p className="text-sm text-gray-400">
-                {welcomeEmailEnabled !== undefined ? (welcomeEmailEnabled ? "Ativado - Emails serão enviados" : "Desativado - Nenhum email será enviado") : ""}
+                {welcomeEmailEnabled !== undefined ? (welcomeEmailEnabled ? t('integrations.operationalApp.welcomeEmailEnabled') : t('integrations.operationalApp.welcomeEmailDisabled')) : ""}
               </p>
             </div>
             <Switch
@@ -291,11 +293,11 @@ export function OperationalAppIntegration() {
 
           <div className="flex items-center justify-between p-4 bg-black/20 rounded-lg">
             <div className="space-y-0.5">
-              <Label className="text-gray-300">Status da Integração</Label>
+              <Label className="text-gray-300">{t('integrations.operationalApp.integrationStatus')}</Label>
               <p className="text-sm text-gray-400">
                 {isActive || config?.isActive 
-                  ? "Ativa - Enviando webhooks e emails" 
-                  : "Inativa - Webhooks e emails desativados"}
+                  ? t('integrations.operationalApp.integrationActive')
+                  : t('integrations.operationalApp.integrationInactive')}
               </p>
             </div>
             <Switch
@@ -313,7 +315,7 @@ export function OperationalAppIntegration() {
               data-testid="button-save-config"
             >
               {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar Configuração
+              {t('integrations.operationalApp.saveConfig')}
             </Button>
             <Button
               onClick={handleTest}
@@ -324,7 +326,7 @@ export function OperationalAppIntegration() {
             >
               {testMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <RefreshCw className="mr-2 h-4 w-4" />
-              Testar Conexão
+              {t('integrations.operationalApp.testConnection')}
             </Button>
           </div>
         </CardContent>
@@ -333,9 +335,9 @@ export function OperationalAppIntegration() {
       {/* Payload Example */}
       <Card className="bg-black/40 border-white/10">
         <CardHeader>
-          <CardTitle className="text-white">Exemplo de Payload</CardTitle>
+          <CardTitle className="text-white">{t('integrations.operationalApp.payloadExampleTitle')}</CardTitle>
           <CardDescription>
-            Este é o formato do JSON que será enviado para seu webhook
+            {t('integrations.operationalApp.payloadExampleDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -357,9 +359,9 @@ export function OperationalAppIntegration() {
       {logs.length > 0 && (
         <Card className="bg-black/40 border-white/10">
           <CardHeader>
-            <CardTitle className="text-white">Histórico de Webhooks</CardTitle>
+            <CardTitle className="text-white">{t('integrations.operationalApp.webhookHistoryTitle')}</CardTitle>
             <CardDescription>
-              Últimas {logs.length} tentativas de envio
+              {t('integrations.operationalApp.webhookHistoryDescription', { count: logs.length })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -377,7 +379,7 @@ export function OperationalAppIntegration() {
                       <XCircle className="h-5 w-5 text-red-400" />
                     )}
                     <div>
-                      <p className="text-sm text-white">Pedido: {log.orderId}</p>
+                      <p className="text-sm text-white">{t('integrations.operationalApp.order')}: {log.orderId}</p>
                       <p className="text-xs text-gray-400">
                         {new Date(log.createdAt).toLocaleString("pt-BR")}
                       </p>

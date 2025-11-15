@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/hooks/use-translation";
 import { 
   Facebook, 
   Settings, 
@@ -139,6 +141,7 @@ interface ManualAdSpend {
 }
 
 export default function Ads() {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [networkSelectOpen, setNetworkSelectOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState<'facebook' | 'google'>('facebook');
@@ -148,6 +151,7 @@ export default function Ads() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
   const [manualSpendDialogOpen, setManualSpendDialogOpen] = useState(false);
   const [editingSpend, setEditingSpend] = useState<ManualAdSpend | null>(null);
+  const { canEdit: canEditAds, canCreate: canCreateAds, canDelete: canDeleteAds } = useOperationPermissions();
   const [newAccount, setNewAccount] = useState({
     accountId: "",
     name: "",
@@ -248,8 +252,8 @@ export default function Ads() {
     },
     onSuccess: () => {
       toast({
-        title: "Conta adicionada",
-        description: `Conta do ${selectedNetwork === 'facebook' ? 'Meta Ads' : 'Google Ads'} configurada com sucesso`,
+        title: t('ads.accountAdded'),
+        description: t('ads.accountConfiguredSuccess', { network: selectedNetwork === 'facebook' ? t('ads.metaAds') : t('ads.googleAds') }),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/ad-accounts", selectedOperation] });
       setDialogOpen(false);
@@ -266,8 +270,8 @@ export default function Ads() {
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao configurar conta do Meta Ads",
+        title: t('common.error'),
+        description: t('ads.failedToConfigureAccount'),
         variant: "destructive",
       });
     },
@@ -281,15 +285,15 @@ export default function Ads() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Sincronização concluída",
-        description: `${data.synced || 0} campanhas sincronizadas`,
+        title: t('ads.syncCompleted'),
+        description: t('ads.campaignsSynced', { count: data.synced || 0 }),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod, selectedOperation] });
     },
     onError: () => {
       toast({
-        title: "Erro na sincronização",
-        description: "Falha ao sincronizar campanhas do Facebook",
+        title: t('ads.syncError'),
+        description: t('ads.failedToSyncCampaigns'),
         variant: "destructive",
       });
     },
@@ -308,14 +312,14 @@ export default function Ads() {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod, selectedOperation] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
       toast({
-        title: "Campanha atualizada",
-        description: "Seleção da campanha alterada",
+        title: t('ads.campaignUpdated'),
+        description: t('ads.campaignSelectionChanged'),
       });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar campanha",
+        title: t('common.error'),
+        description: t('ads.failedToUpdateCampaign'),
         variant: "destructive",
       });
     },
@@ -333,8 +337,8 @@ export default function Ads() {
     },
     onSuccess: () => {
       toast({
-        title: "Gasto adicionado",
-        description: "Gasto manual de anúncios criado com sucesso",
+        title: t('ads.spendAdded'),
+        description: t('ads.manualSpendCreated'),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/manual-ad-spend", selectedOperation] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
@@ -349,8 +353,8 @@ export default function Ads() {
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao criar gasto manual",
+        title: t('common.error'),
+        description: t('ads.failedToCreateManualSpend'),
         variant: "destructive",
       });
     },
@@ -367,8 +371,8 @@ export default function Ads() {
     },
     onSuccess: () => {
       toast({
-        title: "Gasto atualizado",
-        description: "Gasto manual de anúncios atualizado com sucesso",
+        title: t('ads.spendUpdated'),
+        description: t('ads.manualSpendUpdated'),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/manual-ad-spend", selectedOperation] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
@@ -377,8 +381,8 @@ export default function Ads() {
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar gasto manual",
+        title: t('common.error'),
+        description: t('ads.failedToUpdateManualSpend'),
         variant: "destructive",
       });
     },
@@ -392,16 +396,16 @@ export default function Ads() {
     },
     onSuccess: () => {
       toast({
-        title: "Gasto removido",
-        description: "Gasto manual de anúncios removido com sucesso",
+        title: t('ads.spendRemoved'),
+        description: t('ads.manualSpendRemoved'),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/manual-ad-spend", selectedOperation] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
     },
     onError: () => {
       toast({
-        title: "Erro",
-        description: "Falha ao remover gasto manual",
+        title: t('common.error'),
+        description: t('ads.failedToRemoveManualSpend'),
         variant: "destructive",
       });
     },
@@ -409,10 +413,10 @@ export default function Ads() {
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      "ACTIVE": { label: "Ativa", variant: "default" as const, color: "text-green-400" },
-      "PAUSED": { label: "Pausada", variant: "secondary" as const, color: "text-yellow-400" },
-      "DELETED": { label: "Deletada", variant: "destructive" as const, color: "text-red-400" },
-      "ARCHIVED": { label: "Arquivada", variant: "outline" as const, color: "text-gray-400" },
+      "ACTIVE": { label: t('ads.statusActive'), variant: "default" as const, color: "text-green-400" },
+      "PAUSED": { label: t('ads.statusPaused'), variant: "secondary" as const, color: "text-yellow-400" },
+      "DELETED": { label: t('ads.statusDeleted'), variant: "destructive" as const, color: "text-red-400" },
+      "ARCHIVED": { label: t('ads.statusArchived'), variant: "outline" as const, color: "text-gray-400" },
     };
     const config = statusMap[status as keyof typeof statusMap] || statusMap.ACTIVE;
     return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
@@ -479,8 +483,8 @@ export default function Ads() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Anúncios Meta</h1>
-            <p className="text-gray-400">Gerencie campanhas e custos de marketing</p>
+            <h1 className="text-2xl font-bold text-white">{t('ads.metaAds')}</h1>
+            <p className="text-gray-400">{t('ads.manageCampaignsAndCosts')}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -496,8 +500,8 @@ export default function Ads() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Anúncios</h1>
-          <p className="text-sm text-gray-400">Campanhas Meta Ads e Google Ads</p>
+          <h1 className="text-xl font-bold text-white">{t('ads.title')}</h1>
+          <p className="text-sm text-gray-400">{t('ads.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-3">
           <select
@@ -505,18 +509,18 @@ export default function Ads() {
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5"
           >
-            <option value="today">Hoje</option>
-            <option value="yesterday">Ontem</option>
-            <option value="last_7d">Últimos 7 dias</option>
-            <option value="last_30d">Últimos 30 dias</option>
-            <option value="this_month">Este mês</option>
-            <option value="last_month">Mês passado</option>
-            <option value="this_quarter">Este trimestre</option>
+            <option value="today">{t('ads.today')}</option>
+            <option value="yesterday">{t('ads.yesterday')}</option>
+            <option value="last_7d">{t('ads.last7Days')}</option>
+            <option value="last_30d">{t('ads.last30Days')}</option>
+            <option value="this_month">{t('ads.thisMonth')}</option>
+            <option value="last_month">{t('ads.lastMonth')}</option>
+            <option value="this_quarter">{t('ads.thisQuarter')}</option>
           </select>
           <div className="flex items-center space-x-2">
             {syncInfo?.lastSync && (
               <span className="text-xs text-gray-400">
-                Último sync: {new Date(syncInfo.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                {t('ads.lastSync')}: {new Date(syncInfo.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
             <Button
@@ -527,7 +531,7 @@ export default function Ads() {
               data-testid="button-add-manual-spend"
             >
               <Calculator className="w-4 h-4 mr-2" />
-              Gasto Manual
+              {t('ads.manualSpend')}
             </Button>
             <Button
               onClick={() => syncCampaignsMutation.mutate()}
@@ -536,7 +540,7 @@ export default function Ads() {
               data-testid="button-sync-campaigns"
             >
               <RefreshCw className={`w-3 h-3 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-              Sync
+              {t('ads.sync')}
             </Button>
           </div>
           {/* Network Selection Dialog */}
@@ -544,14 +548,14 @@ export default function Ads() {
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8" data-testid="button-add-account">
                 <Plus className="w-3 h-3 mr-2" />
-                Conta
+                {t('ads.account')}
               </Button>
             </DialogTrigger>
             <DialogContent className="glassmorphism border-gray-700 max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Selecionar Rede de Anúncios</DialogTitle>
+                <DialogTitle className="text-white">{t('ads.selectAdNetwork')}</DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Escolha a plataforma de anúncios que deseja configurar
+                  {t('ads.choosePlatformToConfigure')}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-4 py-6">
@@ -587,91 +591,91 @@ export default function Ads() {
                 <DialogTitle className="text-white flex items-center">
                   <NetworkIcon network={selectedNetwork} size={20} />
                   <span className="ml-2">
-                    Configurar {selectedNetwork === 'facebook' ? 'Meta Ads' : 'Google Ads'}
+                    {t('ads.configureAccount', { network: selectedNetwork === 'facebook' ? t('ads.metaAds') : t('ads.googleAds') })}
                   </span>
                 </DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Adicione suas credenciais reais do {selectedNetwork === 'facebook' ? 'Meta' : 'Google'} para sincronizar campanhas
+                  {t('ads.addCredentialsToSync', { network: selectedNetwork === 'facebook' ? t('ads.meta') : t('ads.google') })}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-1">
                   <Label htmlFor="accountId" className="text-sm text-gray-300">
-                    {selectedNetwork === 'facebook' ? 'ID da Conta Meta' : 'Customer ID Google Ads'}
+                    {selectedNetwork === 'facebook' ? t('ads.metaAccountId') : t('ads.googleCustomerId')}
                   </Label>
                   <Input
                     id="accountId"
                     value={newAccount.accountId}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, accountId: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder={selectedNetwork === 'facebook' ? '1234567890 (sem act_)' : '123-456-7890'}
+                    placeholder={selectedNetwork === 'facebook' ? t('ads.metaAccountIdPlaceholder') : t('ads.googleCustomerIdPlaceholder')}
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="name" className="text-sm text-gray-300">Nome da Conta</Label>
+                  <Label htmlFor="name" className="text-sm text-gray-300">{t('ads.accountName')}</Label>
                   <Input
                     id="name"
                     value={newAccount.name}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="Nome descritivo para identificar"
+                    placeholder={t('ads.accountNamePlaceholder')}
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="currency" className="text-sm text-gray-300">Moeda da Conta</Label>
+                  <Label htmlFor="currency" className="text-sm text-gray-300">{t('ads.accountCurrency')}</Label>
                   <select
                     id="currency"
                     value={newAccount.baseCurrency || 'BRL'}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, baseCurrency: e.target.value }))}
                     className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-2 h-9 w-full"
                   >
-                    <option value="BRL">BRL - Real Brasileiro</option>
-                    <option value="USD">USD - Dólar Americano</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - Libra Esterlina</option>
-                    <option value="CAD">CAD - Dólar Canadense</option>
-                    <option value="AUD">AUD - Dólar Australiano</option>
+                    <option value="BRL">{t('ads.currencyBRL')}</option>
+                    <option value="USD">{t('ads.currencyUSD')}</option>
+                    <option value="EUR">{t('ads.currencyEUR')}</option>
+                    <option value="GBP">{t('ads.currencyGBP')}</option>
+                    <option value="CAD">{t('ads.currencyCAD')}</option>
+                    <option value="AUD">{t('ads.currencyAUD')}</option>
                   </select>
                 </div>
 
                 {selectedNetwork === 'facebook' ? (
                   <>
                     <div className="space-y-1">
-                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Meta</Label>
+                      <Label htmlFor="accessToken" className="text-sm text-gray-300">{t('ads.metaAccessToken')}</Label>
                       <Input
                         id="accessToken"
                         value={newAccount.accessToken}
                         onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
                         className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="EAAxxxxxx... (token real do Meta)"
+                        placeholder={t('ads.metaAccessTokenPlaceholder')}
                         type="password"
                         required
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="appId" className="text-sm text-gray-300">App ID</Label>
+                      <Label htmlFor="appId" className="text-sm text-gray-300">{t('ads.appId')}</Label>
                       <Input
                         id="appId"
                         value={newAccount.appId}
                         onChange={(e) => setNewAccount(prev => ({ ...prev, appId: e.target.value }))}
                         className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="ID da aplicação Meta"
+                        placeholder={t('ads.appIdPlaceholder')}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="appSecret" className="text-sm text-gray-300">App Secret</Label>
+                      <Label htmlFor="appSecret" className="text-sm text-gray-300">{t('ads.appSecret')}</Label>
                       <Input
                         id="appSecret"
                         value={newAccount.appSecret}
                         onChange={(e) => setNewAccount(prev => ({ ...prev, appSecret: e.target.value }))}
                         className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="Chave secreta da aplicação"
+                        placeholder={t('ads.appSecretPlaceholder')}
                         type="password"
                       />
                     </div>
@@ -679,26 +683,26 @@ export default function Ads() {
                 ) : (
                   <>
                     <div className="space-y-1">
-                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Google Ads</Label>
+                      <Label htmlFor="accessToken" className="text-sm text-gray-300">{t('ads.googleAccessToken')}</Label>
                       <Input
                         id="accessToken"
                         value={newAccount.accessToken}
                         onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
                         className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="Token OAuth2 do Google Ads"
+                        placeholder={t('ads.googleAccessTokenPlaceholder')}
                         type="password"
                         required
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="managerId" className="text-sm text-gray-300">Manager Account ID (opcional)</Label>
+                      <Label htmlFor="managerId" className="text-sm text-gray-300">{t('ads.managerAccountId')}</Label>
                       <Input
                         id="managerId"
                         value={newAccount.businessManagerId}
                         onChange={(e) => setNewAccount(prev => ({ ...prev, businessManagerId: e.target.value }))}
                         className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="ID da conta gerenciadora Google Ads"
+                        placeholder={t('ads.managerAccountIdPlaceholder')}
                       />
                     </div>
                   </>
@@ -711,7 +715,7 @@ export default function Ads() {
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {addAccountMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
-                  Conectar Conta
+                  {t('ads.connectAccount')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -723,16 +727,16 @@ export default function Ads() {
               <DialogHeader>
                 <DialogTitle className="text-white flex items-center">
                   <Calculator className="w-5 h-5 mr-2 text-green-400" />
-                  {editingSpend ? "Editar Gasto Manual" : "Adicionar Gasto Manual"}
+                  {editingSpend ? t('ads.editManualSpend') : t('ads.addManualSpend')}
                 </DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  {editingSpend ? "Atualize o gasto com anúncios" : "Registre um gasto manual com anúncios para incluir no dashboard"}
+                  {editingSpend ? t('ads.updateSpend') : t('ads.registerManualSpend')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-1">
                   <Label htmlFor="amount" className="text-sm text-gray-300">
-                    Valor ({operationDetails?.currency || 'EUR'})
+                    {t('ads.value')} ({operationDetails?.currency || 'EUR'})
                   </Label>
                   <Input
                     id="amount"
@@ -753,7 +757,7 @@ export default function Ads() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="platform" className="text-sm text-gray-300">Plataforma</Label>
+                  <Label htmlFor="platform" className="text-sm text-gray-300">{t('ads.platform')}</Label>
                   <Select 
                     value={editingSpend ? editingSpend.platform : newManualSpend.platform}
                     onValueChange={(value) => {
@@ -771,25 +775,25 @@ export default function Ads() {
                       <SelectItem value="facebook" className="text-white">
                         <div className="flex items-center gap-2">
                           <FacebookIcon size={16} />
-                          <span>Meta Ads</span>
+                          <span>{t('ads.metaAds')}</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="google" className="text-white">
                         <div className="flex items-center gap-2">
                           <GoogleAdsIcon size={16} />
-                          <span>Google Ads</span>
+                          <span>{t('ads.googleAds')}</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="taboola" className="text-white">Taboola</SelectItem>
-                      <SelectItem value="tiktok" className="text-white">TikTok Ads</SelectItem>
-                      <SelectItem value="influencer" className="text-white">Influencer</SelectItem>
-                      <SelectItem value="outro" className="text-white">Outro</SelectItem>
+                      <SelectItem value="taboola" className="text-white">{t('ads.taboola')}</SelectItem>
+                      <SelectItem value="tiktok" className="text-white">{t('ads.tiktokAds')}</SelectItem>
+                      <SelectItem value="influencer" className="text-white">{t('ads.influencer')}</SelectItem>
+                      <SelectItem value="outro" className="text-white">{t('ads.other')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="spendDate" className="text-sm text-gray-300">Data do Gasto</Label>
+                  <Label htmlFor="spendDate" className="text-sm text-gray-300">{t('ads.spendDate')}</Label>
                   <Input
                     id="spendDate"
                     type="date"
@@ -807,7 +811,7 @@ export default function Ads() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="description" className="text-sm text-gray-300">Descrição (opcional)</Label>
+                  <Label htmlFor="description" className="text-sm text-gray-300">{t('ads.descriptionOptional')}</Label>
                   <Input
                     id="description"
                     value={editingSpend ? editingSpend.description || "" : newManualSpend.description}
@@ -819,12 +823,12 @@ export default function Ads() {
                       }
                     }}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="Ex: Campanha de Black Friday"
+                    placeholder={t('ads.descriptionPlaceholder')}
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="notes" className="text-sm text-gray-300">Observações (opcional)</Label>
+                  <Label htmlFor="notes" className="text-sm text-gray-300">{t('ads.notesOptional')}</Label>
                   <Textarea
                     id="notes"
                     value={editingSpend ? editingSpend.notes || "" : newManualSpend.notes}
@@ -836,7 +840,7 @@ export default function Ads() {
                       }
                     }}
                     className="bg-gray-800 border-gray-600 text-white"
-                    placeholder="Observações adicionais..."
+                    placeholder={t('ads.notesPlaceholder')}
                     rows={3}
                   />
                 </div>
@@ -851,7 +855,7 @@ export default function Ads() {
                   >
                     {deleteManualSpendMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir
+                    {t('common.delete')}
                   </Button>
                 )}
                 <Button 
@@ -874,7 +878,7 @@ export default function Ads() {
                 >
                   {(createManualSpendMutation.isPending || updateManualSpendMutation.isPending) && 
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingSpend ? "Atualizar" : "Adicionar"} Gasto
+                  {editingSpend ? t('ads.update') : t('ads.add')} {t('ads.spend')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -888,12 +892,12 @@ export default function Ads() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
               <DollarSign className="w-4 h-4 text-green-400" />
-              <span>Gasto Total</span>
+              <span>{t('ads.totalSpend')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString(), 'BRL')}</div>
-            <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
+            <p className="text-gray-400 text-sm">{t('ads.campaignsFromAllAccounts', { count: allSelectedCampaigns.length })}</p>
             
             {/* Breakdown por plataforma */}
             {filteredCampaigns && filteredCampaigns.length > 0 && (
@@ -960,7 +964,7 @@ export default function Ads() {
                             <div className="flex items-center justify-between text-xs">
                               <div className="flex items-center space-x-2">
                                 <FacebookIcon size={12} />
-                                <span className="text-gray-300">Meta Ads</span>
+                                <span className="text-gray-300">{t('ads.metaAds')}</span>
                               </div>
                               <span className="text-blue-400 font-medium">{formatCurrency(metaTotalSpent.toString(), 'BRL')}</span>
                             </div>
@@ -969,7 +973,7 @@ export default function Ads() {
                             <div className="flex items-center justify-between text-xs">
                               <div className="flex items-center space-x-2">
                                 <GoogleAdsIcon size={12} />
-                                <span className="text-gray-300">Google Ads</span>
+                                <span className="text-gray-300">{t('ads.googleAds')}</span>
                               </div>
                               <span className="text-red-400 font-medium">{formatCurrency(googleTotalSpent.toString(), 'BRL')}</span>
                             </div>
@@ -988,15 +992,15 @@ export default function Ads() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
               <Calculator className="w-4 h-4 text-green-400" />
-              <span>Gastos Manuais</span>
+              <span>{t('ads.manualSpends')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-400">{manualSpends?.length || 0}</div>
             <p className="text-gray-400 text-sm">
               {manualSpends && manualSpends.length > 0 
-                ? `${manualSpends.reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'EUR' })} total`
-                : "Nenhum gasto manual"}
+                ? `${manualSpends.reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'EUR' })} ${t('ads.total')}`
+                : t('ads.noManualSpend')}
             </p>
           </CardContent>
         </Card>
@@ -1005,12 +1009,12 @@ export default function Ads() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
               <Target className="w-4 h-4 text-blue-400" />
-              <span>Campanhas Selecionadas</span>
+              <span>{t('ads.selectedCampaigns')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-400">{filteredSelectedCampaigns.length}</div>
-            <p className="text-gray-400 text-sm">de {filteredCampaigns.length} {selectedAccountId === "all" ? "total" : "da conta"}</p>
+            <p className="text-gray-400 text-sm">{selectedAccountId === "all" ? t('ads.ofCampaignsTotal', { total: filteredCampaigns.length }) : t('ads.ofCampaignsAccount', { total: filteredCampaigns.length })}</p>
           </CardContent>
         </Card>
 
@@ -1036,13 +1040,13 @@ export default function Ads() {
                   return <Globe className="w-4 h-4 text-gray-400" />;
                 }
               })()}
-              <span>Contas Conectadas</span>
+              <span>{t('ads.connectedAccounts')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-500">{adAccounts?.length || 0}</div>
             <p className="text-gray-400 text-sm">
-              {adAccounts?.filter(a => a.isActive).length || 0} ativas
+              {t('ads.activeAccounts', { count: adAccounts?.filter(a => a.isActive).length || 0 })}
             </p>
             
             {/* Estatísticas por plataforma */}
@@ -1058,7 +1062,7 @@ export default function Ads() {
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center space-x-2">
                             <FacebookIcon size={12} />
-                            <span className="text-gray-300">Meta Ads</span>
+                            <span className="text-gray-300">{t('ads.metaAds')}</span>
                           </div>
                           <span className="text-blue-400 font-medium">{metaAccounts.length}</span>
                         </div>
@@ -1067,7 +1071,7 @@ export default function Ads() {
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center space-x-2">
                             <GoogleAdsIcon size={12} />
-                            <span className="text-gray-300">Google Ads</span>
+                            <span className="text-gray-300">{t('ads.googleAds')}</span>
                           </div>
                           <span className="text-red-400 font-medium">{googleAccounts.length}</span>
                         </div>
@@ -1087,7 +1091,7 @@ export default function Ads() {
                             onClick={() => setAccountsModalOpen(true)}
                             className="text-xs text-blue-400 hover:text-blue-300 text-center pt-1 w-full cursor-pointer transition-colors"
                           >
-                            +{adAccounts.length - 2} mais
+                            +{adAccounts.length - 2} {t('ads.more')}
                           </button>
                         )}
                       </div>
@@ -1105,13 +1109,13 @@ export default function Ads() {
         <Card className="glassmorphism border-gray-700">
           <CardContent className="text-center py-12">
             <Facebook className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Nenhuma conta conectada</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">{t('ads.noAccountConnected')}</h3>
             <p className="text-gray-400 mb-6">
-              Configure sua primeira conta do Meta Ads para começar a importar campanhas
+              {t('ads.configureFirstAccount')}
             </p>
             <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="w-4 h-4 mr-2" />
-              Adicionar Primeira Conta
+              {t('ads.addFirstAccount')}
             </Button>
           </CardContent>
         </Card>
@@ -1122,21 +1126,21 @@ export default function Ads() {
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg text-white">
-              Campanhas {selectedAccountId !== "all" && `- ${adAccounts?.find(acc => acc.accountId === selectedAccountId)?.name}`}
+              {t('ads.campaigns')} {selectedAccountId !== "all" && `- ${adAccounts?.find(acc => acc.accountId === selectedAccountId)?.name}`}
             </CardTitle>
             <CardDescription className="text-sm text-gray-400 mb-3">
-              Selecione campanhas para incluir no dashboard
+              {t('ads.selectCampaignsForDashboard')}
             </CardDescription>
             <div className="mb-4">
               <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                 <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                  <SelectValue placeholder="Selecionar conta" />
+                  <SelectValue placeholder={t('ads.selectAccount')} />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-600">
                   <SelectItem value="all" className="text-white">
                     <div className="flex items-center gap-2">
                       <Globe size={16} className="text-gray-400" />
-                      <span>Todas as contas</span>
+                      <span>{t('ads.allAccounts')}</span>
                     </div>
                   </SelectItem>
                   {adAccounts?.map((account) => (
@@ -1185,7 +1189,7 @@ export default function Ads() {
                           </div>
                           <div className="grid grid-cols-4 gap-3 text-xs">
                             <div>
-                              <span className="text-gray-400">Gasto: </span>
+                              <span className="text-gray-400">{t('ads.spend')}: </span>
                               <div className="flex flex-col">
                                 <span className="text-white font-medium">{formatCurrency(campaign.amountSpent, 'BRL')}</span>
                                 {campaign.originalCurrency && campaign.originalCurrency !== 'BRL' && formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency) && (
@@ -1196,15 +1200,15 @@ export default function Ads() {
                               </div>
                             </div>
                             <div>
-                              <span className="text-gray-400">Impressões: </span>
+                              <span className="text-gray-400">{t('ads.impressions')}: </span>
                               <span className="text-white font-medium">{campaign.impressions.toLocaleString()}</span>
                             </div>
                             <div>
-                              <span className="text-gray-400">Cliques: </span>
+                              <span className="text-gray-400">{t('ads.clicks')}: </span>
                               <span className="text-white font-medium">{campaign.clicks.toLocaleString()}</span>
                             </div>
                             <div>
-                              <span className="text-gray-400">CTR: </span>
+                              <span className="text-gray-400">{t('ads.ctr')}: </span>
                               <span className="text-white font-medium">{formatPercentage(campaign.ctr)}</span>
                             </div>
                           </div>
@@ -1221,9 +1225,9 @@ export default function Ads() {
         <Card className="glassmorphism border-gray-700">
           <CardContent className="text-center py-12">
             <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Nenhuma campanha encontrada</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">{t('ads.noCampaignsFound')}</h3>
             <p className="text-gray-400 mb-6">
-              Sincronize suas campanhas do Meta Ads para começar
+              {t('ads.syncCampaignsToStart')}
             </p>
             <Button 
               onClick={() => syncCampaignsMutation.mutate()}
@@ -1231,7 +1235,7 @@ export default function Ads() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-              Sincronizar Campanhas
+              {t('ads.syncCampaigns')}
             </Button>
           </CardContent>
         </Card>
@@ -1240,10 +1244,10 @@ export default function Ads() {
           <CardContent className="text-center py-12">
             <Facebook className="w-16 h-16 text-blue-500 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">
-              {selectedAccountId === "all" ? "Nenhuma campanha encontrada" : "Nenhuma campanha na conta selecionada"}
+              {selectedAccountId === "all" ? t('ads.noCampaignsFound') : t('ads.noCampaignsInSelectedAccount')}
             </h3>
             <p className="text-gray-400 mb-6">
-              Sincronize suas campanhas do Meta Ads para começar
+              {t('ads.syncCampaignsToStart')}
             </p>
             <Button 
               onClick={() => syncCampaignsMutation.mutate()}
@@ -1251,7 +1255,7 @@ export default function Ads() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-              Sincronizar Campanhas
+              {t('ads.syncCampaigns')}
             </Button>
           </CardContent>
         </Card>
@@ -1264,10 +1268,10 @@ export default function Ads() {
             <DialogTitle className="text-white flex items-center space-x-2">
               <FacebookIcon size={20} />
               <GoogleAdsIcon size={20} />
-              <span>Todas as Contas Conectadas</span>
+              <span>{t('ads.allConnectedAccounts')}</span>
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Visualize todas as suas contas de anúncios conectadas
+              {t('ads.viewAllConnectedAccounts')}
             </DialogDescription>
           </DialogHeader>
           
@@ -1281,7 +1285,7 @@ export default function Ads() {
                     <div>
                       <h3 className="text-sm font-medium text-white flex items-center space-x-2 mb-3">
                         <FacebookIcon size={16} />
-                        <span>Meta Ads ({metaAccounts.length})</span>
+                        <span>{t('ads.metaAds')} ({metaAccounts.length})</span>
                       </h3>
                       <div className="space-y-2">
                         {metaAccounts.map((account) => (
@@ -1298,7 +1302,7 @@ export default function Ads() {
                                 <span className="text-xs text-gray-400">{account.currency}</span>
                                 <span className={`w-2 h-2 rounded-full ${account.isActive ? 'bg-green-400' : 'bg-red-400'}`}></span>
                                 <span className={`text-xs ${account.isActive ? 'text-green-400' : 'text-red-400'}`}>
-                                  {account.isActive ? 'Ativa' : 'Inativa'}
+                                  {account.isActive ? t('ads.active') : t('ads.inactive')}
                                 </span>
                               </div>
                             </div>
@@ -1316,7 +1320,7 @@ export default function Ads() {
                     <div>
                       <h3 className="text-sm font-medium text-white flex items-center space-x-2 mb-3">
                         <GoogleAdsIcon size={16} />
-                        <span>Google Ads ({googleAccounts.length})</span>
+                        <span>{t('ads.googleAds')} ({googleAccounts.length})</span>
                       </h3>
                       <div className="space-y-2">
                         {googleAccounts.map((account) => (
@@ -1333,7 +1337,7 @@ export default function Ads() {
                                 <span className="text-xs text-gray-400">{account.currency}</span>
                                 <span className={`w-2 h-2 rounded-full ${account.isActive ? 'bg-green-400' : 'bg-red-400'}`}></span>
                                 <span className={`text-xs ${account.isActive ? 'text-green-400' : 'text-red-400'}`}>
-                                  {account.isActive ? 'Ativa' : 'Inativa'}
+                                  {account.isActive ? t('ads.active') : t('ads.inactive')}
                                 </span>
                               </div>
                             </div>
@@ -1347,7 +1351,7 @@ export default function Ads() {
             ) : (
               <div className="text-center py-8">
                 <Globe className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-400">Nenhuma conta conectada</p>
+                <p className="text-gray-400">{t('ads.noAccountConnected')}</p>
               </div>
             )}
           </div>
@@ -1360,10 +1364,10 @@ export default function Ads() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg text-white flex items-center space-x-2">
               <Calculator className="w-4 h-4 text-green-400" />
-              <span>Detalhes dos Gastos Manuais</span>
+              <span>{t('ads.manualSpendsDetails')}</span>
             </CardTitle>
             <CardDescription className="text-sm text-gray-400">
-              Gastos adicionados manualmente para complementar os dados das campanhas
+              {t('ads.manualSpendsDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -1381,30 +1385,30 @@ export default function Ads() {
                           {spend.platform === 'google' && <GoogleAdsIcon size={16} />}
                           {!['facebook', 'google'].includes(spend.platform) && <Globe className="w-4 h-4 text-gray-400" />}
                           <h4 className="text-sm font-medium text-white">
-                            {spend.description || `Gasto ${spend.platform === 'facebook' ? 'Meta Ads' : 
-                              spend.platform === 'google' ? 'Google Ads' : 
-                              spend.platform.charAt(0).toUpperCase() + spend.platform.slice(1)}`}
+                            {spend.description || t('ads.spendFor', { platform: spend.platform === 'facebook' ? t('ads.metaAds') : 
+                              spend.platform === 'google' ? t('ads.googleAds') : 
+                              spend.platform.charAt(0).toUpperCase() + spend.platform.slice(1) })}
                           </h4>
                           <Badge variant="outline" className="text-green-400 border-green-400">
-                            Manual
+                            {t('ads.manual')}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-3 gap-3 text-xs">
                           <div>
-                            <span className="text-gray-400">Valor: </span>
+                            <span className="text-gray-400">{t('ads.value')}: </span>
                             <span className="text-white font-medium">{formatCurrency(spend.amount, spend.currency || 'EUR')}</span>
                           </div>
                           <div>
-                            <span className="text-gray-400">Data: </span>
+                            <span className="text-gray-400">{t('ads.date')}: </span>
                             <span className="text-white font-medium">
                               {new Date(spend.spendDate).toLocaleDateString('pt-BR')}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-400">Plataforma: </span>
+                            <span className="text-gray-400">{t('ads.platform')}: </span>
                             <span className="text-white font-medium">
-                              {spend.platform === 'facebook' ? 'Meta Ads' : 
-                               spend.platform === 'google' ? 'Google Ads' : 
+                              {spend.platform === 'facebook' ? t('ads.metaAds') : 
+                               spend.platform === 'google' ? t('ads.googleAds') : 
                                spend.platform.charAt(0).toUpperCase() + spend.platform.slice(1)}
                             </span>
                           </div>
@@ -1417,17 +1421,20 @@ export default function Ads() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        onClick={() => {
-                          setEditingSpend(spend);
-                          setManualSpendDialogOpen(true);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
+                      {canEditAds('ads') && (
+                        <Button
+                          onClick={() => {
+                            setEditingSpend(spend);
+                            setManualSpendDialogOpen(true);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                          title="Editar gasto manual"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

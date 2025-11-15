@@ -7,6 +7,7 @@ import { Loader2, RefreshCw, XCircle, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { SyncTimeline } from "./SyncTimeline";
 import { SyncSummaryCard } from "./SyncSummaryCard";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface PlatformProgress {
   processedOrders: number;
@@ -77,6 +78,83 @@ export function CompleteSyncDialog({
   const pollingIntervalRef = useRef<number | null>(null);
   const hasStartedSyncRef = useRef(false);
   const expectedRunIdRef = useRef<string | null>(null);
+  const { t } = useTranslation();
+
+  // Helper function to translate backend messages
+  const translateSyncMessage = (message: string | null | undefined): string => {
+    if (!message) return t('dashboard.completeSync.preparing');
+    
+    const msg = message.toLowerCase();
+    
+    // Map known backend messages to translations
+    // Check for exact match first, then partial matches
+    if (msg === 'importando pedidos do shopify...' || 
+        msg.includes('importando pedidos do shopify') || 
+        msg.includes('importando pedidos históricos do shopify')) {
+      return t('dashboard.syncMessages.importingShopifyOrders');
+    }
+    if (msg.includes('importando entregas do digistore')) {
+      return t('dashboard.syncMessages.importingDigistore');
+    }
+    if (msg.includes('importando pedidos:') && msg.includes('novos importados')) {
+      // Extract: "Importando pedidos: X novos importados (Página Y)"
+      const importMatch = message.match(/importando pedidos:\s*(\d+)\s*novos?\s*importados?/i);
+      if (importMatch) {
+        const pageMatch = message.match(/página\s*(\d+)/i);
+        if (pageMatch) {
+          return `${t('dashboard.syncMessages.importingOrders', { new: importMatch[1] })} (${t('dashboard.syncMessages.page')} ${pageMatch[1]})`;
+        }
+        return t('dashboard.syncMessages.importingOrders', { new: importMatch[1] });
+      }
+    }
+    if (msg.includes('sincronizando com transportadora')) {
+      return t('dashboard.syncMessages.syncingWithCarrier');
+    }
+    if (msg.includes('sincronizando pedidos com warehouse')) {
+      return t('dashboard.syncMessages.syncingWithWarehouse');
+    }
+    if (msg.includes('sincronização concluída') || msg.includes('sync concluído')) {
+      // Try to extract order count if present: "Sincronização concluída! X pedidos processados."
+      const orderCountMatch = message.match(/sincronização concluída!?\s*(\d+)\s*pedidos?\s*processados?/i);
+      if (orderCountMatch) {
+        return t('dashboard.syncMessages.syncCompletedWithOrders', { count: orderCountMatch[1] });
+      }
+      // Try to extract stats: "Sincronização concluída: X novos, Y atualizados"
+      const statsMatch = message.match(/sincronização concluída:\s*(\d+)\s*novos?,\s*(\d+)\s*atualizados?/i);
+      if (statsMatch) {
+        return t('dashboard.syncMessages.syncCompletedWithStats', { new: statsMatch[1], updated: statsMatch[2] });
+      }
+      return t('dashboard.syncMessages.syncCompleted');
+    }
+    if (msg.includes('processando página')) {
+      // Try to extract page numbers if present
+      const pageMatch = message.match(/processando página (\d+) de (\d+)/i);
+      if (pageMatch) {
+        return `${t('dashboard.syncMessages.processingPage')} ${pageMatch[1]} ${t('dashboard.syncMessages.of')} ${pageMatch[2]}`;
+      }
+      return t('dashboard.syncMessages.processingPage');
+    }
+    if (msg.includes('iniciando importação')) {
+      // Try to extract order count if present
+      const orderMatch = message.match(/iniciando importação de (\d+)/i);
+      if (orderMatch) {
+        return `${t('dashboard.syncMessages.startingImport')} ${orderMatch[1]} ${t('dashboard.syncMessages.orders')}...`;
+      }
+      return t('dashboard.syncMessages.startingImport');
+    }
+    if (msg.includes('erro detectado') && msg.includes('tentando novamente')) {
+      return t('dashboard.syncMessages.errorDetected');
+    }
+    if (msg.includes('falha após') && msg.includes('tentativas')) {
+      const retryMatch = message.match(/falha após (\d+)\s*tentativas?/i);
+      if (retryMatch) {
+        return t('dashboard.syncMessages.failedAfterRetries', { count: retryMatch[1] });
+      }
+    }
+    
+    // If no match found, return original message (it might already be translated or be a dynamic message)
+    return message;
+  };
 
   // CRÍTICO: Monitorar quando sincronização termina para garantir que onSyncStateChange(false) seja chamado
   useEffect(() => {
@@ -1075,7 +1153,7 @@ export function CompleteSyncDialog({
   const defaultStatus: CompleteSyncStatus = {
     isRunning: isStarting,
     phase: isStarting ? 'preparing' : 'preparing',
-    message: isStarting ? 'Iniciando sincronização...' : 'Preparando...',
+    message: isStarting ? t('dashboard.completeSync.starting') : t('dashboard.completeSync.preparing'),
     currentStep: null,
     overallProgress: 0,
     shopifyProgress: {
@@ -1219,20 +1297,20 @@ export function CompleteSyncDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <XCircle className="h-6 w-6 text-red-500" />
-              Erro ao Inicializar
+              {t('dashboard.completeSync.initializationError')}
             </DialogTitle>
           </DialogHeader>
           <div className="p-4 space-y-4">
             <p className="text-sm text-muted-foreground">{error}</p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleClose}>
-                Fechar
+                {t('dashboard.completeSync.close')}
               </Button>
               <Button onClick={() => {
                 setError(null);
                 window.location.reload(); // Simple reload as fallback
               }}>
-                Tentar Novamente
+                {t('dashboard.completeSync.retry')}
               </Button>
             </div>
           </div>
@@ -1257,7 +1335,7 @@ export function CompleteSyncDialog({
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
                   <CheckCircle className="h-6 w-6 text-green-500" />
-                  Sincronização Completa
+                  {t('dashboard.completeSync.completedTitle')}
                 </DialogTitle>
               </DialogHeader>
 
@@ -1284,14 +1362,14 @@ export function CompleteSyncDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             {getPhaseIcon()}
-            Sincronização Completa
+            {t('dashboard.completeSync.title')}
           </DialogTitle>
         </DialogHeader>
 
               {/* Status message */}
           <div className="text-center">
             <p className="text-sm text-muted-foreground" data-testid="sync-message">
-                  {displayStatus?.message || "Preparando..."}
+                  {translateSyncMessage(displayStatus?.message)}
             </p>
           </div>
 
@@ -1300,7 +1378,7 @@ export function CompleteSyncDialog({
             <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-foreground">
-                      Progresso Geral
+                      {t('dashboard.completeSync.overallProgress')}
                 </span>
                     <span className="text-sm font-bold text-foreground">
                       {isNaN(animatedProgress) || !isFinite(animatedProgress) 
@@ -1337,7 +1415,7 @@ export function CompleteSyncDialog({
                     onClick={handleClose}
                     data-testid="button-close-running"
                   >
-                    Fechar (continua em background)
+                    {t('dashboard.completeSync.closeBackground')}
               </Button>
             )}
             
@@ -1348,7 +1426,7 @@ export function CompleteSyncDialog({
                   onClick={handleClose}
                   data-testid="button-cancel"
                 >
-                  Cancelar
+                  {t('dashboard.completeSync.cancel')}
                 </Button>
                 <Button 
                   onClick={startCompleteSync}
@@ -1356,7 +1434,7 @@ export function CompleteSyncDialog({
                   data-testid="button-retry"
                 >
                   {isStarting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Tentar Novamente
+                  {t('dashboard.completeSync.retry')}
                 </Button>
               </>
             )}

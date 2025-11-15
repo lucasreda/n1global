@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   phone: text("phone"), // Phone number for contact
   avatarUrl: text("avatar_url"), // URL for profile picture/avatar
+  preferredLanguage: text("preferred_language"), // User's preferred language: 'en', 'pt-BR', 'es'
   role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor', 'admin_investimento', 'affiliate'
   storeId: varchar("store_id"), // For product_seller role - links to parent store
   onboardingCompleted: boolean("onboarding_completed").default(false),
@@ -274,6 +275,26 @@ export const syncJobs = pgTable("sync_jobs", {
   
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Polling Executions - track automatic polling executions
+export const pollingExecutions = pgTable("polling_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").references(() => operations.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(), // 'shopify', 'cartpanda', 'digistore24'
+  executedAt: timestamp("executed_at").notNull().defaultNow(),
+  ordersFound: integer("orders_found").default(0),
+  ordersProcessed: integer("orders_processed").default(0),
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Índice composto para buscar última execução por operação e provider
+  operationProviderIdx: index("polling_executions_operation_provider_idx").on(
+    table.operationId,
+    table.provider,
+    table.executedAt
+  ),
+}));
 
 // Facebook Ads integrations - per operation
 export const facebookAdsIntegrations = pgTable("facebook_ads_integrations", {
@@ -860,8 +881,29 @@ export const userOperationAccess = pgTable("user_operation_access", {
   role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
   permissions: jsonb("permissions"), // Custom permissions
   
+  invitedAt: timestamp("invited_at"), // Timestamp when invitation was accepted
+  invitedBy: varchar("invited_by").references(() => users.id), // User who sent the invitation
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Operation invitations table - tracks team member invitations
+export const operationInvitations = pgTable("operation_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  email: text("email").notNull(),
+  invitedBy: varchar("invited_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
+  permissions: jsonb("permissions"), // Granular permissions JSONB
+  token: varchar("token").notNull().unique(),
+  status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'expired', 'cancelled'
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tokenIdx: index("operation_invitations_token_idx").on(table.token),
+  operationStatusIdx: index("operation_invitations_operation_status_idx").on(table.operationId, table.status),
+}));
 
 // Products table
 export const products = pgTable("products", {
@@ -1340,6 +1382,13 @@ export const insertUserOperationAccessSchema = createInsertSchema(userOperationA
   createdAt: true,
 });
 
+// Operation invitations schemas
+export const insertOperationInvitationSchema = createInsertSchema(operationInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Order schemas
 export const insertOrderSchema = createInsertSchema(orders).omit({
   createdAt: true,
@@ -1434,6 +1483,9 @@ export type InsertShopifyIntegration = z.infer<typeof insertShopifyIntegrationSc
 
 export type UserOperationAccess = typeof userOperationAccess.$inferSelect;
 export type InsertUserOperationAccess = z.infer<typeof insertUserOperationAccessSchema>;
+
+export type OperationInvitation = typeof operationInvitations.$inferSelect;
+export type InsertOperationInvitation = z.infer<typeof insertOperationInvitationSchema>;
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;

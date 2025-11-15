@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Download, BarChart3 } from "lucide-react";
 import { formatOperationCurrency } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ChartsSectionProps {
   revenueData: any[];
@@ -25,12 +26,13 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export function ChartsSection({ revenueData, distributionData, isLoading = false, currency = "EUR" }: ChartsSectionProps) {
+  const { t, currentLanguage } = useTranslation();
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 animate-fade-in">
       {/* Revenue Chart */}
       <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-revenue">
         <div className="mb-4 sm:mb-6">
-          <h3 className="text-lg font-semibold text-white">Receita por Período</h3>
+          <h3 className="text-lg font-semibold text-white">{t('dashboard.revenueByPeriod')}</h3>
         </div>
         
         <div className="w-full h-40 sm:h-48 lg:h-64 overflow-hidden">
@@ -83,7 +85,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       {/* Distribution Chart */}
       <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden flex flex-col" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-distribution">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-white">Distribuição de Status</h3>
+          <h3 className="text-lg font-semibold text-white">{t('dashboard.statusDistribution')}</h3>
         </div>
         
         <div className="flex gap-4 items-center justify-center flex-1">
@@ -121,7 +123,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                       fontSize: '12px'
                     }}
                     formatter={(value, name) => [
-                      `${value} pedidos`,
+                      `${value} ${t('dashboard.orders')}`,
                       name
                     ]}
                   />
@@ -134,7 +136,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                   <div className="text-sm font-bold text-white">
                     {distributionData.reduce((sum, item) => sum + item.value, 0)}
                   </div>
-                  <div className="text-xs text-gray-400">Total</div>
+                  <div className="text-xs text-gray-400">{t('dashboard.total')}</div>
                 </div>
               </div>
             </div>
