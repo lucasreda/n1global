@@ -122,19 +122,15 @@ export function serveStatic(app: Express) {
   // Add middleware to log asset requests for debugging
   app.use((req, res, next) => {
     if (req.path.startsWith('/assets/')) {
-      const originalSend = res.send;
       const originalEnd = res.end;
       
-      res.send = function(body: any) {
-        console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${res.getHeader('Content-Type')}`);
-        return originalSend.call(this, body);
-      };
-      
       res.end = function(chunk?: any) {
-        if (chunk && res.statusCode === 200) {
-          console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${res.getHeader('Content-Type')}`);
-        } else if (res.statusCode !== 200) {
-          console.warn(`⚠️ [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}`);
+        // 200 = OK, 304 = Not Modified (valid cached response)
+        if (res.statusCode === 200 || res.statusCode === 304) {
+          const contentType = res.getHeader('Content-Type') || 'unknown';
+          console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${contentType}`);
+        } else if (res.statusCode >= 400) {
+          console.warn(`⚠️ [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode} (arquivo não encontrado ou erro)`);
         }
         return originalEnd.call(this, chunk);
       };
@@ -178,6 +174,32 @@ export function serveStatic(app: Express) {
       return next();
     }
     
-    res.sendFile(path.resolve(distPath, "index.html"));
+    // Always serve fresh index.html (no cache) to ensure correct asset references
+    const indexPath = path.resolve(distPath, "index.html");
+    
+    // Set headers to prevent caching of index.html
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    
+    // Verify index.html exists before sending
+    if (!fs.existsSync(indexPath)) {
+      console.error(`❌ index.html not found at: ${indexPath}`);
+      return res.status(500).send("index.html not found");
+    }
+    
+    // Log which index.html is being served (first few lines to see asset references)
+    try {
+      const indexContent = fs.readFileSync(indexPath, "utf-8");
+      const assetMatches = indexContent.match(/href=["']([^"']*\.css)["']|src=["']([^"']*\.js)["']/g);
+      if (assetMatches && assetMatches.length > 0) {
+        console.log(`📄 [HTML] Serving index.html with assets:`, assetMatches.slice(0, 2).join(", "));
+      }
+    } catch (error) {
+      console.warn("⚠️ Could not read index.html for logging:", error);
+    }
+    
+    res.sendFile(indexPath);
   });
 }
