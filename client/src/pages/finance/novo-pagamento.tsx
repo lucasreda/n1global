@@ -1,0 +1,520 @@
+import { FinanceLayout } from "@/components/finance/finance-layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { 
+  ArrowLeft,
+  Package, 
+  Calculator,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileText,
+  RefreshCw
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+const paymentSchema = z.object({
+  supplierId: z.string().min(1, "Selecione um fornecedor"),
+  paymentMethod: z.string().min(1, "Selecione o método de pagamento"),
+  dueDate: z.string().min(1, "Data de vencimento é obrigatória"),
+  quantity: z.number().min(1, "Quantidade deve ser maior que 0"),
+  description: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type PaymentForm = z.infer<typeof paymentSchema>;
+
+interface SupplierBalance {
+  supplierId: string;
+  supplierName: string;
+  supplierEmail: string;
+  totalOrdersValue: number;
+  paidAmount: number;
+  pendingAmount: number;
+  totalUnitsCount: number;
+  unitB2BPrice: number;
+}
+
+export default function FinanceNovoPagamento() {
+  const [location, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  const [customQuantity, setCustomQuantity] = useState<number>(0);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const [loadingRate, setLoadingRate] = useState<boolean>(false);
+
+  // Função para buscar taxa de câmbio EUR->BRL
+  const fetchExchangeRate = async () => {
+    setLoadingRate(true);
+    try {
+      const response = await fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=BRL');
+      const data = await response.json();
+      setExchangeRate(data.rates.BRL);
+    } catch (error) {
+      console.error('Erro ao buscar taxa de câmbio:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível buscar a taxa de câmbio atual",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingRate(false);
+    }
+  };
+
+  // Buscar taxa de câmbio ao carregar a página
+  useEffect(() => {
+    fetchExchangeRate();
+  }, []);
+
+  const form = useForm<PaymentForm>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      supplierId: "",
+      paymentMethod: "",
+      dueDate: "",
+      quantity: 0,
+      description: "",
+      notes: "",
+    },
+  });
+
+  // Buscar fornecedores
+  const { data: suppliers = [] } = useQuery<Array<{id: string; name: string; email: string}>>({
+    queryKey: ["/api/finance/suppliers"],
+  });
+
+  // Buscar balanço do fornecedor selecionado
+  const { data: supplierBalance, isLoading: isLoadingBalance } = useQuery<SupplierBalance>({
+    queryKey: ["/api/finance/supplier-balance", selectedSupplierId],
+    enabled: !!selectedSupplierId,
+  });
+
+  // Mutation para criar pagamento
+  const createPaymentMutation = useMutation({
+    mutationFn: async (data: PaymentForm) => {
+      console.log("💰 CLIENT: Making API request with data:", data);
+      
+      if (!supplierBalance) {
+        throw new Error("Fornecedor não encontrado");
+      }
+
+      // Usar quantidade personalizada ou total disponível
+      const quantityToPay = data.quantity || supplierBalance.totalUnitsCount;
+      const amountEUR = quantityToPay * supplierBalance.unitB2BPrice;
+      const amountBRL = amountEUR * exchangeRate;
+
+      const paymentData = {
+        supplierId: data.supplierId,
+        amount: amountEUR,
+        amountBRL: amountBRL,
+        currency: "EUR",
+        description: data.description || `Pagamento para ${supplierBalance.supplierName}`,
+        paymentMethod: data.paymentMethod,
+        dueDate: new Date(data.dueDate),
+        notes: data.notes,
+        exchangeRate: exchangeRate,
+        items: [{
+          productSku: "Consolidado",
+          quantity: quantityToPay,
+          unitPrice: supplierBalance.unitB2BPrice,
+          totalAmount: amountEUR
+        }]
+      };
+      
+      return await apiRequest("/api/finance/supplier-payments", "POST", paymentData);
+    },
+    onSuccess: () => {
+      console.log("💰 CLIENT: Payment created successfully");
+      toast({
+        title: "Pagamento criado",
+        description: "O pagamento foi criado com sucesso e está aguardando aprovação.",
+      });
+      setLocation("/finance/pagamentos");
+    },
+    onError: (error) => {
+      console.log("💰 CLIENT: Payment creation failed:", error);
+      toast({
+        title: "Erro ao criar pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: PaymentForm) => {
+    console.log("💰 CLIENT: Form submitted with data:", data);
+    console.log("💰 CLIENT: Supplier balance:", supplierBalance);
+    
+    if (!supplierBalance || supplierBalance.pendingAmount <= 0) {
+      console.log("💰 CLIENT: No pending balance found");
+      toast({
+        title: "Valor inválido",
+        description: "Não há valor pendente para este fornecedor.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!exchangeRate) {
+      toast({
+        title: "Taxa de câmbio indisponível",
+        description: "Não foi possível obter a taxa de câmbio. Tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("💰 CLIENT: Sending payment payload with custom quantity:", data.quantity);
+    createPaymentMutation.mutate(data);
+  };
+
+  const handleSupplierChange = (value: string) => {
+    setSelectedSupplierId(value);
+    form.setValue("supplierId", value);
+  };
+
+  return (
+    <FinanceLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLocation("/finance/pagamentos")}
+            className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          <div>
+            <h1 className="text-[22px] font-bold text-white">Novo Pagamento</h1>
+            <p className="text-gray-400 mt-1">Criar novo pagamento para fornecedor</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Formulário de Pagamento */}
+          <Card style={{ backgroundColor: '#0f0f0f', borderColor: '#252525' }}>
+            <CardHeader>
+              <CardTitle className="text-xl text-white flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-500" />
+                Dados do Pagamento
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Preencha as informações do pagamento
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* Seleção do Fornecedor */}
+                <div className="space-y-2">
+                  <Label htmlFor="supplier" className="text-gray-300">Fornecedor</Label>
+                  <Select onValueChange={handleSupplierChange} value={selectedSupplierId}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue placeholder="Selecione um fornecedor" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id} className="text-white hover:bg-gray-700">
+                          <div className="flex flex-col">
+                            <span>{supplier.name}</span>
+                            <span className="text-sm text-gray-400">{supplier.email}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.supplierId && (
+                    <p className="text-red-500 text-sm">{form.formState.errors.supplierId.message}</p>
+                  )}
+                </div>
+
+                {/* Método de Pagamento */}
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethod" className="text-gray-300">Método de Pagamento</Label>
+                  <Select onValueChange={(value) => form.setValue("paymentMethod", value)}>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectValue placeholder="Selecione o método" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="bank_transfer" className="text-white hover:bg-gray-700">Transferência Bancária</SelectItem>
+                      <SelectItem value="pix" className="text-white hover:bg-gray-700">PIX</SelectItem>
+                      <SelectItem value="paypal" className="text-white hover:bg-gray-700">PayPal</SelectItem>
+                      <SelectItem value="other" className="text-white hover:bg-gray-700">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.paymentMethod && (
+                    <p className="text-red-500 text-sm">{form.formState.errors.paymentMethod.message}</p>
+                  )}
+                </div>
+
+                {/* Quantidade Personalizada */}
+                {supplierBalance && (
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity" className="text-gray-300">Quantidade de Unidades</Label>
+                    <div className="space-y-2">
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        max={supplierBalance.totalUnitsCount}
+                        {...form.register("quantity", { 
+                          setValueAs: (value) => value === "" ? 0 : parseInt(value) 
+                        })}
+                        placeholder={`Máximo: ${supplierBalance.totalUnitsCount} unidades`}
+                        className="bg-gray-800 border-gray-700 text-white"
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          setCustomQuantity(value);
+                          form.setValue("quantity", value);
+                        }}
+                      />
+                      <p className="text-xs text-gray-400">
+                        Deixe vazio para pagar todas as {supplierBalance.totalUnitsCount} unidades pendentes
+                      </p>
+                      {form.formState.errors.quantity && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.quantity.message}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Data de Vencimento */}
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate" className="text-gray-300">Data de Vencimento</Label>
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    {...form.register("dueDate")}
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                  {form.formState.errors.dueDate && (
+                    <p className="text-red-500 text-sm">{form.formState.errors.dueDate.message}</p>
+                  )}
+                </div>
+
+                {/* Descrição */}
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-gray-300">Descrição</Label>
+                  <Input
+                    id="description"
+                    {...form.register("description")}
+                    placeholder="Ex: Pagamento produtos mês de agosto"
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+
+                {/* Observações */}
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-gray-300">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    {...form.register("notes")}
+                    placeholder="Observações adicionais..."
+                    className="bg-gray-800 border-gray-700 text-white"
+                    rows={3}
+                  />
+                </div>
+
+                <Separator className="bg-gray-700" />
+
+                {/* Botões */}
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setLocation("/finance/pagamentos")}
+                    className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={!selectedSupplierId || !supplierBalance || supplierBalance.pendingAmount <= 0 || createPaymentMutation.isPending}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {createPaymentMutation.isPending ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Criar Pagamento
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Resumo do Fornecedor */}
+          <Card style={{ backgroundColor: '#0f0f0f', borderColor: '#252525' }}>
+            <CardHeader>
+              <CardTitle className="text-xl text-white flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-green-500" />
+                Balanço do Fornecedor
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Resumo financeiro e pedidos pendentes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!selectedSupplierId ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Package className="h-12 w-12 text-gray-600 mb-4" />
+                  <p className="text-gray-400">Selecione um fornecedor para ver o balanço</p>
+                </div>
+              ) : isLoadingBalance ? (
+                <div className="flex items-center justify-center py-12">
+                  <Clock className="h-8 w-8 text-blue-500 animate-spin" />
+                  <span className="ml-2 text-gray-400">Calculando balanço...</span>
+                </div>
+              ) : supplierBalance ? (
+                <div className="space-y-6">
+                  {/* Estatísticas */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-gray-400">Total de Pedidos</span>
+                      </div>
+                      <div className="text-lg font-bold text-white">
+                        €{supplierBalance.totalOrdersValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm text-gray-400">Já Pago</span>
+                      </div>
+                      <div className="text-lg font-bold text-white">
+                        €{supplierBalance.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Valor Pendente */}
+                  <div className="p-4 rounded-lg bg-yellow-900/20 border border-yellow-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-yellow-500" />
+                        <span className="text-lg font-semibold text-white">Valor Pendente</span>
+                        {exchangeRate > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={fetchExchangeRate}
+                            disabled={loadingRate}
+                            className="p-1 h-6 w-6"
+                          >
+                            <RefreshCw className={`h-3 w-3 text-gray-400 ${loadingRate ? 'animate-spin' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
+                      <Badge className="bg-yellow-600 text-white">
+                        {customQuantity > 0 ? customQuantity : supplierBalance.totalUnitsCount} unidades
+                      </Badge>
+                    </div>
+                    
+                    {/* Cálculo baseado na quantidade selecionada */}
+                    {(() => {
+                      const quantity = customQuantity > 0 ? customQuantity : supplierBalance.totalUnitsCount;
+                      const amountEUR = quantity * supplierBalance.unitB2BPrice;
+                      const amountBRL = amountEUR * exchangeRate;
+                      
+                      return (
+                        <div className="mt-3 space-y-2">
+                          {/* Valor em BRL (destaque) */}
+                          <div className="text-3xl font-bold text-green-400">
+                            R$ {amountBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                          {/* Valor em EUR (menor) */}
+                          <div className="text-lg text-yellow-400">
+                            €{amountEUR.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                          {/* Taxa de câmbio */}
+                          {exchangeRate > 0 && (
+                            <div className="text-xs text-gray-400">
+                              Taxa: 1 EUR = R$ {exchangeRate.toFixed(4)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Resumo de Pedidos */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-3">Resumo de Pagamento</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-gray-400">Unidades Vendidas</span>
+                        </div>
+                        <div className="text-xl font-bold text-white">
+                          {supplierBalance.totalUnitsCount}
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <Calculator className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-gray-400">Preço B2B Unitário</span>
+                        </div>
+                        <div className="text-xl font-bold text-white">
+                          €{supplierBalance.unitB2BPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <AlertCircle className="h-12 w-12 text-yellow-500 mb-4" />
+                  <p className="text-gray-400">Nenhum dado encontrado para este fornecedor</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </FinanceLayout>
+  );
+}
