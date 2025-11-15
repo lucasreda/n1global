@@ -1,0 +1,132 @@
+2025-10-23 16:22:28.90
+601cf06f
+User
+🗑️ Admin: Deletando conta FHB e44c19eb-dce3-438c-b48a-eab09da15d23
+2025-10-23 16:22:28.99
+601cf06f
+User
+❌ Erro ao deletar conta FHB: error: update or delete on table "fhb_accounts" violates foreign key constraint "fhb_sync_logs_fhb_account_id_fkey" on table "fhb_sync_logs"
+2025-10-23 16:22:28.99
+601cf06f
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-10-23 16:22:28.99
+601cf06f
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-10-23 16:22:28.99
+601cf06f
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-10-23 16:22:28.99
+601cf06f
+User
+at async file:///home/runner/workspace/dist/index.js:47754:23 {
+2025-10-23 16:22:28.99
+601cf06f
+User
+length: 357,
+2025-10-23 16:22:28.99
+601cf06f
+User
+severity: 'ERROR',
+2025-10-23 16:22:28.99
+601cf06f
+User
+code: '23503',
+2025-10-23 16:22:28.99
+601cf06f
+User
+detail: 'Key (id)=(e44c19eb-dce3-438c-b48a-eab09da15d23) is still referenced from table "fhb_sync_logs".',
+2025-10-23 16:22:28.99
+601cf06f
+User
+hint: undefined,
+2025-10-23 16:22:28.99
+601cf06f
+User
+position: undefined,
+2025-10-23 16:22:28.99
+601cf06f
+User
+internalPosition: undefined,
+2025-10-23 16:22:28.99
+601cf06f
+User
+internalQuery: undefined,
+2025-10-23 16:22:28.99
+601cf06f
+User
+where: undefined,
+2025-10-23 16:22:28.99
+601cf06f
+User
+schema: 'public',
+2025-10-23 16:22:28.99
+601cf06f
+User
+table: 'fhb_sync_logs',
+2025-10-23 16:22:28.99
+601cf06f
+User
+column: undefined,
+2025-10-23 16:22:28.99
+601cf06f
+User
+dataType: undefined,
+2025-10-23 16:22:28.99
+601cf06f
+User
+constraint: 'fhb_sync_logs_fhb_account_id_fkey',
+2025-10-23 16:22:28.99
+601cf06f
+User
+file: 'ri_triggers.c',
+2025-10-23 16:22:28.99
+601cf06f
+User
+line: '2621',
+2025-10-23 16:22:28.99
+601cf06f
+User
+routine: 'ri_ReportViolation'
+2025-10-23 16:22:28.99
+601cf06f
+User
+}
+2025-10-23 16:22:29.00
+601cf06f
+User
+7:22:29 PM [express] DELETE /api/admin/fhb-accounts/e44c19eb-dce3-438c-b48a-eab09da15d23 500 in 99ms…
+2025-10-23 16:22:34.57
+601cf06f
+User
+🔐 Auth Debug: {
+2025-10-23 16:22:34.57
+601cf06f
+User
+hasAuthHeader: true,
+2025-10-23 16:22:34.57
+601cf06f
+User
+hasToken: true,
+2025-10-23 16:22:34.57
+601cf06f
+User
+url: '/api/currency/history/status',
+2025-10-23 16:22:34.57
+601cf06f
+User
+method: 'GET'
+2025-10-23 16:22:34.57
+601cf06f
+User
+}
+2025-10-23 16:22:34.57
+601cf06f
+User
+✅ JWT verified for user: elizabeth@n1global.app
+2025-10-23 16:22:34.62
+601cf06f
+User
+7:22:34 PM [express] GET /api/currency/history/status 304 in 48ms :: {"isUpToDate":true,"lastUpdate"…

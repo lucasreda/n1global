@@ -1,0 +1,98 @@
+Implemente um sistema de Creative Intelligence baseado em dados reais de performance, integrando com Meta Marketing API e expandindo o sistema atual de análise de criativos. O objetivo é transformar análises diagnósticas em insights actionáveis com predições de performance e benchmarking proprietário.
+
+CONTEXTO TÉCNICO ATUAL:
+- Sistema existente: creative-analysis-service.ts, copy-analysis-adapter.ts, dynamic-copy-analysis.ts
+- Frontend: creative-details.tsx com resultados de análise
+- Storage: PostgreSQL com schema em shared/schema.ts
+- Framework: Express + React + TypeScript
+
+IMPLEMENTAÇÃO REQUERIDA:
+
+1. INTEGRAÇÃO META MARKETING API:
+- Criar novo serviço CampaignDataService para conectar com Meta Marketing API
+- Usar Replit integrations para gerenciar tokens de acesso da Meta
+- Estrutura de dados: accountId, campaigns[], creativePerformance[] com métricas reais (ctr, cpm, roas, impressions, conversions)
+- Armazenar dados no schema existente com novas tabelas: campaign_accounts, campaign_metrics, creative_performance
+
+2. EXPANDED STORAGE SCHEMA:
+- Expandir schema.ts com novas interfaces:
+  * CampaignMetrics: spend, impressions, clicks, conversions, ctr, cpm, roas
+  * CreativePerformanceData: adId, creativeUrl, metrics, duration, activeStatus
+  * VerticalBenchmark: industry, avgCtr, avgCpm, avgRoas, sampleSize
+  * PerformancePrediction: estimatedCtr, estimatedCpm, estimatedRoas, confidenceInterval
+- Criar tabelas correspondentes no banco
+
+3. ENHANCED CREATIVE ANALYSIS:
+- Expandir creative-analysis-service.ts para aceitar dados de performance opcional
+- Adicionar correlação entre elementos criativos e performance real
+- Implementar PerformancePredictionService usando ML simples (regressão baseada em features)
+- Features: hookStrength, frameworkType, audioDuration, visualQuality, copyLength
+
+4. ACTIONABLE INSIGHTS ENGINE:
+- Criar ActionableInsightsEngine que gera EditPlan baseado em:
+  * Gaps vs benchmarks (se CTR < benchmark, sugerir melhorias específicas)
+  * Elementos com baixo score + impacto estimado
+  * Priorização por ROI (estimatedImpact / effort)
+- Estrutura EditPlan: action, specificChange, estimatedImpact, effort, timestamp, reasoning
+
+5. BENCHMARKING PROPRIETÁRIO:
+- Criar BenchmarkingService que agrega dados de múltiplos clientes (anonimizados)
+- Calcular métricas por vertical: avgCtr, avgCpm, avgRoas, topPerformingFrameworks
+- Gerar percentis de performance para contexto competitivo
+
+6. ENHANCED FRONTEND:
+- Expandir creative-details.tsx com:
+  * Seção "Performance Overview": métricas reais vs preditas vs benchmark
+  * Seção "Edit Plan": top 3-5 mudanças priorizadas com impacto estimado
+  * Seção "Competitive Context": percentil de performance, gaps identificados
+- UI components: PerformanceChart, EditPlanCard, BenchmarkComparison
+
+7. API ENDPOINTS:
+- POST /api/campaigns/connect - conectar conta Meta
+- GET /api/campaigns/:accountId/performance - métricas de performance
+- GET /api/benchmarks/:vertical - benchmarks por vertical
+- POST /api/creative/analyze-enhanced - análise com dados de performance
+
+ESTRUTURAS DE DADOS ESPECÍFICAS:
+
+```typescript
+interface EnhancedAnalysisResult {
+  // Manter análise atual
+  ...currentAnalysis,
+  
+  // Novos campos
+  realPerformance?: {
+    metrics: CampaignMetrics;
+    benchmarkPosition: number;
+    performanceTier: 'high' | 'medium' | 'low';
+  };
+  
+  performancePrediction: {
+    estimatedCtr: number;
+    estimatedCpm: number;
+    estimatedRoas: number;
+    confidence: number;
+  };
+  
+  editPlan: {
+    priority: EditPlanItem[];
+    expectedTotalImpact: string;
+    confidenceLevel: number;
+  };
+  
+  competitiveContext: {
+    verticalBenchmark: VerticalBenchmark;
+    performancePercentile: number;
+    gapAnalysis: string[];
+  };
+}
+
+interface EditPlanItem {
+  action: string;
+  specificChange: string;
+  estimatedImpact: string;
+  effort: 'low' | 'medium' | 'high';
+  timestamp?: string;
+  reasoning: string;
+  priority: number;
+}

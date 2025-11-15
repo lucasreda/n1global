@@ -1,0 +1,56 @@
+Implementar funcionalidades essenciais de gerenciamento de usuários no painel administrativo. Execute em etapas sequenciais:
+
+Etapa 1: Gerenciamento de Operações por Usuário
+Adicionar aba "Operações" no modal de edição de usuário onde o admin pode:
+
+Ver todas as operações disponíveis no sistema
+Marcar/desmarcar quais operações o usuário tem acesso
+Interface visual similar às permissões de páginas (grid com checkboxes)
+Mostrar contador de operações atribuídas
+Salvar via endpoint PUT /api/admin/users/:userId incluindo campo operationIds no body
+No backend, atualizar tabela user_operation_access ao salvar
+Etapa 2: Toggle de Ativar/Desativar Conta
+Adicionar na aba "Geral" do modal de edição:
+
+Campo isActive (boolean) no banco de dados da tabela users
+Toggle visual com estados "Ativa" (verde) / "Desativada" (vermelho)
+Quando desativada, bloquear login do usuário no middleware de autenticação
+Mostrar badge de status na lista de usuários
+Etapa 3: Visualização de Atividade e Estatísticas
+Adicionar nova aba "Atividade" no modal de edição mostrando:
+
+Último login (data/hora) - usar campo lastLoginAt existente
+Total de operações com acesso
+Total de pedidos sob sua gestão (contar da tabela orders)
+Receita total gerada (somar orders)
+Integrações configuradas (Shopify, CartPanda, Armazéns)
+Criar endpoint GET /api/admin/users/:userId/stats para buscar essas métricas
+Etapa 4: Reset de Senha e Logs
+Adicionar na aba "Geral":
+
+Checkbox "Forçar troca de senha no próximo login"
+Adicionar campo forcePasswordChange (boolean) na tabela users
+No login, verificar esse campo e redirecionar para tela de troca de senha
+Botão "Enviar email de reset de senha" (opcional, se houver integração de email)
+Etapa 5: Gerenciar Integrações do Usuário
+Adicionar na aba "Atividade":
+
+Lista de integrações configuradas por operação
+Botão "Desconectar" para cada integração
+Status de cada integração (conectada/desconectada/erro)
+Criar endpoints:
+GET /api/admin/users/:userId/integrations - listar integrações
+DELETE /api/admin/integrations/:integrationType/:integrationId - remover integração
+Etapa Final: Revisar com Arquiteto
+Após completar todas as etapas, chamar o arquiteto para revisar a implementação completa incluindo:
+
+Estrutura do código frontend
+Rotas e validações do backend
+Segurança e controle de acesso
+Performance das queries
+Experiência do usuário
+Arquivos principais a serem modificados:
+
+client/src/pages/admin/users.tsx
+server/routes.ts
+shared/schema.ts (se necessário adicionar campos)

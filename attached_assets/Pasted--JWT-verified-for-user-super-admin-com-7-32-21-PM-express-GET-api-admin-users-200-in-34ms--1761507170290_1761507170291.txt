@@ -1,0 +1,37 @@
+}
+✅ JWT verified for user: super@admin.com
+7:32:21 PM [express] GET /api/admin/users 200 in 34ms :: [{"id":"fbbc1926-cb10-4321-8701-1a8ac7b7a2e…
+📡 Response status: 200
+📡 Response headers: {
+  'cache-control': 'max-age=0, no-cache, no-store, must-revalidate',
+  connection: 'close',
+  'content-encoding': 'gzip',
+  'content-type': 'text/html; charset=UTF-8',
+  date: 'Sun, 26 Oct 2025 19:32:22 GMT',
+  expires: 'Sat, 26 Jul 1997 05:00:00 GMT',
+  'last-modified': 'Sun, 26 Oct 2025 19:32:22 GMT',
+  link: '<https://ecomfulfillment.eu/wp-json/>; rel="https://api.w.org/", <https://ecomfulfillment.eu/wp-json/wp/v2/pages/2387>; rel="alternate"; title="JSON"; type="application/json", <https://ecomfulfillment.eu/>; rel=shortlink',
+  pragma: 'no-cache',
+  server: 'Apache',
+  'set-cookie': 'ip2location_redirection_first_visit=1761507142%3B6722f96e737822cf1c856dfe8612e04b; expires=Mon, 27 Oct 2025 19:32:22 GMT; Max-Age=86400; path=/; secure; HttpOnly',
+  'transfer-encoding': 'chunked',
+  'x-litespeed-tag': '5c5_HTTP.200',
+  'x-powered-by': 'PHP/8.2.29',
+  'x-ua-compatible': 'IE=edge',
+  'x-ws-ratelimit-limit': '1000',
+  'x-ws-ratelimit-remaining': '999'
+}
+💥 European Fulfillment authentication error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at Response.json (/home/runner/workspace/node_modules/node-fetch/src/body.js:149:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async EuropeanFulfillmentService.getAuthToken (/home/runner/workspace/server/fulfillment-service.ts:144:20)
+    at async EuropeanFulfillmentAdapter.authenticate (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:38:19)
+    at async EuropeanFulfillmentSyncService.syncWarehouseAccount (/home/runner/workspace/server/services/european-fulfillment-sync-service.ts:232:7)
+    at async EuropeanFulfillmentSyncService.performInitialSyncWarehouse (/home/runner/workspace/server/services/european-fulfillment-sync-service.ts:348:7)
+    at async EuropeanFulfillmentSyncService.triggerInitialSyncForAccount (/home/runner/workspace/server/services/european-fulfillment-sync-service.ts:173:7)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1631:13)
+❌ European Fulfillment sync failed for Ale: Failed to authenticate with N1 Warehouse
+❌ Initial sync failed for Ale: Failed to authenticate with N1 Warehouse
+❌ Initial sync failed for account 68b75e40-f720-47a7-b630-f41368cd5d30: Failed to authenticate with N1 Warehouse
+❌ Failed to trigger initial sync for account 68b75e40-f720-47a7-b630-f41368cd5d30: Failed to authenticate with N1 Warehouse

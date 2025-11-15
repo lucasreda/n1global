@@ -1,0 +1,306 @@
+Transforme o editor visual de landing pages do N1 Hub em um editor profissional de nível empresarial, competindo com Webflow, Framer e Unbounce. Implemente TODAS as fases até conclusão 100%.
+## CONTEXTO DO PROJETO
+**Sistema Atual:**
+- Conversor HTML → PageModelV2 (limitado)
+- Editor visual React básico
+- Tecnologias: htmlparser2, css-tree, Drizzle ORM, React, TailwindCSS
+**Arquivos Principais:**
+- `shared/schema.ts` - Define PageModelV2 (BlockSection, BlockRow, BlockColumn, BlockElement)
+- `server/html-to-pagemodel-converter.ts` - Conversor HTML → PageModel
+- `server/affiliate-landing-service.ts` - Lógica de negócio
+- `client/src/components/page-editor/` - Componentes do editor visual
+- `client/src/pages/admin/affiliates-landing-pages.tsx` - Página principal
+**Limitações Críticas Identificadas:**
+- ❌ Sem breakpoints responsivos
+- ❌ Sem design tokens
+- ❌ Sem estados CSS (hover/focus)
+- ❌ Sem componentes reutilizáveis
+- ❌ Conversor perde 60%+ dos estilos
+- ❌ Editor visual básico demais
+---
+## 🎯 OBJETIVO FINAL
+Um editor visual que:
+1. **Converte qualquer HTML/CSS** perfeitamente para PageModel editável
+2. **Preserva 100% dos estilos** (responsivo, animations, estados)
+3. **Interface profissional** (layers panel, inspector, drag&drop)
+4. **Sistema de componentes** reutilizáveis
+5. **Breakpoints responsivos** (mobile, tablet, desktop)
+6. **Undo/redo robusto**
+7. **Asset management** completo
+---
+## 📋 FASE 1 - FUNDAÇÃO (P0 - CRÍTICO)
+### 1.1 - PageModelV3 Schema Design
+**Tarefa:** Redesenhar completamente o schema em `shared/schema.ts`
+**Critérios de Aceitação:**
+- [ ] Criar `PageModelV3` com suporte a breakpoints
+- [ ] Adicionar `DesignTokens` (colors, typography, spacing, shadows)
+- [ ] Criar `ResponsiveStyles` com breakpoint keys
+- [ ] Adicionar estados CSS: `default`, `hover`, `focus`, `active`, `disabled`
+- [ ] Criar tipo `Container` genérico (suporta flex/grid/block)
+- [ ] Adicionar `Animation` schema (keyframes, transitions, transforms)
+- [ ] Criar `ComponentDefinition` e `ComponentInstance`
+- [ ] Adicionar `pseudo-elements` (::before, ::after)
+**Schema Esperado:**
+```typescript
+type ResponsiveStyles = {
+  mobile?: CSSProperties;
+  tablet?: CSSProperties;
+  desktop?: CSSProperties;
+};
+type StateStyles = {
+  default: CSSProperties;
+  hover?: CSSProperties;
+  focus?: CSSProperties;
+  active?: CSSProperties;
+  disabled?: CSSProperties;
+};
+type BlockElement = {
+  id: string;
+  type: 'heading' | 'text' | 'button' | 'image' | 'container' | 'video' | 'form' | 'custom';
+  props: Record<string, any>;
+  styles: ResponsiveStyles;
+  states?: StateStyles;
+  pseudoElements?: {
+    before?: ResponsiveStyles;
+    after?: ResponsiveStyles;
+  };
+  animations?: Animation[];
+  layout?: 'flex' | 'grid' | 'block' | 'inline' | 'absolute';
+  children?: BlockElement[];
+  componentRef?: string; // Reference to component
+};
+Testes:
+
+ Validar schema com Zod
+ Criar fixtures de exemplo
+ Documentar cada campo
+1.2 - Conversor HTML - CSSOM Completo
+Tarefa: Refatorar server/html-to-pagemodel-converter.ts completamente
+
+Critérios de Aceitação:
+
+ Implementar CSSOM builder com especificidade correta
+
+Calcular especificidade (id=100, class=10, tag=1)
+Resolver cascade com ordem de declaração
+Suportar combinators (>, +, ~, space)
+Processar pseudo-classes (:hover, :focus, :nth-child)
+Processar pseudo-elements (::before, ::after)
+ Parsear media queries e atribuir a breakpoints
+
+Detectar @media (max-width: 768px) → mobile
+Detectar @media (min-width: 769px) and (max-width: 1024px) → tablet
+Detectar @media (min-width: 1025px) → desktop
+ Detectar layout type automaticamente
+
+display: flex → layout: 'flex' (capturar flex-direction, justify-content, align-items, gap)
+display: grid → layout: 'grid' (capturar grid-template-columns, gap)
+position: absolute/relative → layout: 'absolute' (capturar top, left, z-index)
+ Preservar estrutura HTML semântica
+
+Converter <nav> → Container com semanticTag: 'nav'
+Converter <header> → Container com semanticTag: 'header'
+Converter <footer> → Container com semanticTag: 'footer'
+Converter <article> → Container com semanticTag: 'article'
+ Extrair design tokens automaticamente
+
+Detectar paleta de cores (variables CSS ou cores recorrentes)
+Detectar escalas de tipografia (font-sizes usados)
+Detectar escalas de spacing (margins/paddings usados)
+ Parsear animations e transitions
+
+@keyframes → Animation schema
+transition properties → Animation schema
+transform properties → preservar
+Testes:
+
+ Testar com 10 landing pages HTML diferentes
+ Comparar HTML original vs HTML gerado (bijective test)
+ Validar que 95%+ dos estilos são preservados
+ Criar snapshot tests
+1.3 - Editor - Inspector Básico
+Tarefa: Criar Inspector Panel profissional
+
+Critérios de Aceitação:
+
+ Box Model Visual
+
+Input fields para margin (top, right, bottom, left)
+Input fields para padding (top, right, bottom, left)
+Input fields para border (width, style, color)
+Preview visual do box model (como Chrome DevTools)
+ Typography Controls
+
+Font family selector (com preview)
+Font size slider (8px - 72px)
+Font weight selector (100-900)
+Line height slider (0.8 - 3)
+Letter spacing slider (-2px - 10px)
+Text align buttons (left, center, right, justify)
+Text transform (none, uppercase, lowercase, capitalize)
+ Color Picker Profissional
+
+Seletor de cor com alpha
+Paleta de cores recentes
+Paleta de design tokens
+Modo HEX/RGB/HSL
+Eyedropper tool
+ Spacing Controls
+
+Preset spacing scale (0, 0.25rem, 0.5rem, 1rem, 2rem, 4rem)
+Custom value input
+Link/unlink sides toggle
+Localização: client/src/components/page-editor/inspector/
+
+Componentes a Criar:
+
+InspectorPanel.tsx (container principal)
+BoxModelInspector.tsx
+TypographyInspector.tsx
+ColorPicker.tsx
+SpacingInspector.tsx
+Testes:
+
+ Testar cada controle isoladamente
+ Validar que mudanças no inspector atualizam o PageModel
+ Validar que mudanças no PageModel atualizam o inspector
+1.4 - Migration System
+Tarefa: Criar sistema de migração PageModelV2 → PageModelV3
+
+Critérios de Aceitação:
+
+ Função migratePageModelV2ToV3()
+ Preservar todos os dados existentes
+ Converter estilos flat para ResponsiveStyles
+ Testar com todas as landing pages existentes
+Localização: server/migrations/pagemodel-v3-migration.ts
+
+📋 FASE 2 - LAYOUT PROFISSIONAL (P1)
+2.1 - Flex Inspector Visual
+Critérios de Aceitação:
+
+ Visual controls para flex-direction (row, column)
+ Visual controls para justify-content (start, center, end, space-between, space-around)
+ Visual controls para align-items (start, center, end, stretch)
+ Gap slider (0 - 4rem)
+ Flex wrap toggle
+ Preview visual do layout
+ Aplicar mudanças em tempo real
+2.2 - Grid Inspector Visual
+Critérios de Aceitação:
+
+ Grid template columns input (e.g., "1fr 2fr 1fr")
+ Grid template rows input
+ Gap controls (row-gap, column-gap)
+ Auto-flow controls (row, column, dense)
+ Visual grid overlay no canvas
+ Drag handles para ajustar columns/rows
+2.3 - Position Controls
+Critérios de Aceitação:
+
+ Position selector (static, relative, absolute, fixed, sticky)
+ Top/Right/Bottom/Left inputs (aparecem quando absolute/fixed)
+ Z-index slider
+ Visual overlay mostrando positioned elements
+2.4 - Responsive System
+Critérios de Aceitação:
+
+ Breakpoint selector buttons (Mobile 📱, Tablet 📱, Desktop 🖥️)
+ Mudar canvas width ao trocar breakpoint
+ Inspector mostra estilos do breakpoint ativo
+ Indicador visual de quais propriedades são override por breakpoint
+ Reset breakpoint styles button
+2.5 - Layers Panel
+Critérios de Aceitação:
+
+ Árvore hierárquica de todos os elementos
+ Drag & drop para reordenar elementos
+ Context menu (duplicate, delete, lock, hide)
+ Search/filter elements
+ Icons por tipo de elemento
+ Highlight no canvas ao hover layer
+ Rename layer inline
+Localização: client/src/components/page-editor/layers/LayersPanel.tsx
+
+📋 FASE 3 - FEATURES AVANÇADAS (P2)
+3.1 - Component System
+Critérios de Aceitação:
+
+ Component library panel
+ "Convert to component" action
+ Component instances com overrides
+ Props/variants system
+ Update all instances button
+ Detach instance button
+3.2 - Animation Timeline
+Critérios de Aceitação:
+
+ Timeline UI (como After Effects)
+ Keyframe editor
+ Transition presets
+ Play/pause animation preview
+ Easing curve editor
+3.3 - Asset Manager
+Critérios de Aceitação:
+
+ Upload de imagens (drag & drop)
+ Google Fonts integration
+ Image optimization automática
+ SVG upload e edição básica
+ Asset search e filter
+3.4 - Undo/Redo System
+Critérios de Aceitação:
+
+ Command pattern implementation
+ History panel (lista de ações)
+ Undo/redo com Ctrl+Z / Ctrl+Shift+Z
+ Branch history visual
+ Max 100 actions na history
+Localização: client/src/services/history-service.ts
+
+✅ CRITÉRIOS DE CONCLUSÃO 100%
+Para marcar o projeto como 100% completo, TODOS os itens abaixo devem estar ✅:
+
+Funcionalidades Core
+ Conversão HTML → PageModelV3 preserva 95%+ dos estilos
+ PageModelV3 → HTML é bijective (gera HTML idêntico)
+ Breakpoints responsivos funcionando (mobile, tablet, desktop)
+ Inspector completo com todos os controles
+ Layers panel com drag & drop
+ Flex/Grid inspectors visuais
+ Component system funcional
+Qualidade
+ 100+ testes automatizados (unit + integration)
+ Visual regression tests (comparar screenshots)
+ Sem erros LSP
+ Performance: PageModel carrega em <500ms
+ Performance: Editor re-render em <100ms
+UX/UI
+ Interface intuitiva (usuário não-técnico consegue usar)
+ Undo/redo funciona em todas as ações
+ Keyboard shortcuts (Ctrl+Z, Ctrl+C, Ctrl+V, Delete)
+ Loading states em todas as operações
+ Error handling com mensagens claras
+Documentação
+ README técnico completo
+ Guia de uso do editor (para usuários finais)
+ Comentários no código em funções complexas
+ Schema documentation inline
+🔄 WORKFLOW DE TRABALHO
+Para cada sub-tarefa:
+
+Ler arquivos relevantes
+Implementar feature
+Adicionar testes
+Testar manualmente
+Chamar architect para code review
+Marcar como completed após review
+Não pule etapas. Trabalhe fase por fase, item por item.
+
+Teste extensivamente antes de prosseguir.
+
+Chame architect sempre que:
+
+Completar uma feature grande
+Tiver dúvidas arquiteturais
+Antes de prosseguir para próxima fase

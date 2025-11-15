@@ -1,0 +1,85 @@
+📦 European Fulfillment: 15 leads encontrados
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+❌ Erro processando lead undefined: ReferenceError: storage is not defined
+    at EuropeanFulfillmentAdapter.syncOrders (/home/runner/workspace/server/fulfillment-providers/european-fulfillment-adapter.ts:152:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3042:26)
+✅ European Fulfillment sync completo: 15 processados, 0 criados, 0 atualizados
+✅ Sync european_fulfillment concluído: {
+  success: true,
+  ordersProcessed: 15,
+  ordersCreated: 0,
+  ordersUpdated: 0,
+  errors: [
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined',
+    'Lead undefined: storage is not defined'
+  ]
+}
