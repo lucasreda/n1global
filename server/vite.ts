@@ -174,14 +174,11 @@ export function serveStatic(app: Express) {
       return next();
     }
     
+    // Log all HTML requests for debugging
+    console.log(`📄 [HTML] Request for: ${req.method} ${req.originalUrl}`);
+    
     // Always serve fresh index.html (no cache) to ensure correct asset references
     const indexPath = path.resolve(distPath, "index.html");
-    
-    // Set headers to prevent caching of index.html
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
     
     // Verify index.html exists before sending
     if (!fs.existsSync(indexPath)) {
@@ -189,17 +186,54 @@ export function serveStatic(app: Express) {
       return res.status(500).send("index.html not found");
     }
     
-    // Log which index.html is being served (first few lines to see asset references)
+    // Read and log which assets are referenced in index.html
     try {
       const indexContent = fs.readFileSync(indexPath, "utf-8");
-      const assetMatches = indexContent.match(/href=["']([^"']*\.css)["']|src=["']([^"']*\.js)["']/g);
-      if (assetMatches && assetMatches.length > 0) {
-        console.log(`📄 [HTML] Serving index.html with assets:`, assetMatches.slice(0, 2).join(", "));
+      
+      // Extract CSS and JS asset references
+      const cssMatches = indexContent.match(/href=["']([^"']*\.css[^"']*)["']/g);
+      const jsMatches = indexContent.match(/src=["']([^"']*\.js[^"']*)["']/g);
+      
+      if (cssMatches && cssMatches.length > 0) {
+        console.log(`📄 [HTML] CSS assets in index.html:`, cssMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
+      }
+      if (jsMatches && jsMatches.length > 0) {
+        console.log(`📄 [HTML] JS assets in index.html:`, jsMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
+      }
+      
+      // Check if referenced assets actually exist
+      const allAssets = [
+        ...(cssMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || []),
+        ...(jsMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || [])
+      ];
+      
+      for (const asset of allAssets) {
+        if (asset && asset.startsWith('/')) {
+          const assetPath = path.resolve(distPath, asset.substring(1));
+          const exists = fs.existsSync(assetPath);
+          if (!exists) {
+            console.error(`❌ [HTML] Referenced asset not found: ${asset} at ${assetPath}`);
+          } else {
+            console.log(`✅ [HTML] Asset exists: ${asset}`);
+          }
+        }
       }
     } catch (error) {
       console.warn("⚠️ Could not read index.html for logging:", error);
     }
     
-    res.sendFile(indexPath);
+    // Set headers to prevent caching of index.html
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error(`❌ [HTML] Error serving index.html:`, err);
+      } else {
+        console.log(`✅ [HTML] Successfully served index.html for ${req.originalUrl}`);
+      }
+    });
   });
 }
