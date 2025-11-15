@@ -99,7 +99,20 @@ export function serveStatic(app: Express) {
 
   console.log(`📁 Serving static files from: ${distPath}`);
 
-  app.use(express.static(distPath));
+  // Serve static files with proper headers and caching
+  app.use(express.static(distPath, {
+    maxAge: process.env.NODE_ENV === "production" ? "1y" : "0",
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+      // Set proper Content-Type for CSS and JS files
+      if (filePath.endsWith(".css")) {
+        res.setHeader("Content-Type", "text/css; charset=utf-8");
+      } else if (filePath.endsWith(".js")) {
+        res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      }
+    },
+  }));
 
   // fall through to index.html if the file doesn't exist
   // but skip API routes
