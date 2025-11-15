@@ -9,10 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap, Send, Loader2 } from "lucide-react";
+import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, Send, Loader2 } from "lucide-react";
 import { cn, formatOperationCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
+import shopifyIcon from "@assets/shopify_1756413996883.webp";
+import cartpandaIcon from "@assets/carticon_1758210690464.avif";
+import digistoreIcon from "@assets/digistore-logo_1757013744090.png";
 import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 import { useTranslation } from "@/hooks/use-translation";
 
@@ -21,27 +24,27 @@ const getPlatformIcon = (order: any) => {
   // Verificar dataSource primeiro
   if (order.dataSource === 'shopify' || order.shopifyOrderId) {
     return (
-      <svg 
-        width="12" 
-        height="12" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        className="inline-block mr-1.5 flex-shrink-0"
-      >
-        <path 
-          d="M16.373 8.717c-.002-.03-.02-.057-.047-.068-.026-.011-1.028-.344-1.028-.344s-.676-.656-.745-.725c-.069-.069-.205-.048-.257-.034-.008.002-.145.045-.37.117-.223-1.004-.775-1.93-1.64-1.93h-.001c-.046 0-.092.003-.139.009-.022-.029-.045-.058-.069-.086-.346-.413-.785-.616-1.305-.616-1.012 0-2.018.754-2.831 2.122-.572.963-.997 2.168-1.127 3.197-1.006.311-1.71.529-1.717.531-.505.158-.519.173-.584.647-.05.362-1.338 10.313-1.338 10.313l10.063 1.74 4.464-1.103s-2.327-15.717-2.329-15.77zm-3.662-.863c-.191.06-.402.125-.63.196v-.155c0-.58-.079-1.049-.212-1.424.386.078.683.57.842 1.383zm-1.196.373c-.517.161-1.082.337-1.647.513.16-.612.465-1.218.831-1.61.121-.13.284-.284.478-.393.259.37.381.914.381 1.49v.001zm-.956-2.355c.119 0 .229.024.333.069-.172.11-.341.257-.494.426-.483.534-.856 1.363-1.019 2.276-.46.143-.91.284-1.339.418.319-1.307 1.177-3.189 2.519-3.189z" 
-          fill="white"
-        />
-      </svg>
+      <img 
+        src={shopifyIcon}
+        alt="Shopify"
+        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0 object-contain"
+        loading="lazy"
+        decoding="async"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
     );
   }
   
   if (order.dataSource === 'cartpanda' || order.cartpandaOrderId) {
     return (
       <img 
-        src="/cartpanda-logo.png"
+        src={cartpandaIcon}
         alt="CartPanda"
-        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0"
+        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0 object-contain"
+        loading="lazy"
+        decoding="async"
         onError={(e) => {
           e.currentTarget.style.display = 'none';
         }}
@@ -52,9 +55,10 @@ const getPlatformIcon = (order: any) => {
   if (order.dataSource === 'digistore24' || order.digistoreOrderId || order.id?.startsWith('DS-')) {
     return (
       <img
-        src="/digistore-logo.png"
+        src={digistoreIcon}
         alt="Digistore24"
-        className="w-3 h-3 inline-block mr-1.5 rounded flex-shrink-0"
+        className="w-3 h-3 inline-block mr-1.5 rounded flex-shrink-0 object-contain"
+        loading="lazy"
         decoding="async"
         onError={(e) => {
           e.currentTarget.style.display = 'none';
@@ -76,8 +80,6 @@ export default function Orders() {
   const [pageSize] = useState(15);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<any | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
-  const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
   const [sendingTrackingOrderId, setSendingTrackingOrderId] = useState<string | null>(null);
   const { canEdit: canEditOrders, canDelete: canDeleteOrders, canCreate: canCreateOrders } = useOperationPermissions();
   const handleSendDigistoreTracking = async (order: any) => {
@@ -123,7 +125,6 @@ export default function Orders() {
       setSendingTrackingOrderId(null);
     }
   };
-  const [currentSyncState, setCurrentSyncState] = useState(false);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -193,16 +194,18 @@ export default function Orders() {
     enabled: !!selectedOperation,
   });
 
+
   // Fetch operation details to get currency
-  const { data: operationDetails } = useQuery({
-    queryKey: ['/api/operations', selectedOperation],
+  const { data: operationsList } = useQuery({
+    queryKey: ['/api/operations'],
     queryFn: async () => {
-      if (!selectedOperation) return null;
-      const response = await authenticatedApiRequest('GET', `/api/operations/${selectedOperation}`);
+      const response = await authenticatedApiRequest('GET', '/api/operations');
       return response.json();
     },
-    enabled: !!selectedOperation,
   });
+
+  // Find the selected operation from the list to get its currency
+  const operationDetails = operationsList?.find((op: any) => op.id === selectedOperation) || null;
 
   // Remove the query for operations with orders since we'll show a simple message
 
@@ -267,14 +270,36 @@ export default function Orders() {
     }
   };
 
+  const operationCurrency = operationDetails?.currency || 'EUR';
+  
+  // Debug log para verificar moeda
+  if (operationDetails && selectedOperation) {
+    console.log('💰 [ORDERS] Moeda da operação:', {
+      operationId: selectedOperation,
+      operationName: operationDetails.name,
+      currency: operationDetails.currency,
+      usingCurrency: operationCurrency
+    });
+  }
+
   const formatAmount = (amount: any) => {
-    if (!amount) return formatOperationCurrency(0, 'EUR');
+    if (!amount) return formatOperationCurrency(0, operationCurrency);
     
     // Convert string to number if needed
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     
-    if (isNaN(numAmount)) return formatOperationCurrency(0, 'EUR');
-    return formatOperationCurrency(numAmount, 'EUR');
+    if (isNaN(numAmount)) return formatOperationCurrency(0, operationCurrency);
+    return formatOperationCurrency(numAmount, operationCurrency);
+  };
+
+  const formatCost = (cost: any) => {
+    if (!cost) return formatOperationCurrency(0, operationCurrency);
+    
+    // Convert string to number if needed
+    const numCost = typeof cost === 'string' ? parseFloat(cost) : cost;
+    
+    if (isNaN(numCost)) return formatOperationCurrency(0, operationCurrency);
+    return formatOperationCurrency(numCost, operationCurrency);
   };
 
   return (
@@ -332,7 +357,7 @@ export default function Orders() {
               </Select>
             </div>
             
-            {/* Sync button and count */}
+            {/* Order count */}
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
               <TooltipProvider>
                 <Tooltip>
@@ -454,7 +479,7 @@ export default function Orders() {
                       </div>
                       <div>
                         <span className="text-gray-400">{t('orders.b2b')}:</span>
-                        <div className="text-orange-400 font-semibold">€{parseFloat(order.productCost || '0').toFixed(2)}</div>
+                        <div className="text-orange-400 font-semibold">{formatCost(order.productCost)}</div>
                       </div>
                     </div>
                     
@@ -572,10 +597,24 @@ export default function Orders() {
                             </div>
                             <div className="text-gray-400 text-xs">
                               {(() => {
-                                // Extract SKU from Shopify products array
+                                // Extract SKUs from products array (pode ter múltiplos SKUs concatenados)
                                 if (order.products && Array.isArray(order.products) && order.products.length > 0) {
-                                  const sku = order.products[0]?.sku;
-                                  return sku ? sku.toLowerCase() : t('orders.noSku');
+                                  const allSkus: string[] = [];
+                                  
+                                  // Extrair todos os SKUs de todos os produtos
+                                  for (const product of order.products) {
+                                    if (product?.sku) {
+                                      // Dividir SKU concatenado por "+" se houver
+                                      const skus = product.sku.split('+').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+                                      allSkus.push(...skus);
+                                    }
+                                  }
+                                  
+                                  if (allSkus.length > 0) {
+                                    // Se houver múltiplos SKUs, mostrar separados por vírgula
+                                    return allSkus.map(sku => sku.toLowerCase()).join(', ');
+                                  }
+                                  return t('orders.noSku');
                                 }
                                 return order.refNumber || t('orders.noSku');
                               })()}
@@ -595,10 +634,10 @@ export default function Orders() {
                           {formatAmount(order.total || order.amount || order.lead_value)}
                         </td>
                         <td className="py-4 px-4 text-sm text-orange-400 font-semibold">
-                          €{parseFloat(order.productCost || '0').toFixed(2)}
+                          {formatCost(order.productCost)}
                         </td>
                         <td className="py-4 px-4 text-sm text-cyan-400 font-semibold">
-                          €{parseFloat(order.shippingCost || '0').toFixed(2)}
+                          {formatCost(order.shippingCost)}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-200">
                           {order.customerCity || order.city || '-'}
@@ -820,25 +859,6 @@ export default function Orders() {
         operationCurrency={operationDetails?.currency || 'EUR'}
       />
 
-      {/* Complete Sync Dialog */}
-      <CompleteSyncDialog 
-        isOpen={isSyncDialogOpen}
-        onClose={() => {
-          setIsSyncDialogOpen(false);
-        }}
-        onSyncStateChange={(isRunning) => {
-          setCurrentSyncState(isRunning);
-          if (!isRunning) {
-            setIsSyncingInBackground(false);
-          }
-        }}
-        onComplete={() => {
-          setIsSyncingInBackground(false);
-          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
-        }}
-        operationId={selectedOperation}
-      />
     </div>
   );
 }

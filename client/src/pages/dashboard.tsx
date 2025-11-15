@@ -4,8 +4,6 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { OnboardingCard } from "@/components/dashboard/onboarding-card";
 import { WelcomeMessage } from "@/components/dashboard/welcome-message";
-import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
-import { SyncConfirmationDialog } from "@/components/sync/SyncConfirmationDialog";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -17,11 +15,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, RefreshCw, X, Package } from "lucide-react";
+import { CalendarIcon, X, Package, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { useTranslation } from "@/hooks/use-translation";
+import { SyncConfirmationDialog } from "@/components/sync/SyncConfirmationDialog";
+import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
+
 
 export default function Dashboard() {
   const { t, currentLanguage } = useTranslation();
@@ -32,41 +33,14 @@ export default function Dashboard() {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
-  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
   const [currentSyncState, setCurrentSyncState] = useState(false);
-  
-  // Verificar status da sync quando necessário
-  const handleSyncButtonClick = async () => {
-    try {
-      // Verificar se há uma sync ativa
-      const response = await authenticatedApiRequest("GET", "/api/sync/complete-status");
-      const status = await response.json();
-      
-      // Se há sync ativa, abrir diretamente o modal de progresso
-      if (status.isRunning) {
-        setIsSyncDialogOpen(true);
-      } else {
-        // Se não há sync ativa, mostrar modal de confirmação
-        setIsSyncConfirmationOpen(true);
-      }
-    } catch (error) {
-      console.error("Erro ao verificar status da sync:", error);
-      // Em caso de erro, mostrar modal de confirmação normalmente
-      setIsSyncConfirmationOpen(true);
-    }
-  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
 
-  // Detectar quando o modal fecha durante sync
-  useEffect(() => {
-    if (!isSyncDialogOpen && currentSyncState) {
-      setIsSyncingInBackground(true);
-    }
-  }, [isSyncDialogOpen, currentSyncState]);
   
   // Tour context
   const { startTour, isTourRunning, tourWasCompletedOrSkipped } = useTourContext();
@@ -108,6 +82,7 @@ export default function Dashboard() {
       return res.json();
     },
   });
+
 
 
   // Auto-sync on page load (optimized - no page reload)
@@ -211,6 +186,11 @@ export default function Dashboard() {
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
+  // Handle sync button click
+  const handleSyncButtonClick = () => {
+    setIsSyncConfirmationOpen(true);
+  };
+
   // Calculate distribution data with 3 meaningful categories
   const getDistributionData = useMemo(() => {
     if (!metrics) return [];
@@ -313,7 +293,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
-      {/* Header with Complete Sync Button and Date Filter */}
+      {/* Header with Date Filter */}
       <div className="w-full flex items-center justify-end gap-2 sm:gap-3">
         {/* Product Filter */}
         {products.length > 0 && (

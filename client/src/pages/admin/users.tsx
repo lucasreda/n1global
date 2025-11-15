@@ -142,6 +142,14 @@ export default function AdminUsers() {
     formData: WarehouseFormData;
   } | null>(null);
   const [editingWarehouseAccountId, setEditingWarehouseAccountId] = useState<string | null>(null);
+  const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
+
+  // Automatically open Accordion when adding account
+  useEffect(() => {
+    if (addingEditWarehouseAccount?.providerKey) {
+      setAccordionValue(addingEditWarehouseAccount.providerKey);
+    }
+  }, [addingEditWarehouseAccount?.providerKey]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -206,8 +214,9 @@ export default function AdminUsers() {
     requiredFields: Array<{ fieldName: string; label: string; fieldType: string; required: boolean }>;
   }>>({
     queryKey: ['/api/warehouse/providers'],
-    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    staleTime: 0, // No cache - always fetch fresh data
   });
+
 
   // Buscar todas as operações disponíveis
   const { data: allOperations, isLoading: operationsLoading } = useQuery<{ id: string; name: string; country: string }[]>({
@@ -1063,7 +1072,7 @@ export default function AdminUsers() {
                       Integrações de Warehouse (Opcional)
                     </h4>
                     <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                      Configure contas de warehouse (FHB, European Fulfillment, eLogy) para este usuário. 
+                      Configure contas de warehouse (FHB, European Fulfillment, eLogy, Big Arena) para este usuário. 
                       Você pode pular esta etapa e configurar depois.
                     </p>
                   </div>
@@ -1103,6 +1112,17 @@ export default function AdminUsers() {
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="space-y-3 pt-2">
+                            {provider.key === 'big_arena' && (
+                              <div className="p-3 border border-blue-500/30 bg-blue-500/10 rounded-lg text-xs text-blue-100 leading-relaxed">
+                                <p className="font-semibold text-blue-200 mb-1">Como conectar a Big Arena</p>
+                                <ul className="list-disc list-inside space-y-1 text-blue-100/90">
+                                  <li>Informe o <strong>API Token</strong> fornecido pelo suporte Big Arena.</li>
+                                  <li>Campo de domínio é opcional. Preencha apenas se sua conta utiliza subdomínio dedicado (ex: <code className="bg-blue-900/40 px-1 py-0.5 rounded">api.sualoja.bigarena.com</code>).</li>
+                                  <li>Após salvar, as sincronizações automáticas de pedidos, estoque e tracking serão configuradas pelos workers.</li>
+                                </ul>
+                              </div>
+                            )}
+
                             {newWarehouseAccounts
                               .filter(acc => acc.providerKey === provider.key)
                               .map((account) => (
@@ -1136,68 +1156,130 @@ export default function AdminUsers() {
 
                             {addingAccount?.providerKey === provider.key ? (
                               <div className="p-4 border rounded-lg space-y-3" data-testid={`form-add-account-${provider.key}`}>
-                                <div>
-                                  <Label htmlFor={`account-name-${provider.key}`}>Nome da Conta</Label>
-                                  <Input
-                                    id={`account-name-${provider.key}`}
-                                    placeholder="Ex: FHB Principal"
-                                    value={addingAccount.accountName}
-                                    onChange={(e) => setAddingAccount({ ...addingAccount, accountName: e.target.value })}
-                                    data-testid={`input-account-name-${provider.key}`}
-                                  />
-                                </div>
-
-                                {provider.requiredFields.map((field) => (
-                                  <div key={field.fieldName}>
-                                    <Label htmlFor={`${provider.key}-${field.fieldName}`}>
-                                      {field.label} {field.required && <span className="text-destructive">*</span>}
-                                    </Label>
-                                    {field.fieldType === 'select' && field.fieldName === 'country' ? (
-                                      <Select
-                                        value={addingAccount.credentials[field.fieldName] || ''}
-                                        onValueChange={(value) => setAddingAccount({
-                                          ...addingAccount,
-                                          credentials: { ...addingAccount.credentials, [field.fieldName]: value }
-                                        })}
-                                      >
-                                        <SelectTrigger data-testid={`select-credential-${provider.key}-${field.fieldName}`}>
-                                          <SelectValue placeholder="Selecione o país" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="spain">🇪🇸 Espanha</SelectItem>
-                                          <SelectItem value="portugal">🇵🇹 Portugal</SelectItem>
-                                          <SelectItem value="italy">🇮🇹 Itália</SelectItem>
-                                          <SelectItem value="poland">🇵🇱 Polônia</SelectItem>
-                                          <SelectItem value="slovakia">🇸🇰 Eslováquia</SelectItem>
-                                          <SelectItem value="czechrepublic">🇨🇿 República Tcheca</SelectItem>
-                                          <SelectItem value="romania">🇷🇴 Romênia</SelectItem>
-                                          <SelectItem value="bulgaria">🇧🇬 Bulgária</SelectItem>
-                                          <SelectItem value="greece">🇬🇷 Grécia</SelectItem>
-                                          <SelectItem value="hungary">🇭🇺 Hungria</SelectItem>
-                                          <SelectItem value="slovenia">🇸🇮 Eslovênia</SelectItem>
-                                          <SelectItem value="croatia">🇭🇷 Croácia</SelectItem>
-                                          <SelectItem value="austria">🇦🇹 Áustria</SelectItem>
-                                          <SelectItem value="germany">🇩🇪 Alemanha</SelectItem>
-                                          <SelectItem value="france">🇫🇷 França</SelectItem>
-                                          <SelectItem value="belgium">🇧🇪 Bélgica</SelectItem>
-                                          <SelectItem value="netherlands">🇳🇱 Holanda</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <Input
-                                        id={`${provider.key}-${field.fieldName}`}
-                                        type={field.fieldType === 'password' ? 'password' : 'text'}
-                                        placeholder={`Digite ${field.label.toLowerCase()}`}
-                                        value={addingAccount.credentials[field.fieldName] || ''}
-                                        onChange={(e) => setAddingAccount({
-                                          ...addingAccount,
-                                          credentials: { ...addingAccount.credentials, [field.fieldName]: e.target.value }
-                                        })}
-                                        data-testid={`input-credential-${provider.key}-${field.fieldName}`}
-                                      />
-                                    )}
+                                {/* FHB uses App ID and Secret fields, not username/password */}
+                                {provider.key === 'fhb' ? (
+                                  <div>
+                                    <div className="mb-2 p-2 bg-green-100 text-green-800 text-xs rounded">
+                                      ✅ USANDO FORMULÁRIO FHB (App ID + Secret)
+                                    </div>
+                                    <FHBIntegrationForm
+                                      formData={{
+                                        accountName: addingAccount.accountName || '',
+                                        credentials: addingAccount.credentials || {},
+                                        operationIds: addingAccount.operationIds || []
+                                      }}
+                                      onChange={(formData) => setAddingAccount({
+                                        providerKey: provider.key,
+                                        accountName: formData.accountName,
+                                        credentials: formData.credentials,
+                                        operationIds: formData.operationIds
+                                      })}
+                                      availableOperations={[]}
+                                    />
                                   </div>
-                                ))}
+                                ) : null}
+                                {provider.key === 'european_fulfillment' && (
+                                  <EuropeanFulfillmentIntegrationForm
+                                    formData={{
+                                      accountName: addingAccount.accountName || '',
+                                      credentials: addingAccount.credentials || {},
+                                      operationIds: addingAccount.operationIds || []
+                                    }}
+                                    onChange={(formData) => setAddingAccount({
+                                      providerKey: provider.key,
+                                      accountName: formData.accountName,
+                                      credentials: formData.credentials,
+                                      operationIds: formData.operationIds
+                                    })}
+                                    availableOperations={[]}
+                                  />
+                                )}
+                                {provider.key === 'elogy' && (
+                                  <ElogyIntegrationForm
+                                    formData={{
+                                      accountName: addingAccount.accountName || '',
+                                      credentials: addingAccount.credentials || {},
+                                      operationIds: addingAccount.operationIds || []
+                                    }}
+                                    onChange={(formData) => setAddingAccount({
+                                      providerKey: provider.key,
+                                      accountName: formData.accountName,
+                                      credentials: formData.credentials,
+                                      operationIds: formData.operationIds
+                                    })}
+                                    availableOperations={[]}
+                                  />
+                                )}
+                                {/* Generic form for other providers (Big Arena, etc.) */}
+                                {(provider.key !== 'fhb' && provider.key !== 'european_fulfillment' && provider.key !== 'elogy') && (
+                                  <>
+                                    <div className="mb-2 p-2 bg-yellow-100 text-yellow-800 text-xs rounded">
+                                      ⚙️ Formulário genérico ({provider.name})
+                                    </div>
+                                    <div>
+                                      <Label htmlFor={`account-name-${provider.key}`}>Nome da Conta</Label>
+                                      <Input
+                                        id={`account-name-${provider.key}`}
+                                        placeholder="Ex: Big Arena Principal"
+                                        value={addingAccount.accountName}
+                                        onChange={(e) => setAddingAccount({ ...addingAccount, accountName: e.target.value })}
+                                        data-testid={`input-account-name-${provider.key}`}
+                                      />
+                                    </div>
+
+                                    {provider.requiredFields.map((field) => (
+                                      <div key={field.fieldName}>
+                                        <Label htmlFor={`${provider.key}-${field.fieldName}`}>
+                                          {field.label} {field.required && <span className="text-destructive">*</span>}
+                                        </Label>
+                                        {field.fieldType === 'select' && field.fieldName === 'country' ? (
+                                          <Select
+                                            value={addingAccount.credentials[field.fieldName] || ''}
+                                            onValueChange={(value) => setAddingAccount({
+                                              ...addingAccount,
+                                              credentials: { ...addingAccount.credentials, [field.fieldName]: value }
+                                            })}
+                                          >
+                                            <SelectTrigger data-testid={`select-credential-${provider.key}-${field.fieldName}`}>
+                                              <SelectValue placeholder="Selecione o país" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="spain">🇪🇸 Espanha</SelectItem>
+                                              <SelectItem value="portugal">🇵🇹 Portugal</SelectItem>
+                                              <SelectItem value="italy">🇮🇹 Itália</SelectItem>
+                                              <SelectItem value="poland">🇵🇱 Polônia</SelectItem>
+                                              <SelectItem value="slovakia">🇸🇰 Eslováquia</SelectItem>
+                                              <SelectItem value="czechrepublic">🇨🇿 República Tcheca</SelectItem>
+                                              <SelectItem value="romania">🇷🇴 Romênia</SelectItem>
+                                              <SelectItem value="bulgaria">🇧🇬 Bulgária</SelectItem>
+                                              <SelectItem value="greece">🇬🇷 Grécia</SelectItem>
+                                              <SelectItem value="hungary">🇭🇺 Hungria</SelectItem>
+                                              <SelectItem value="slovenia">🇸🇮 Eslovênia</SelectItem>
+                                              <SelectItem value="croatia">🇭🇷 Croácia</SelectItem>
+                                              <SelectItem value="austria">🇦🇹 Áustria</SelectItem>
+                                              <SelectItem value="germany">🇩🇪 Alemanha</SelectItem>
+                                              <SelectItem value="france">🇫🇷 França</SelectItem>
+                                              <SelectItem value="belgium">🇧🇪 Bélgica</SelectItem>
+                                              <SelectItem value="netherlands">🇳🇱 Holanda</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        ) : (
+                                          <Input
+                                            id={`${provider.key}-${field.fieldName}`}
+                                            type={field.fieldType === 'password' ? 'password' : 'text'}
+                                            placeholder={field.placeholder || `Digite ${field.label.toLowerCase()}`}
+                                            value={addingAccount.credentials[field.fieldName] || ''}
+                                            onChange={(e) => setAddingAccount({
+                                              ...addingAccount,
+                                              credentials: { ...addingAccount.credentials, [field.fieldName]: e.target.value }
+                                            })}
+                                            data-testid={`input-credential-${provider.key}-${field.fieldName}`}
+                                          />
+                                        )}
+                                      </div>
+                                    ))}
+                                  </>
+                                )}
 
                                 <div className="flex gap-2 justify-end">
                                   <Button
@@ -1220,8 +1302,35 @@ export default function AdminUsers() {
                                         return;
                                       }
 
-                                      const missingFields = provider.requiredFields
-                                        .filter(f => f.required && !addingAccount.credentials[f.fieldName]?.trim());
+                                      // Validate required fields based on provider type
+                                      let missingFields: Array<{ label: string }> = [];
+                                      
+                                      if (provider.key === 'fhb') {
+                                        if (!addingAccount.credentials['appId']?.trim()) {
+                                          missingFields.push({ label: 'App ID' });
+                                        }
+                                        if (!addingAccount.credentials['secret']?.trim()) {
+                                          missingFields.push({ label: 'Secret' });
+                                        }
+                                      } else if (provider.key === 'european_fulfillment') {
+                                        if (!addingAccount.credentials['email']?.trim()) {
+                                          missingFields.push({ label: 'Email European Fulfillment' });
+                                        }
+                                        if (!addingAccount.credentials['password']?.trim()) {
+                                          missingFields.push({ label: 'Senha European Fulfillment' });
+                                        }
+                                      } else if (provider.key === 'elogy') {
+                                        if (!addingAccount.credentials['email']?.trim()) {
+                                          missingFields.push({ label: 'Email eLogy' });
+                                        }
+                                        if (!addingAccount.credentials['password']?.trim()) {
+                                          missingFields.push({ label: 'Senha eLogy' });
+                                        }
+                                      } else {
+                                        missingFields = provider.requiredFields
+                                          .filter(f => f.required && !addingAccount.credentials[f.fieldName]?.trim())
+                                          .map(f => ({ label: f.label }));
+                                      }
                                       
                                       if (missingFields.length > 0) {
                                         toast({
@@ -1232,8 +1341,17 @@ export default function AdminUsers() {
                                         return;
                                       }
 
+                                      const sanitizedCredentials = Object.fromEntries(
+                                        Object.entries(addingAccount.credentials).map(([key, value]) => [
+                                          key,
+                                          typeof value === 'string' ? value.trim() : value
+                                        ])
+                                      );
+
                                       const newAccount = {
                                         ...structuredClone(addingAccount),
+                                        accountName: addingAccount.accountName.trim(),
+                                        credentials: sanitizedCredentials,
                                         tempId: `temp-${Date.now()}-${Math.random()}`,
                                         operationIds: []
                                       };
@@ -1366,6 +1484,9 @@ export default function AdminUsers() {
       <Dialog open={showEditModal} onOpenChange={(open) => {
         if (!open) {
           setActiveTab("general");
+          setEditingWarehouseAccountId(null);
+          setAddingEditWarehouseAccount(null);
+          setAccordionValue(undefined);
           setShowEditModal(false);
         }
       }}>
@@ -1756,7 +1877,7 @@ export default function AdminUsers() {
               <TabsContent value="warehouse" className="mt-4">
                 <div className="space-y-4">
                   <div className="text-sm text-slate-400">
-                    Gerencie as contas de warehouse (FHB, European Fulfillment, eLogy) deste usuário.
+                    Gerencie as contas de warehouse (FHB, European Fulfillment, eLogy, Big Arena) deste usuário.
                   </div>
                   
                   {/* Lista de warehouse accounts existentes */}
@@ -1821,8 +1942,17 @@ export default function AdminUsers() {
                         <Badge variant="destructive">Erro ao carregar providers</Badge>
                       </div>
                     ) : warehouseProviders && warehouseProviders.length > 0 ? (
-                      <Accordion type="single" collapsible className="w-full">
-                        {warehouseProviders.map((provider) => (
+                      <Accordion 
+                        type="single" 
+                        collapsible 
+                        className="w-full" 
+                        value={accordionValue}
+                        onValueChange={setAccordionValue}
+                        key={addingEditWarehouseAccount?.providerKey || 'empty'}
+                      >
+                        {warehouseProviders.map((provider) => {
+                          const isAddingAccount = addingEditWarehouseAccount?.providerKey === provider.key;
+                          return (
                           <AccordionItem key={provider.key} value={provider.key} data-testid={`accordion-edit-provider-${provider.key}`}>
                             <AccordionTrigger className="hover:no-underline">
                               <div className="flex items-center gap-3">
@@ -1836,8 +1966,23 @@ export default function AdminUsers() {
                               </div>
                             </AccordionTrigger>
                             <AccordionContent>
-                              {addingEditWarehouseAccount?.providerKey === provider.key ? (
+                              {provider.key === 'big_arena' && !isAddingAccount && (
+                                <div className="mb-3 p-3 border border-blue-500/30 bg-blue-500/10 rounded-lg text-xs text-blue-100 leading-relaxed">
+                                  <p className="font-semibold text-blue-200 mb-1">Como conectar a Big Arena</p>
+                                  <ul className="list-disc list-inside space-y-1 text-blue-100/90">
+                                    <li>Informe o <strong>API Token</strong> fornecido pelo suporte Big Arena.</li>
+                                    <li>Campo de domínio é opcional. Preencha apenas se sua conta utiliza subdomínio dedicado (ex: <code className="bg-blue-900/40 px-1 py-0.5 rounded">api.sualoja.bigarena.com</code>).</li>
+                                    <li>Após salvar, as sincronizações automáticas de pedidos, estoque e tracking serão configuradas pelos workers.</li>
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {isAddingAccount && addingEditWarehouseAccount && addingEditWarehouseAccount.providerKey === provider.key ? (
                                 <div className="p-4 border border-white/20 rounded-lg space-y-3 bg-white/5">
+                                  {/* DEBUG: Test render */}
+                                  <div className="text-red-400 text-sm font-bold">
+                                    FORMULÁRIO ESTÁ SENDO RENDERIZADO - Provider: {provider.key}
+                                  </div>
                                   {provider.key === 'fhb' && (
                                     <FHBIntegrationForm
                                       formData={addingEditWarehouseAccount.formData}
@@ -1859,12 +2004,81 @@ export default function AdminUsers() {
                                       availableOperations={userOperations ? allOperations?.filter(op => userOperations.some(uo => uo.operationId === op.id)) || [] : []}
                                     />
                                   )}
+                                  {(provider.key !== 'fhb' && provider.key !== 'european_fulfillment' && provider.key !== 'elogy') && (() => {
+                                    // Get fields with fallback for Big Arena
+                                    const fields = Array.isArray(provider.requiredFields) ? provider.requiredFields : [];
+                                    const finalFields = fields.length > 0 ? fields : (
+                                      provider.key === 'big_arena' ? [
+                                        { fieldName: 'apiToken', fieldType: 'password', label: 'API Token', placeholder: 'seu_token_api', required: true }
+                                      ] : []
+                                    );
+
+                                    return (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <Label htmlFor={`edit-account-name-${provider.key}`} className="text-xs text-slate-300">
+                                            Nome da Conta
+                                          </Label>
+                                          <Input
+                                            id={`edit-account-name-${provider.key}`}
+                                            value={addingEditWarehouseAccount?.formData?.accountName || ''}
+                                            onChange={(e) =>
+                                              setAddingEditWarehouseAccount({
+                                                providerKey: provider.key,
+                                                formData: { 
+                                                  ...(addingEditWarehouseAccount?.formData || {}), 
+                                                  accountName: e.target.value 
+                                                }
+                                              })
+                                            }
+                                            placeholder="Ex: Big Arena Principal"
+                                            className="bg-white/10 border-white/20 text-white"
+                                          />
+                                        </div>
+                                        
+                                        {finalFields.map((field: any) => (
+                                          <div key={field.fieldName}>
+                                            <Label htmlFor={`edit-${provider.key}-${field.fieldName}`} className="text-xs text-slate-300">
+                                              {field.label} {field.required && <span className="text-red-400">*</span>}
+                                            </Label>
+                                            <Input
+                                              id={`edit-${provider.key}-${field.fieldName}`}
+                                              type={field.fieldType === 'password' ? 'password' : 'text'}
+                                              placeholder={field.placeholder || ''}
+                                              value={addingEditWarehouseAccount?.formData?.credentials?.[field.fieldName] || ''}
+                                              onChange={(e) =>
+                                                setAddingEditWarehouseAccount({
+                                                  providerKey: provider.key,
+                                                  formData: {
+                                                    ...(addingEditWarehouseAccount?.formData || {}),
+                                                    credentials: {
+                                                      ...(addingEditWarehouseAccount?.formData?.credentials || {}),
+                                                      [field.fieldName]: e.target.value
+                                                    }
+                                                  }
+                                                })
+                                              }
+                                              className="bg-white/10 border-white/20 text-white"
+                                            />
+                                            {!field.required && (
+                                              <p className="text-[10px] text-slate-400 mt-1">
+                                                Campo opcional
+                                              </p>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
                                   
                                   <div className="flex gap-2 justify-end">
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => setAddingEditWarehouseAccount(null)}
+                                      onClick={() => {
+                                        setAddingEditWarehouseAccount(null);
+                                        setAccordionValue(undefined);
+                                      }}
                                       data-testid={`button-cancel-add-${provider.key}`}
                                     >
                                       Cancelar
@@ -1881,11 +2095,32 @@ export default function AdminUsers() {
                                           return;
                                         }
                                         if (!userToEdit?.id) return;
+                                        if (provider.key !== 'fhb' && provider.key !== 'european_fulfillment' && provider.key !== 'elogy') {
+                                          const missingFields = (provider.requiredFields || []).filter(field => {
+                                            if (!field.required) return false;
+                                            const value = addingEditWarehouseAccount.formData.credentials?.[field.fieldName];
+                                            return !(typeof value === 'string' && value.trim().length > 0);
+                                          });
+                                          if (missingFields.length > 0) {
+                                            toast({
+                                              title: "Campos obrigatórios faltando",
+                                              description: `Preencha: ${missingFields.map(f => f.label).join(', ')}`,
+                                              variant: "destructive"
+                                            });
+                                            return;
+                                          }
+                                        }
+                                        const sanitizedCredentials = Object.fromEntries(
+                                          Object.entries(addingEditWarehouseAccount.formData.credentials || {}).map(([key, value]) => [
+                                            key,
+                                            typeof value === 'string' ? value.trim() : value
+                                          ])
+                                        );
                                         createWarehouseAccountMutation.mutate({
                                           userId: userToEdit.id,
                                           providerKey: provider.key,
-                                          accountName: addingEditWarehouseAccount.formData.accountName,
-                                          credentials: addingEditWarehouseAccount.formData.credentials,
+                                          accountName: addingEditWarehouseAccount.formData.accountName.trim(),
+                                          credentials: sanitizedCredentials,
                                           operationIds: addingEditWarehouseAccount.formData.operationIds
                                         });
                                       }}
@@ -1901,10 +2136,13 @@ export default function AdminUsers() {
                                   variant="outline"
                                   size="sm"
                                   className="w-full"
-                                  onClick={() => setAddingEditWarehouseAccount({
-                                    providerKey: provider.key,
-                                    formData: { accountName: '', credentials: {}, operationIds: [] }
-                                  })}
+                                  onClick={() => {
+                                    setAccordionValue(provider.key);
+                                    setAddingEditWarehouseAccount({
+                                      providerKey: provider.key,
+                                      formData: { accountName: '', credentials: {}, operationIds: [] }
+                                    });
+                                  }}
                                   data-testid={`button-add-${provider.key}`}
                                 >
                                   <Plus className="h-4 w-4 mr-2" />
@@ -1913,7 +2151,8 @@ export default function AdminUsers() {
                               )}
                             </AccordionContent>
                           </AccordionItem>
-                        ))}
+                          );
+                        })}
                       </Accordion>
                     ) : (
                       <p className="text-xs text-muted-foreground text-center py-4">

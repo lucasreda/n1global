@@ -187,7 +187,14 @@ export class ShopifySyncService {
       currentStep: 'Verificando total de pedidos...'
     });
     
-    const countResponse = await fetch(`https://${normalizedShopName}/admin/api/2023-10/orders/count.json?status=any`, {
+    // Construir URL de contagem com filtro de data se houver integrationStartedAt
+    let countUrl = `https://${normalizedShopName}/admin/api/2023-10/orders/count.json?status=any`;
+    if (integration.integrationStartedAt) {
+      countUrl += `&created_at_min=${integration.integrationStartedAt.toISOString()}`;
+      console.log(`📅 Contando apenas pedidos a partir da data de integração: ${integration.integrationStartedAt.toISOString()}`);
+    }
+    
+    const countResponse = await fetch(countUrl, {
       headers: {
         'X-Shopify-Access-Token': integration.accessToken,
         'Content-Type': 'application/json',
@@ -196,7 +203,7 @@ export class ShopifySyncService {
     
     const countData = await countResponse.json();
     const totalShopifyOrders = countData.count || 0;
-    console.log(`🎯 Total de pedidos na Shopify: ${totalShopifyOrders}`);
+    console.log(`🎯 Total de pedidos na Shopify${integration.integrationStartedAt ? ' (a partir da data de integração)' : ''}: ${totalShopifyOrders}`);
     
     // Calcular total de páginas esperadas
     const totalPages = Math.ceil(totalShopifyOrders / 250);
@@ -235,6 +242,12 @@ export class ShopifySyncService {
         order: 'created_at desc', // Ordenação para paginação consistente
         fields: 'id,name,email,phone,created_at,updated_at,total_price,current_total_price,subtotal_price,currency,financial_status,fulfillment_status,customer,shipping_address,billing_address,line_items'
       };
+      
+      // Usar integrationStartedAt como filtro mínimo se existir
+      if (integration.integrationStartedAt && !lastCreatedAt) {
+        params.created_at_min = integration.integrationStartedAt.toISOString();
+        console.log(`📅 Filtrando pedidos a partir da data de integração: ${integration.integrationStartedAt.toISOString()}`);
+      }
       
       if (lastCreatedAt) {
         params.created_at_max = lastCreatedAt;

@@ -81,8 +81,12 @@ async function pollNewOrders() {
         if (tracking.lastSyncAt) {
           const fromDate = new Date(tracking.lastSyncAt);
           params.from = fromDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        } else if (integration.integrationStartedAt) {
+          // Se não temos tracking mas temos integrationStartedAt, usar como filtro inicial
+          // Garantir que só buscamos entregas criadas a partir da data de integração
+          params.from = integration.integrationStartedAt.toISOString().split('T')[0]; // YYYY-MM-DD
         } else {
-          // Se não temos tracking, buscar últimos 7 dias
+          // Se não temos tracking nem integrationStartedAt, buscar últimos 7 dias (fallback)
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
           params.from = sevenDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD

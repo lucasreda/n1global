@@ -6,6 +6,7 @@ import { execSync } from "child_process";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
+import { ensureWarehouseProvidersCatalog } from "./warehouse-providers-catalog";
 
 const app = express();
 
@@ -151,8 +152,24 @@ app.use((req, res, next) => {
     }
   }
   
+  // Garantir que o catálogo de providers está completo (inclui Big Arena)
+  await ensureWarehouseProvidersCatalog();
+  
   // Seed database with initial data
   await seedDatabase();
+  
+  // Executar migrações do banco de dados (adicionar colunas/tabelas faltantes)
+  if (process.env.DATABASE_URL) {
+    try {
+      console.log('🔄 Executando migrações do banco de dados...');
+      execSync('npm run db:migrate', { stdio: 'inherit', env: process.env });
+      console.log('✅ Migrações aplicadas com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao executar migrações:', error);
+      // Continuar mesmo com erro - migrações podem já estar aplicadas
+      console.log('⚠️ Continuando startup mesmo com erro nas migrações');
+    }
+  }
   
   // Servir imagens antes de tudo (precisa vir antes do Vite)
   app.use('/images', express.static(path.join(process.cwd(), 'client', 'public', 'images')));
@@ -199,8 +216,8 @@ app.use((req, res, next) => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 
-  // 🛍️ Start Shopify/CartPanda/Digistore24 Polling Workers
-  console.log('🛍️  Starting Shopify/CartPanda/Digistore24 Polling Workers...');
+  // 🛍️ Start Shopify/CartPanda/Digistore24/Big Arena Polling Workers
+  console.log('🛍️  Starting Shopify/CartPanda/Digistore24/Big Arena Polling Workers...');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   // Start Shopify polling worker
@@ -215,6 +232,10 @@ app.use((req, res, next) => {
   const { startDigistoreSyncWorker } = await import('./workers/digistore-sync-worker');
   startDigistoreSyncWorker();
 
+  // Start Big Arena polling worker
+  const { startBigArenaSyncWorker } = await import('./workers/big-arena-sync-worker');
+  startBigArenaSyncWorker();
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 
@@ -226,6 +247,47 @@ app.use((req, res, next) => {
   const { startStagingSyncWorker } = await import('./workers/staging-sync-worker');
   startStagingSyncWorker();
 
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
+
+  // 🧹 Start Cleanup Job for Old Sync Sessions
+  console.log('🧹 Starting cleanup job for old sync sessions...');
+  const { db } = await import('./db');
+  const { syncSessions } = await import('@shared/schema');
+  const { or, and, eq, lt } = await import('drizzle-orm');
+  
+  // Limpar sessões de sync antigas (>24h) a cada 6 horas
+  setInterval(async () => {
+    try {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      const deleted = await db
+        .delete(syncSessions)
+        .where(
+          or(
+            // Sessões completadas há mais de 24h
+            and(
+              eq(syncSessions.isRunning, false),
+              lt(syncSessions.endTime, twentyFourHoursAgo)
+            ),
+            // Sessões travadas há mais de 24h (ainda isRunning mas não atualizadas)
+            and(
+              eq(syncSessions.isRunning, true),
+              lt(syncSessions.lastUpdatedAt, twentyFourHoursAgo)
+            )
+          )
+        )
+        .returning();
+      
+      if (deleted.length > 0) {
+        console.log(`🧹 Limpeza de sessões antigas: ${deleted.length} removidas`);
+      }
+    } catch (error) {
+      console.error('Erro ao limpar sessões antigas:', error);
+    }
+  }, 6 * 60 * 60 * 1000); // A cada 6 horas
+  
+  console.log('✅ Cleanup job iniciado');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 

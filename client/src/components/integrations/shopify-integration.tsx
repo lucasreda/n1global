@@ -358,83 +358,94 @@ export function ShopifyIntegration() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Seção de Webhook - ANTES dos campos de configuração - Só exibe se URL pública disponível */}
-            {webhookInfo?.hasPublicUrl && (
-              <>
-                {webhookInfoLoading ? (
-                  <div className="p-4 bg-muted/50 border border-border rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{t('integrations.shopify.loadingWebhookInfo')}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3 p-4 bg-muted/50 border border-border rounded-lg">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-foreground mb-2">
-                        {t('integrations.shopify.webhookOptional')}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {t('integrations.shopify.webhookDescription')}
-                      </p>
-                      <div className="space-y-3">
-                        <div>
-                          <Label className="text-sm text-muted-foreground">{t('integrations.shopify.webhookUrl')}</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Input
-                              value={webhookInfo.webhookUrl || ''}
-                              readOnly
-                              className="font-mono text-xs"
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                if (webhookInfo.webhookUrl) {
-                                  navigator.clipboard.writeText(webhookInfo.webhookUrl);
-                                  setWebhookUrlCopied(true);
-                                  setTimeout(() => setWebhookUrlCopied(false), 2000);
-                                  toast({
-                                    title: t('integrations.shopify.webhookUrlCopied'),
-                                    description: t('integrations.shopify.webhookUrlCopiedDescription'),
-                                  });
-                                }
-                              }}
-                            >
-                              {webhookUrlCopied ? (
-                                <Check className="w-4 h-4" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-sm text-muted-foreground">{t('integrations.shopify.requiredTopics')}</Label>
-                          <div className="mt-1 flex gap-2 flex-wrap">
-                            {webhookInfo.topics?.map((topic: string) => (
-                              <Badge key={topic} variant="secondary" className="mr-1">
-                                {topic}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        {webhookInfo.instructions && (
-                          <div className="mt-3 text-xs text-muted-foreground bg-muted/30 p-3 rounded border border-border">
-                            <p className="font-medium mb-2 text-foreground">{webhookInfo.instructions.title}</p>
-                            <ol className="list-decimal list-inside space-y-1">
-                              {webhookInfo.instructions.steps.map((step: string, idx: number) => (
-                                <li key={idx}>{step}</li>
-                              ))}
-                            </ol>
-                          </div>
+            {/* Seção de Webhook - ANTES dos campos de configuração - Sempre exibida */}
+            {webhookInfoLoading ? (
+              <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{t('integrations.shopify.loadingWebhookInfo')}</span>
+                </div>
+              </div>
+            ) : webhookInfo ? (
+              <div className="space-y-3 p-4 bg-muted/50 border border-border rounded-lg">
+                <div className="flex-1">
+                  <h4 className="font-medium text-foreground mb-2">
+                    {t('integrations.shopify.webhookOptional')}
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t('integrations.shopify.webhookDescription')}
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">{t('integrations.shopify.webhookUrl')}</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input
+                          value={webhookInfo.webhookUrl || ''}
+                          readOnly
+                          disabled={!webhookInfo.webhookUrl}
+                          className="font-mono text-xs"
+                          placeholder={webhookInfo.webhookUrl ? undefined : "Configure PUBLIC_URL ou REPLIT_DEV_DOMAIN para gerar URL do webhook"}
+                        />
+                        {webhookInfo.webhookUrl && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(webhookInfo.webhookUrl);
+                              setWebhookUrlCopied(true);
+                              setTimeout(() => setWebhookUrlCopied(false), 2000);
+                              toast({
+                                title: t('integrations.shopify.webhookUrlCopied'),
+                                description: t('integrations.shopify.webhookUrlCopiedDescription'),
+                              });
+                            }}
+                          >
+                            {webhookUrlCopied ? (
+                              <Check className="w-4 h-4" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
                         )}
                       </div>
+                      {!webhookInfo.webhookUrl && (
+                        <p className="text-xs text-amber-500 mt-1">
+                          ⚠️ {t('integrations.shopify.webhookUrlWarning', { defaultValue: 'Configure PUBLIC_URL ou REPLIT_DEV_DOMAIN nas variáveis de ambiente para gerar a URL do webhook. O sistema usará polling inteligente como fallback.' })}
+                        </p>
+                      )}
                     </div>
+                    {webhookInfo.topics && webhookInfo.topics.length > 0 && (
+                      <div>
+                        <Label className="text-sm text-muted-foreground">{t('integrations.shopify.requiredTopics')}</Label>
+                        <div className="mt-1 flex gap-2 flex-wrap">
+                          {webhookInfo.topics.map((topic: string) => (
+                            <Badge key={topic} variant="secondary" className="mr-1">
+                              {topic}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {webhookInfo.instructions && (
+                      <div className="mt-3 text-xs text-muted-foreground bg-muted/30 p-3 rounded border border-border">
+                        {webhookInfo.instructions.title && (
+                          <p className="font-medium mb-2 text-foreground">{webhookInfo.instructions.title}</p>
+                        )}
+                        {webhookInfo.instructions.message ? (
+                          <p className="text-muted-foreground">{webhookInfo.instructions.message}</p>
+                        ) : webhookInfo.instructions.steps && webhookInfo.instructions.steps.length > 0 ? (
+                          <ol className="list-decimal list-inside space-y-1">
+                            {webhookInfo.instructions.steps.map((step: string, idx: number) => (
+                              <li key={idx}>{step}</li>
+                            ))}
+                          </ol>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
-                )}
-              </>
-            )}
+                </div>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="shopName">{t('integrations.shopify.shopName')}</Label>

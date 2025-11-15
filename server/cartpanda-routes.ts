@@ -143,6 +143,11 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
       .where(eq(cartpandaIntegrations.operationId, operationId))
       .limit(1);
 
+    // Determinar se deve definir integrationStartedAt
+    const shouldSetIntegrationStartedAt = 
+      !existingIntegration || // Nova integração
+      (existingIntegration.status !== "active" && existingIntegration.integrationStartedAt === null); // Ativando pela primeira vez
+
     let integration;
 
     if (existingIntegration) {
@@ -157,6 +162,7 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
           status: "active",
           lastSyncAt: null, // Reset last sync since credentials changed
           syncErrors: null,
+          ...(shouldSetIntegrationStartedAt && { integrationStartedAt: new Date() }),
           metadata: {
             storeUrl: `https://${storeSlug}.mycartpanda.com`
           },
@@ -175,6 +181,7 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
           storeSlug,
           bearerToken,
           status: "active",
+          integrationStartedAt: new Date(), // Nova integração sempre define integrationStartedAt
           metadata: {
             storeUrl: `https://${storeSlug}.mycartpanda.com`
           }
@@ -249,30 +256,31 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
       bearerToken: integration.bearerToken
     });
 
+    // Preparar parâmetros base com filtro de data de integração
+    const baseParams: any = {};
+    if (integration.integrationStartedAt) {
+      baseParams.created_at_min = integration.integrationStartedAt.toISOString();
+      console.log(`📅 Filtrando pedidos a partir da data de integração: ${integration.integrationStartedAt.toISOString()}`);
+    }
+    
     // Testando múltiplas abordagens para encontrar os pedidos
     console.log('🔍 Investigando CartPanda com múltiplos testes...');
     
     let cartpandaOrders = [];
     
-    // Teste 1: Sem parâmetros (usa paginação padrão da CartPanda)
-    console.log('📊 Teste 1: Sem parâmetros...');
-    cartpandaOrders = await cartpandaService.listOrders();
+    // Teste 1: Com filtro de data de integração (se existir)
+    console.log('📊 Teste 1: Com filtro de data de integração...');
+    cartpandaOrders = await cartpandaService.listOrders(baseParams);
     
     if (cartpandaOrders.length === 0) {
-      // Teste 2: Parâmetros vazios explícitos
-      console.log('📊 Teste 2: Com parâmetros vazios...');
-      cartpandaOrders = await cartpandaService.listOrders({});
-    }
-    
-    if (cartpandaOrders.length === 0) {
-      // Teste 3: Com diferentes status
-      console.log('📊 Teste 3: Testando diferentes status...');
+      // Teste 2: Com diferentes status (mantendo filtro de data)
+      console.log('📊 Teste 2: Testando diferentes status...');
       const statusesToTest = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded'];
       
       for (const status of statusesToTest) {
         try {
           console.log(`🔍 Testando status: ${status}`);
-          const orders = await cartpandaService.listOrders({ status });
+          const orders = await cartpandaService.listOrders({ ...baseParams, status });
           console.log(`📋 Status ${status}: ${orders.length} pedidos`);
           if (orders.length > 0) {
             cartpandaOrders = orders;
@@ -285,8 +293,8 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     }
     
     if (cartpandaOrders.length === 0) {
-      // Teste 4: Com diferentes status de pagamento (números conforme documentação)
-      console.log('📊 Teste 4: Testando diferentes status de pagamento...');
+      // Teste 3: Com diferentes status de pagamento (mantendo filtro de data)
+      console.log('📊 Teste 3: Testando diferentes status de pagamento...');
       const paymentStatusesToTest = [0, 1, 2, 3]; // números conforme documentação
       const paymentStatusNames = ['unpaid', 'paid', 'pending', 'partial']; // para logs
       
@@ -295,7 +303,7 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
         const statusName = paymentStatusNames[i];
         try {
           console.log(`🔍 Testando payment_status: ${paymentStatus} (${statusName})`);
-          const orders = await cartpandaService.listOrders({ payment_status: paymentStatus });
+          const orders = await cartpandaService.listOrders({ ...baseParams, payment_status: paymentStatus });
           console.log(`📋 Payment status ${paymentStatus} (${statusName}): ${orders.length} pedidos`);
           if (orders.length > 0) {
             cartpandaOrders = orders;

@@ -185,12 +185,18 @@ export class ShopifyService {
       .where(eq(shopifyIntegrations.operationId, operationId))
       .limit(1);
 
+    // Determinar se deve definir integrationStartedAt
+    const shouldSetIntegrationStartedAt = 
+      !existingIntegration || // Nova integração
+      (existingIntegration.status !== "active" && existingIntegration.integrationStartedAt === null); // Ativando pela primeira vez
+
     const integrationData = {
       shopName,
       accessToken,
       status: "active" as const,
       lastSyncAt: new Date(),
       syncErrors: null,
+      ...(shouldSetIntegrationStartedAt && { integrationStartedAt: new Date() }),
       metadata: {
         storeName: storeData.name,
         storeEmail: storeData.email,

@@ -120,6 +120,10 @@ async function pollNewOrders() {
         } else if (tracking.lastSyncAt) {
           // Se não temos since_id mas temos lastSyncAt, usar updated_at_min
           params.updated_at_min = tracking.lastSyncAt.toISOString();
+        } else if (integration.integrationStartedAt) {
+          // Se não temos tracking mas temos integrationStartedAt, usar como filtro inicial
+          // Garantir que só buscamos pedidos criados a partir da data de integração
+          params.created_at_min = integration.integrationStartedAt.toISOString();
         }
 
         console.log(`🔍 [SHOPIFY POLLING] Buscando novos pedidos para operação ${integration.operationId}...`);
