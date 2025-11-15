@@ -140,7 +140,9 @@ export function serveStatic(app: Express) {
 
   // Serve static files with proper headers and caching
   // IMPORTANT: This must be called BEFORE the catch-all route
+  // index: false prevents express.static from automatically serving index.html
   app.use(express.static(distPath, {
+    index: false, // Don't automatically serve index.html - let catch-all handle it
     maxAge: process.env.NODE_ENV === "production" ? "1y" : "0",
     etag: true,
     lastModified: true,
