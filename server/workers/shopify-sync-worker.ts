@@ -1,5 +1,9 @@
-// 🛍️ Shopify Sync Worker - Polling inteligente para novos pedidos
+// 🛍️ Shopify Sync Worker - DESABILITADO
+// Pedidos são criados/atualizados APENAS via webhooks para melhor performance e menos erros
+// Este worker foi desabilitado em favor de webhooks em tempo real
+//
 // Polling adaptativo: 5 minutos (horário comercial 8h-20h UTC), 15 minutos (fora do horário)
+// Para reativar, descomente as linhas em server/index.ts
 
 import { db } from '../db';
 import { shopifyIntegrations, operations, pollingExecutions } from '@shared/schema';

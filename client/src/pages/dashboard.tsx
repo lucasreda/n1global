@@ -15,13 +15,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, X, Package, RefreshCw } from "lucide-react";
+import { CalendarIcon, X, Package } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { useTranslation } from "@/hooks/use-translation";
-import { SyncConfirmationDialog } from "@/components/sync/SyncConfirmationDialog";
-import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 
 
 export default function Dashboard() {
@@ -33,10 +31,6 @@ export default function Dashboard() {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
-  const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
-  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
-  const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
-  const [currentSyncState, setCurrentSyncState] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
@@ -185,11 +179,6 @@ export default function Dashboard() {
     refetchOnMount: false, // Don't refetch on every mount
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
-
-  // Handle sync button click
-  const handleSyncButtonClick = () => {
-    setIsSyncConfirmationOpen(true);
-  };
 
   // Calculate distribution data with 3 meaningful categories
   const getDistributionData = useMemo(() => {
@@ -488,36 +477,6 @@ export default function Dashboard() {
             </div>
           </PopoverContent>
         </Popover>
-
-        {/* Complete Sync Button - Right on mobile */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Button
-                  onClick={handleSyncButtonClick}
-                  disabled={!integrationsStatus?.hasPlatform}
-                  variant="outline"
-                  size="sm"
-                  className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0 ${
-                    isSyncingInBackground ? 'animate-pulse ring-2 ring-blue-500/50' : ''
-                  }`}
-                  data-testid="button-complete-sync"
-                >
-                  <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 ${isSyncingInBackground ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">
-                    {isSyncingInBackground ? t('dashboard.syncing') : t('dashboard.syncComplete')}
-                  </span>
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {!integrationsStatus?.hasPlatform && (
-              <TooltipContent className="max-w-xs">
-                <p>{t('dashboard.needPlatform')}</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
       </div>
       
       <WelcomeMessage />
@@ -537,45 +496,6 @@ export default function Dashboard() {
         distributionData={getDistributionData}
         isLoading={revenueLoading}
         currency={operationCurrency}
-      />
-
-      {/* Sync Confirmation Dialog */}
-      <SyncConfirmationDialog
-        isOpen={isSyncConfirmationOpen}
-        onClose={() => setIsSyncConfirmationOpen(false)}
-        onConfirm={() => {
-          setIsSyncDialogOpen(true);
-        }}
-        operationId={selectedOperation}
-      />
-
-      {/* Complete Sync Dialog */}
-      <CompleteSyncDialog 
-        isOpen={isSyncDialogOpen}
-        onClose={() => {
-          setIsSyncDialogOpen(false);
-        }}
-        onSyncStateChange={(isRunning) => {
-          // Rastrear estado atual do sync
-          setCurrentSyncState(isRunning);
-          // Se terminou, limpar background
-          if (!isRunning) {
-            setIsSyncingInBackground(false);
-          }
-        }}
-        onComplete={() => {
-          setIsSyncingInBackground(false);
-          // Refresh ALL dashboard data and sync stats
-          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-          toast({
-            title: t('dashboard.syncCompleted'),
-            description: t('dashboard.allDataUpdated'),
-          });
-        }}
-        operationId={selectedOperation}
       />
     </div>
   );

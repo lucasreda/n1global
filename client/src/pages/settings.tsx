@@ -422,12 +422,8 @@ export default function Settings() {
             <h4 className="text-white font-medium">{t('settings.support')}</h4>
             <p className="text-gray-400 text-sm">{t('settings.support24_7')}</p>
           </div>
-        </TabsContent>
-
-        <TabsContent value="team" className="mt-6 space-y-6 w-full">
-          <TeamManagementTab />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

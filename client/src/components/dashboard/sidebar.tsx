@@ -49,42 +49,45 @@ import {
 import { NewOperationDialog } from "./new-operation-dialog";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useTranslation } from "@/hooks/use-translation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 
-const getNavigationForRole = (userRole: string, userPermissions: string[] = [], t: any) => {
+const getNavigationForRole = (userRole: string, userPermissions: string[] = [], t: any, operationPermissions?: any) => {
   // All possible navigation items with their permission IDs
   const allNavigationItems = [
-    { id: 'dashboard', name: t('sidebar.dashboard'), href: "/", icon: Home },
-    { id: 'hub', name: t('sidebar.hub'), href: "/hub", icon: Store },
-    { id: 'orders', name: t('sidebar.orders'), href: "/orders", icon: Package },
-    { id: 'analytics', name: t('sidebar.analytics'), href: "/analytics", icon: BarChart3 },
-    { id: 'ads', name: t('sidebar.ads'), href: "/ads", icon: Target },
-    { id: 'creatives', name: t('sidebar.creatives'), href: "/creatives", icon: Sparkles },
+    { id: 'dashboard', name: t('sidebar.dashboard'), href: "/", icon: Home, permissionModule: 'dashboard' as const },
+    { id: 'hub', name: t('sidebar.hub'), href: "/hub", icon: Store, permissionModule: 'hub' as const },
+    { id: 'orders', name: t('sidebar.orders'), href: "/orders", icon: Package, permissionModule: 'orders' as const },
+    { id: 'analytics', name: t('sidebar.analytics'), href: "/analytics", icon: BarChart3, permissionModule: 'dashboard' as const },
+    { id: 'ads', name: t('sidebar.ads'), href: "/ads", icon: Target, permissionModule: 'ads' as const },
+    { id: 'creatives', name: t('sidebar.creatives'), href: "/creatives", icon: Sparkles, permissionModule: 'ads' as const },
     { 
       id: 'funnels',
       name: t('sidebar.funnels'), 
       icon: Zap,
       isDropdown: true,
-      adminOnly: true, // Only for admins
+      adminOnly: true, // Only for admins/owners
+      permissionModule: 'dashboard' as const,
       subItems: [
         { name: t('sidebar.manageFunnels'), href: "/funnels" },
         { name: t('sidebar.previewValidation'), href: "/funnel-preview" }
       ]
     },
-    { name: t('sidebar.products'), href: "/products", icon: ShoppingCart }, // Always visible
+    { name: t('sidebar.products'), href: "/products", icon: ShoppingCart, permissionModule: 'products' as const },
     { 
       id: 'support',
       name: t('sidebar.support'), 
       icon: MessageSquare,
       isDropdown: true,
-      adminOnly: true, // Only for admins
+      adminOnly: true, // Only for admins/owners
+      permissionModule: 'dashboard' as const,
       subItems: [
         { name: t('sidebar.customerSupport'), href: "/customer-support" },
         { name: t('sidebar.supportSettings'), href: "/customer-support/settings" }
       ]
     },
-    { id: 'integrations', name: t('sidebar.integrations'), href: "/integrations", icon: Plug },
-    { id: 'tools', name: t('sidebar.tools'), href: "/tools", icon: Wrench },
-    { name: t('sidebar.settings'), href: "/settings", icon: Settings }, // Always visible
+    { id: 'integrations', name: t('sidebar.integrations'), href: "/integrations", icon: Plug, permissionModule: 'integrations' as const },
+    { id: 'tools', name: t('sidebar.tools'), href: "/tools", icon: Wrench, permissionModule: 'dashboard' as const },
+    { name: t('sidebar.settings'), href: "/settings", icon: Settings, permissionModule: 'settings' as const },
   ];
 
   // For super_admin and admin roles, show all items
@@ -106,20 +109,106 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = [], 
   }
 
   // Filter items based on operation permissions
+  const isOwner = operationPermissions?.isOwner || false;
+  const isAdmin = operationPermissions?.isAdmin || false;
+  
   return allNavigationItems.filter(item => {
-    // Admin-only items: only show for admins/owners
-    if (item.adminOnly) {
-      return operationPermissions?.isOwner || operationPermissions?.isAdmin || false;
+    // CRITICAL: Configurações e Produtos são padrões e sempre aparecem, independente de permissões
+    const isSettings = item.href === '/settings' || (!item.id && item.name?.toLowerCase() === t('sidebar.settings').toLowerCase());
+    const isProducts = item.href === '/products' || (!item.id && item.name?.toLowerCase() === t('sidebar.products').toLowerCase());
+    
+    if (isSettings || isProducts) {
+      return true; // Sempre mostrar Configurações e Produtos
     }
     
-    // Items without permissionModule should not appear for non-admin users
-    if (!item.permissionModule) {
+    // CRITICAL: Para owners, verificar permissões globais do usuário configuradas no painel administrativo
+    // As permissões de equipe só se aplicam a membros convidados, não ao proprietário
+    if (isOwner) {
+      // Mapear IDs/hrefs de itens do menu para IDs de permissões globais
+      // CRITICAL: Analytics e Criativos precisam ter permissões explícitas, não herdam de dashboard/ads
+      const permissionMap: Record<string, string> = {
+        'dashboard': 'dashboard',
+        'hub': 'hub',
+        'orders': 'orders',
+        'analytics': 'analytics', // Analytics precisa de permissão explícita
+        'ads': 'ads',
+        'creatives': 'creatives', // Criativos precisa de permissão explícita
+        'funnels': 'funnels',
+        'support': 'support',
+        'integrations': 'integrations',
+        'tools': 'tools',
+      };
+      
+      // Buscar permissão por ID primeiro
+      let permissionId = permissionMap[item.id || ''];
+      
+      // Se não encontrou por ID, tentar mapear pela href (para itens sem ID)
+      if (!permissionId && item.href) {
+        const hrefMap: Record<string, string> = {
+          '/': 'dashboard',
+          '/hub': 'hub',
+          '/orders': 'orders',
+          '/analytics': 'analytics', // Analytics precisa de permissão explícita
+          '/ads': 'ads',
+          '/creatives': 'creatives', // Criativos precisa de permissão explícita
+          '/integrations': 'integrations',
+          '/tools': 'tools',
+        };
+        permissionId = hrefMap[item.href] || permissionId;
+      }
+      
+      // Para itens dropdown (funnels, support), verificar pela primeira subItem
+      if (!permissionId && item.isDropdown && item.subItems && item.subItems.length > 0) {
+        const firstHref = item.subItems[0].href;
+        if (firstHref === '/funnels') permissionId = 'funnels';
+        else if (firstHref === '/customer-support' || firstHref?.startsWith('/customer-support')) permissionId = 'support';
+      }
+      
+      // Se o item tem um ID de permissão mapeado, verificar se está nas permissões globais do usuário
+      if (permissionId) {
+        return userPermissions.includes(permissionId);
+      }
+      
+      // Se não tem mapeamento, não mostrar (segurança)
       return false;
     }
     
-    // Check if user has view permission for this module
-    const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team';
-    return operationPermissions.canView(module);
+    // CRITICAL: Configurações e Produtos sempre aparecem para todos (já verificado acima)
+    // Mas precisamos garantir que também apareçam para admins e membros convidados
+    
+    // Admin-only items: only show for admins
+    if (item.adminOnly) {
+      return isAdmin;
+    }
+    
+    // CRITICAL: Items without permissionModule should appear only for admins
+    if (!item.permissionModule) {
+      return isAdmin;
+    }
+    
+    // Para admins, verificar permissões da operação
+    if (isAdmin) {
+      const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team' | 'hub';
+      if (operationPermissions.canView && typeof operationPermissions.canView === 'function') {
+        return operationPermissions.canView(module);
+      }
+      return true;
+    }
+    
+    // Para usuários regulares (viewers/employees), verificar permissões específicas da operação
+    const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team' | 'hub';
+    
+    // CRITICAL: Configurações e Produtos sempre aparecem (verificação adicional para membros convidados)
+    if (module === 'settings' || module === 'products') {
+      return true;
+    }
+    
+    if (operationPermissions.canView && typeof operationPermissions.canView === 'function') {
+      return operationPermissions.canView(module);
+    }
+    
+    // Se não há função canView, não mostrar
+    return false;
   });
 };
 
@@ -137,8 +226,8 @@ export function Sidebar() {
   
   // Recalculate navigation when language changes
   const navigation = useMemo(() => {
-    return getNavigationForRole(user?.role || 'user', user?.permissions || [], t);
-  }, [user?.role, user?.permissions, t, currentLanguage]);
+    return getNavigationForRole(user?.role || 'user', user?.permissions || [], t, operationPermissions);
+  }, [user?.role, user?.permissions, t, currentLanguage, operationPermissions]);
 
   // Handle operation change
   const handleOperationChange = (operationId: string) => {

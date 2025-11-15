@@ -15,8 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
 import cartpandaIcon from "@assets/carticon_1758210690464.avif";
-import digistoreIcon from "@assets/digistore-logo_1757013744090.png";
-import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 import { useTranslation } from "@/hooks/use-translation";
 
 // Helper para retornar ícone da plataforma baseado no dataSource ou ID do pedido
@@ -55,10 +53,11 @@ const getPlatformIcon = (order: any) => {
   if (order.dataSource === 'digistore24' || order.digistoreOrderId || order.id?.startsWith('DS-')) {
     return (
       <img
-        src={digistoreIcon}
+        src="/digistore-logo.png"
         alt="Digistore24"
-        className="w-3 h-3 inline-block mr-1.5 rounded flex-shrink-0 object-contain"
-        loading="lazy"
+        width="30"
+        height="30"
+        className="text-blue-400 rounded w-3 h-3 inline-block mr-1.5 flex-shrink-0 object-contain"
         decoding="async"
         onError={(e) => {
           e.currentTarget.style.display = 'none';
@@ -359,41 +358,6 @@ export default function Orders() {
             
             {/* Order count */}
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex-1">
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsSyncDialogOpen(true)}
-                        disabled={!integrationsStatus?.hasPlatform}
-                        className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap w-full ${
-                          isSyncingInBackground ? 'animate-pulse ring-2 ring-blue-500/50' : ''
-                        }`}
-                        data-testid="button-sync-complete"
-                      >
-                        {isSyncingInBackground ? (
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Zap className="w-4 h-4 mr-2" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {isSyncingInBackground ? t('orders.syncing') : t('orders.syncComplete')}
-                        </span>
-                        <span className="sm:hidden">
-                          {isSyncingInBackground ? t('orders.syncing') : t('orders.syncComplete')}
-                        </span>
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  {!integrationsStatus?.hasPlatform && (
-                    <TooltipContent className="max-w-xs">
-                      <p>{t('orders.needPlatformForSync')}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
               <div className="text-xs text-gray-300 text-center sm:text-left whitespace-nowrap">
                 {totalOrders} {t('orders.orders')}
               </div>
@@ -858,7 +822,6 @@ export default function Orders() {
         onOpenChange={setIsDetailsDialogOpen}
         operationCurrency={operationDetails?.currency || 'EUR'}
       />
-
     </div>
   );
 }

@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import crypto from "crypto";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations, syncSessions, pollingExecutions } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations, syncSessions, pollingExecutions, operationInvitations } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -475,45 +475,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Smart Sync routes - for intelligent incremental synchronization
-  app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
-    try {
-      // CRITICAL: Get user's operation for data isolation
-      const userOperations = await storage.getUserOperations(req.user.id);
-      const currentOperation = userOperations[0];
-      
-      if (!currentOperation) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Nenhuma operação encontrada. Complete o onboarding primeiro." 
-        });
-      }
-
-      const { syncType = "intelligent", maxPages = 3 } = req.body;
-      const { smartSyncService } = await import("./smart-sync-service");
-      
-      const userContext = {
-        userId: req.user.id,
-        operationId: currentOperation.id,
-        storeId: req.user.storeId
-      };
-      
-      let result;
-      if (syncType === "full") {
-        result = await smartSyncService.startFullInitialSync(userContext);
-      } else if (syncType === "incremental") {
-        result = await smartSyncService.startIncrementalSync({ maxPages }, userContext);
-      } else {
-        // Default: intelligent sync
-        result = await smartSyncService.startIntelligentSync(userContext);
-      }
-      
-      res.json(result);
-    } catch (error) {
-      console.error("Smart sync error:", error);
-      res.status(500).json({ message: "Failed to start smart sync" });
-    }
-  });
+  // Smart Sync routes - REMOVED: Manual sync endpoint removed
+  // Sync now happens automatically via webhooks and scheduled workers only
 
   // 🚀 CACHE: Cache para sync stats com TTL de 1 minuto
   const syncStatsCache = new Map<string, { data: any; expiry: number }>();
@@ -548,7 +511,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Shopify-first sync endpoint
+  // ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+  // Em produção, pedidos Shopify são criados/atualizados APENAS via webhooks para melhor performance
   app.post("/api/sync/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { ShopifySyncService } = await import("./shopify-sync-service");
@@ -732,6 +696,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { dashboardService } = await import("./dashboard-service");
       const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req, operationId, dateFrom, dateTo, productId);
+
+      // Debug: verificar valores de custos retornados
+      console.log(`🔍 Debug - Métricas retornadas para o frontend:`, {
+        totalProductCosts: metrics.totalProductCosts,
+        totalShippingCosts: metrics.totalShippingCosts,
+        totalProductCostsBRL: metrics.totalProductCostsBRL,
+        totalShippingCostsBRL: metrics.totalShippingCostsBRL,
+        deliveredOrders: metrics.deliveredOrders,
+        operationId: operationId || 'auto'
+      });
 
       res.json(metrics);
     } catch (error) {
@@ -3374,6 +3348,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Trigger automatic sync when status changes to 'active' or credentials are updated
+      const shouldTriggerSync = 
+        (status !== undefined && status === 'active' && account.status !== 'active') || // Status changed to active
+        (credentials !== undefined && updated.status === 'active'); // Credentials updated and account is active
+
+      if (shouldTriggerSync) {
+        // Trigger sync automatically in background
+        (async () => {
+          try {
+            // Small delay to ensure database transaction is committed
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log(`🚀 Triggering sync for updated warehouse account: ${updated.id} (provider: ${account.providerKey})`);
+            
+            if (account.providerKey === 'fhb') {
+              const { FHBSyncService } = await import('./services/fhb-sync-service');
+              const fhbSyncService = new FHBSyncService();
+              await fhbSyncService.triggerInitialSyncForAccount(updated.id, 90);
+            } else if (account.providerKey === 'european_fulfillment' || account.providerKey === 'elogy') {
+              const { EuropeanFulfillmentSyncService } = await import('./services/european-fulfillment-sync-service');
+              const europeanSyncService = new EuropeanFulfillmentSyncService();
+              await europeanSyncService.triggerInitialSyncForAccount(updated.id, 90);
+            } else if (account.providerKey === 'big_arena') {
+              console.log(`🔄 Disparando sincronização Big Arena para conta ${updated.id}...`);
+              try {
+                const { syncBigArenaAccount } = await import('./workers/big-arena-sync-worker');
+                await syncBigArenaAccount(updated.id, { reason: "manual" });
+                console.log(`✅ Big Arena sync concluída para conta ${updated.id}`);
+              } catch (bigArenaSyncError: any) {
+                console.error(`⚠️ Erro ao executar sync Big Arena para conta ${updated.id}:`, bigArenaSyncError.message);
+                // Não falhar a requisição - o worker tentará novamente automaticamente
+              }
+            }
+            
+            console.log(`✅ Sync triggered successfully for account ${updated.id}`);
+          } catch (syncError: any) {
+            console.error(`❌ Failed to trigger sync for account ${updated.id}:`, syncError.message);
+            // Don't fail the request - sync will be retried by worker
+          }
+        })();
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Update warehouse account error:", error);
@@ -3547,6 +3563,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accountId: req.params.id,
         operationId: operationId.trim()
       });
+      
+      // Trigger automatic sync when operation is linked to warehouse account
+      if (account.status === 'active') {
+        // Trigger sync automatically in background
+        (async () => {
+          try {
+            // Small delay to ensure database transaction is committed
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log(`🚀 Triggering sync for warehouse account linked to operation: ${account.id} (provider: ${account.providerKey})`);
+            
+            if (account.providerKey === 'fhb') {
+              const { FHBSyncService } = await import('./services/fhb-sync-service');
+              const fhbSyncService = new FHBSyncService();
+              await fhbSyncService.triggerInitialSyncForAccount(account.id, 90);
+            } else if (account.providerKey === 'european_fulfillment' || account.providerKey === 'elogy') {
+              const { EuropeanFulfillmentSyncService } = await import('./services/european-fulfillment-sync-service');
+              const europeanSyncService = new EuropeanFulfillmentSyncService();
+              await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+            } else if (account.providerKey === 'big_arena') {
+              console.log(`🔄 Disparando sincronização Big Arena para conta ${account.id}...`);
+              try {
+                const { syncBigArenaAccount } = await import('./workers/big-arena-sync-worker');
+                await syncBigArenaAccount(account.id, { reason: "manual" });
+                console.log(`✅ Big Arena sync concluída para conta ${account.id}`);
+              } catch (bigArenaSyncError: any) {
+                console.error(`⚠️ Erro ao executar sync Big Arena para conta ${account.id}:`, bigArenaSyncError.message);
+                // Não falhar a requisição - o worker tentará novamente automaticamente
+              }
+            }
+            
+            console.log(`✅ Sync triggered successfully for account ${account.id}`);
+          } catch (syncError: any) {
+            console.error(`❌ Failed to trigger sync for account ${account.id}:`, syncError.message);
+            // Don't fail the request - sync will be retried by worker
+          }
+        })();
+      }
       
       res.status(201).json(link);
     } catch (error) {
@@ -4536,6 +4590,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // 1️⃣.5 Sincronizar Digistore24 (SE CONFIGURADO)
+          // ⚠️ SYNC MANUAL - USAR APENAS PARA ONBOARDING/TESTES
+          // Em produção, pedidos devem ser criados/atualizados via webhooks (se disponível)
           if (operationId && typeof operationId === 'string' && hasDigistore) {
             console.log(`📦 [DIGISTORE SYNC] Sincronizando Digistore24 para operação ${operationId}...`);
             
@@ -6584,15 +6640,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "operationId é obrigatório para vincular produto à operação" });
       }
       
-      console.log(`Linking product ${linkData.sku} for user ${userId} to operation ${operationId}`);
+      console.log(`🔗 Vinculando produto ${linkData.sku} para usuário ${userId} na operação ${operationId}`);
+      
+      // Obter storeId da operação para usar no recálculo
+      const userOperations = await storage.getUserOperations(userId);
+      const operation = userOperations.find(op => op.id === operationId);
+      
+      if (!operation) {
+        return res.status(403).json({ message: "Operação não encontrada ou acesso negado" });
+      }
+      
       const userProduct = await storage.linkProductToUserByOperation(userId, operationId, linkData);
-      res.status(201).json(userProduct);
+      
+      // Recalcular custos de pedidos existentes com esse SKU
+      try {
+        const { recalculateOrderCostsForSku, recalculateAllOrderCostsForOperation } = await import('./services/order-cost-recalculation-service');
+        const { invalidateDashboardCache } = await import('./services/dashboard-cache-service');
+        
+        // recalculateOrderCostsForSku já normaliza o SKU internamente
+        console.log(`🔄 Recalculando custos de pedidos existentes com SKU "${linkData.sku}"...`);
+        const updatedOrdersCount = await recalculateOrderCostsForSku(
+          linkData.sku,
+          operation.storeId,
+          operationId
+        );
+        
+        // Se não encontrou nenhum pedido com esse SKU específico, recalcular TODOS os pedidos da operação
+        // Isso pode acontecer se os SKUs nos pedidos estiverem em formato diferente ou concatenado
+        if (updatedOrdersCount === 0) {
+          console.log(`⚠️ Nenhum pedido encontrado com SKU específico "${linkData.sku}" - recalculando TODOS os pedidos da operação...`);
+          const allUpdatedCount = await recalculateAllOrderCostsForOperation(
+            operation.storeId,
+            operationId
+          );
+          
+          if (allUpdatedCount > 0) {
+            console.log(`✅ ${allUpdatedCount} pedido(s) atualizado(s) ao recalcular todos os pedidos`);
+          }
+        }
+        
+        // Invalidar cache do dashboard para forçar recálculo das métricas
+        await invalidateDashboardCache(operationId);
+        console.log(`✅ Cache do dashboard invalidado para operação ${operationId}`);
+        
+        if (updatedOrdersCount > 0) {
+          console.log(`✅ ${updatedOrdersCount} pedido(s) atualizado(s) com novos custos`);
+        }
+        
+        res.status(201).json({
+          ...userProduct,
+          ordersUpdated: updatedOrdersCount,
+          message: updatedOrdersCount > 0 
+            ? `${updatedOrdersCount} pedido(s) atualizado(s) com novos custos` 
+            : 'Produto vinculado com sucesso'
+        });
+      } catch (recalcError) {
+        // Não falhar a vinculação se o recálculo der erro
+        console.error(`⚠️ Erro ao recalcular custos de pedidos (continuando mesmo assim):`, recalcError);
+        res.status(201).json({
+          ...userProduct,
+          ordersUpdated: 0,
+          warning: 'Produto vinculado, mas houve erro ao recalcular custos de pedidos existentes'
+        });
+      }
     } catch (error) {
       if (error instanceof Error) {
         res.status(400).json({ message: error.message });
       } else {
         res.status(400).json({ message: "Erro ao vincular produto" });
       }
+    }
+  });
+
+  // Endpoint para recalcular custos de TODOS os pedidos de uma operação
+  app.post('/api/operations/:operationId/recalculate-costs', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const userId = req.user.id;
+
+      // Verificar permissão
+      await requireOperationAccess(req, res, operationId, 'dashboard.view');
+
+      // Obter storeId da operação
+      const userOperations = await storage.getUserOperations(userId);
+      const operation = userOperations.find(op => op.id === operationId);
+
+      if (!operation) {
+        return res.status(403).json({ message: "Operação não encontrada ou acesso negado" });
+      }
+
+      // Recalcular custos de todos os pedidos
+      const { recalculateAllOrderCostsForOperation } = await import('./services/order-cost-recalculation-service');
+      const { invalidateDashboardCache } = await import('./services/dashboard-cache-service');
+
+      console.log(`🔄 [MANUAL RECALC] Recalculando custos de TODOS os pedidos da operação ${operationId}...`);
+      const updatedOrdersCount = await recalculateAllOrderCostsForOperation(
+        operation.storeId,
+        operationId
+      );
+
+      // Invalidar cache do dashboard
+      await invalidateDashboardCache(operationId);
+      console.log(`✅ [MANUAL RECALC] Cache do dashboard invalidado para operação ${operationId}`);
+
+      res.json({
+        success: true,
+        updatedOrdersCount,
+        message: `${updatedOrdersCount} pedido(s) atualizado(s) com novos custos`
+      });
+    } catch (error) {
+      console.error('❌ Erro ao recalcular custos de pedidos:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
     }
   });
 
@@ -7813,7 +7974,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sync Shopify data with new Shopify-first approach
+  // ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+  // Em produção, pedidos Shopify são criados/atualizados APENAS via webhooks para melhor performance
   app.post("/api/integrations/shopify/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;

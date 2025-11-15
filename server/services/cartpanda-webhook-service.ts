@@ -1,8 +1,11 @@
 // 🔔 CartPanda Webhook Service
 // Gerencia webhooks do CartPanda para sincronização automática em tempo real
+// 
+// IMPORTANTE: Pedidos CartPanda são criados/atualizados APENAS via webhooks
+// Não use polling workers - eles foram desabilitados para melhor performance
 
 import { db } from '../db';
-import { cartpandaIntegrations, operations, stores } from '@shared/schema';
+import { cartpandaIntegrations, operations, stores, orders } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import { CartPandaService } from '../cartpanda-service';
@@ -178,39 +181,149 @@ export class CartPandaWebhookService {
 
   /**
    * Processa webhook de pedido pago
+   * Processa pedido CartPanda e cria/atualiza na tabela orders
    */
   async handleOrderPaid(payload: any, operationId: string): Promise<void> {
     try {
-      console.log(`💰 [WEBHOOK] Pedido pago: ${payload.order?.id || payload.id}`);
+      const cartpandaOrder = payload.order || payload;
+      const orderId = cartpandaOrder.id;
       
-      // TODO: Implementar processamento de pedido CartPanda quando sync service estiver pronto
-      // Por enquanto, apenas disparar staging sync
+      console.log(`💰 [WEBHOOK] Pedido pago CartPanda: ${orderId}`);
       
-      // Invalidar cache do dashboard para esta operação
-      invalidateDashboardCache(operationId);
-      
+      // Buscar operação para obter storeId
       const [operation] = await db
         .select({ storeId: operations.storeId })
         .from(operations)
         .where(eq(operations.id, operationId))
         .limit(1);
       
-      if (operation?.storeId) {
-        const [store] = await db
-          .select({ ownerId: stores.ownerId })
-          .from(stores)
-          .where(eq(stores.id, operation.storeId))
-          .limit(1);
-        
-        if (store?.ownerId) {
-          // Disparar staging sync em background (não bloqueia resposta)
-          performStagingSync(store.ownerId).catch(error => {
-            console.error('❌ Erro no staging sync automático após webhook CartPanda:', error);
-          });
-        }
+      if (!operation) {
+        throw new Error(`Operação ${operationId} não encontrada`);
       }
       
-      console.log(`✅ Pedido CartPanda processado via webhook: ${payload.order?.id || payload.id}`);
+      // Verificar se o pedido já existe
+      const existingOrder = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, `cartpanda_${orderId}`))
+        .limit(1);
+      
+      // Funções auxiliares para mapear status
+      const mapCartPandaStatus = (status: string): string => {
+        const statusMap: Record<string, string> = {
+          'pending': 'pending',
+          'confirmed': 'confirmed', 
+          'processing': 'confirmed',
+          'shipped': 'shipped',
+          'delivered': 'delivered',
+          'cancelled': 'cancelled',
+          'returned': 'returned'
+        };
+        return statusMap[status.toLowerCase()] || 'pending';
+      };
+      
+      const mapCartPandaPaymentStatus = (paymentStatus: string): string => {
+        const paymentMap: Record<string, string> = {
+          'paid': 'paid',
+          'pending': 'unpaid',
+          'refunded': 'refunded',
+          'partially_refunded': 'paid',
+          'unpaid': 'unpaid'
+        };
+        return paymentMap[paymentStatus.toLowerCase()] || 'unpaid';
+      };
+      
+      // Calcular custos de produto e envio
+      const { calculateOrderCosts } = await import('../utils/order-cost-calculator');
+      const orderStatus = mapCartPandaStatus(cartpandaOrder.status || 'pending');
+      const orderProducts = cartpandaOrder.items || cartpandaOrder.line_items || [];
+      const costs = await calculateOrderCosts(orderStatus, orderProducts, operation.storeId);
+      
+      const orderData = {
+        id: `cartpanda_${orderId}`,
+        storeId: operation.storeId,
+        operationId: operationId,
+        dataSource: 'cartpanda' as const,
+        
+        // Customer information
+        customerId: cartpandaOrder.customer?.id?.toString() || null,
+        customerName: cartpandaOrder.customer 
+          ? `${cartpandaOrder.customer.first_name || ''} ${cartpandaOrder.customer.last_name || ''}`.trim() || 'Cliente CartPanda' 
+          : 'Cliente CartPanda',
+        customerEmail: cartpandaOrder.email || cartpandaOrder.customer?.email || null,
+        customerPhone: cartpandaOrder.customer?.phone || null,
+        customerAddress: cartpandaOrder.billing_address ? JSON.stringify(cartpandaOrder.billing_address) : null,
+        customerCity: null,
+        customerState: null,
+        customerCountry: null,
+        customerZip: null,
+        
+        // Order details
+        status: orderStatus,
+        paymentStatus: mapCartPandaPaymentStatus((cartpandaOrder as any).payment_status || 'unpaid'),
+        paymentMethod: (cartpandaOrder as any).payment_method || 'unknown',
+        
+        // Financial
+        total: (cartpandaOrder as any).total || (cartpandaOrder as any).total_price || '0.00',
+        currency: (cartpandaOrder as any).currency || 'BRL',
+        
+        // Products
+        products: orderProducts,
+        
+        // Provider
+        provider: 'cartpanda' as const,
+        providerOrderId: orderId?.toString(),
+        
+        // Custos calculados
+        productCost: costs.productCost.toFixed(2),
+        shippingCost: costs.shippingCost.toFixed(2),
+        
+        // Timestamps
+        orderDate: new Date(cartpandaOrder.created_at || Date.now()),
+        lastStatusUpdate: new Date(cartpandaOrder.updated_at || Date.now()),
+        
+        // Store complete CartPanda data
+        providerData: cartpandaOrder,
+        
+        // Standard timestamps
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      if (existingOrder.length > 0) {
+        // Atualizar pedido existente
+        await db
+          .update(orders)
+          .set({
+            ...orderData,
+            updatedAt: new Date()
+          })
+          .where(eq(orders.id, `cartpanda_${orderId}`));
+        console.log(`✅ [WEBHOOK] Pedido CartPanda ${orderId} atualizado`);
+      } else {
+        // Criar novo pedido
+        await db.insert(orders).values(orderData);
+        console.log(`✅ [WEBHOOK] Pedido CartPanda ${orderId} criado`);
+      }
+      
+      // Invalidar cache do dashboard para esta operação
+      invalidateDashboardCache(operationId);
+      
+      // Disparar staging sync automático para fazer matching com transportadora
+      const [store] = await db
+        .select({ ownerId: stores.ownerId })
+        .from(stores)
+        .where(eq(stores.id, operation.storeId))
+        .limit(1);
+      
+      if (store?.ownerId) {
+        // Disparar staging sync em background (não bloqueia resposta)
+        performStagingSync(store.ownerId).catch(error => {
+          console.error('❌ Erro no staging sync automático após webhook CartPanda:', error);
+        });
+      }
+      
+      console.log(`✅ Pedido CartPanda processado via webhook: ${orderId}`);
     } catch (error: any) {
       console.error('❌ Erro ao processar webhook de pedido pago CartPanda:', error);
       throw error;

@@ -1,5 +1,8 @@
 // 🔔 Shopify Webhook Service
 // Gerencia webhooks do Shopify para sincronização automática em tempo real
+// 
+// IMPORTANTE: Pedidos Shopify são criados/atualizados APENAS via webhooks
+// Não use polling workers - eles foram desabilitados para melhor performance
 
 import { db } from '../db';
 import { shopifyIntegrations, operations, stores } from '@shared/schema';

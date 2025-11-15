@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface OperationPermissions {
   dashboard?: { view?: boolean; export?: boolean };
+  hub?: { view?: boolean; export?: boolean };
   orders?: { view?: boolean; create?: boolean; edit?: boolean; delete?: boolean };
   products?: { view?: boolean; create?: boolean; edit?: boolean; delete?: boolean };
   ads?: { view?: boolean; create?: boolean; edit?: boolean; delete?: boolean };
@@ -41,18 +42,52 @@ export function useOperationPermissions() {
   });
 
   // Find current user's access in the team members
-  const currentUserAccess = teamData?.members.find(
+  let currentUserAccess = teamData?.members.find(
     (member) => member.id === user?.id
   );
 
+  // CRITICAL: Se o usuário não foi encontrado na lista de membros, verificar se é o owner
+  // através do ownerId retornado pela API. Permissões de equipe não se aplicam ao proprietário.
+  const isOwnerById = teamData?.ownerId && user?.id && teamData.ownerId === user.id;
+  
+  if (!currentUserAccess && isOwnerById) {
+    // Se o usuário é o owner mas não está na lista de membros, criar objeto de acesso
+    // O owner tem todas as permissões por padrão
+    currentUserAccess = {
+      id: user.id,
+      role: 'owner',
+      permissions: {
+        dashboard: { view: true, export: true },
+        hub: { view: true, export: true },
+        orders: { view: true, create: true, edit: true, delete: true },
+        products: { view: true, create: true, edit: true, delete: true },
+        ads: { view: true, create: true, edit: true, delete: true },
+        integrations: { view: true, edit: true },
+        settings: { view: true, edit: true },
+        team: { view: true, invite: true, manage: true },
+      },
+    };
+  }
+
   // Helper functions
   const hasPermission = (module: keyof OperationPermissions, action: string): boolean => {
+    // Se o usuário é owner por ID mas não está na lista de membros
+    if (isOwnerById && !currentUserAccess) {
+      return true; // Owner tem todas as permissões
+    }
+
     if (!currentUserAccess) {
       return false;
     }
     
-    // Owners and admins have all permissions
-    if (currentUserAccess.role === 'owner' || currentUserAccess.role === 'admin') {
+    // CRITICAL: Owners têm todas as permissões, independente das configurações na tabela
+    // Permissões de equipe não se aplicam ao proprietário
+    if (currentUserAccess.role === 'owner' || isOwnerById) {
+      return true;
+    }
+    
+    // Admins também têm todas as permissões
+    if (currentUserAccess.role === 'admin') {
       return true;
     }
 
@@ -95,7 +130,7 @@ export function useOperationPermissions() {
   return {
     isLoading,
     permissions: currentUserAccess?.permissions || null,
-    role: currentUserAccess?.role || null,
+    role: currentUserAccess?.role || (isOwnerById ? 'owner' : null),
     hasPermission,
     canView,
     canCreate,
@@ -103,9 +138,9 @@ export function useOperationPermissions() {
     canDelete,
     canManageTeam,
     canInviteTeam,
-    isOwner: currentUserAccess?.role === 'owner',
-    isAdmin: currentUserAccess?.role === 'admin',
-    isViewer: currentUserAccess?.role === 'viewer',
+    isOwner: currentUserAccess?.role === 'owner' || isOwnerById || false,
+    isAdmin: currentUserAccess?.role === 'admin' || false,
+    isViewer: currentUserAccess?.role === 'viewer' || false,
   };
 }
 

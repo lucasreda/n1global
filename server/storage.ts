@@ -766,10 +766,14 @@ export class DatabaseStorage implements IStorage {
 
   // User Products methods implementation
   async findProductBySku(sku: string): Promise<Product | undefined> {
+    // Normalizar SKU para minúsculas para comparação case-insensitive
+    const { normalizeSku } = await import('./utils/sku-parser');
+    const normalizedSku = normalizeSku(sku);
+    
     const [product] = await db
       .select()
       .from(products)
-      .where(eq(products.sku, sku));
+      .where(sql`LOWER(${products.sku}) = ${normalizedSku}`);
     return product || undefined;
   }
 
@@ -957,6 +961,10 @@ export class DatabaseStorage implements IStorage {
       return undefined; // Cannot search without storeId
     }
     
+    // Normalizar SKU para minúsculas para comparação case-insensitive
+    const { normalizeSku } = await import('./utils/sku-parser');
+    const normalizedSku = normalizeSku(sku);
+    
     const result = await db
       .select({
         id: userProducts.id,
@@ -975,12 +983,12 @@ export class DatabaseStorage implements IStorage {
       .from(userProducts)
       .innerJoin(products, eq(userProducts.productId, products.id))
       .where(and(
-        eq(userProducts.sku, sku),
+        sql`LOWER(${userProducts.sku}) = ${normalizedSku}`,
         eq(userProducts.storeId, storeId),
         eq(userProducts.isActive, true)
       ))
       .limit(1);
-
+    
     return result[0] || undefined;
   }
 

@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { CartPandaService, CartPandaCredentials } from "./cartpanda-service";
 import { db } from "./db";
-import { cartpandaIntegrations, orders } from "@shared/schema";
+import { cartpandaIntegrations, orders, operations } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { authenticateToken } from "./auth-middleware";
 import { validateOperationAccess } from "./middleware/operation-access";
@@ -225,6 +225,8 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
 /**
  * Sincronizar pedidos da CartPanda
  */
+// ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+// Em produção, pedidos são criados/atualizados APENAS via webhooks para melhor performance
 router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async (req: AuthRequest, res: Response) => {
   try {
     const { operationId } = req.query;
@@ -472,9 +474,28 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
           .where(eq(orders.id, `cartpanda_${cartpandaOrder.id}`))
           .limit(1);
 
+        // Buscar storeId da operação
+        const [operation] = await db
+          .select({ storeId: operations.storeId })
+          .from(operations)
+          .where(eq(operations.id, operationId))
+          .limit(1);
+        
+        if (!operation) {
+          console.error(`❌ Operação ${operationId} não encontrada para pedido CartPanda ${cartpandaOrder.id}`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Calcular custos de produto e envio
+        const { calculateOrderCosts } = await import('./utils/order-cost-calculator');
+        const orderStatus = (cartpandaOrder as any).status || 'pending';
+        const orderProducts = (cartpandaOrder as any).items || (cartpandaOrder as any).line_items || [];
+        const costs = await calculateOrderCosts(orderStatus, orderProducts, operation.storeId);
+        
         const orderData = {
           id: `cartpanda_${cartpandaOrder.id}`,
-          storeId: '4a4377cc-38ed-44d2-a925-cd043c63fc31', // default store ID
+          storeId: operation.storeId,
           operationId: operationId,
           dataSource: 'cartpanda',
           
@@ -504,6 +525,10 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
           // Provider
           provider: 'cartpanda',
           providerOrderId: cartpandaOrder.id?.toString(),
+          
+          // Custos calculados
+          productCost: costs.productCost.toFixed(2),
+          shippingCost: costs.shippingCost.toFixed(2),
           
           // Timestamps
           orderDate: new Date(cartpandaOrder.created_at || Date.now()),

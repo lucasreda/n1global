@@ -45,9 +45,9 @@ const DigistoreIcon = ({ className, size }: { className?: string; size?: number 
   <img
     src="/digistore-logo.png"
     alt="Digistore24"
-    width={size || 30}
-    height={size || 30}
-    className={`${className ? className + ' ' : ''}rounded`}
+    width="30"
+    height="30"
+    className={`text-blue-400 rounded ${className || ''}`}
     decoding="async"
     onError={(e) => {
       e.currentTarget.style.display = 'none';
@@ -230,9 +230,9 @@ export default function Integrations() {
               <div key={integration.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`integration-${integration.id}`}>
                 <div className="flex items-center space-x-3 mb-4">
                   <IconComponent className={`text-${integration.color}-400`} size={30} />
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h4 className="text-white font-medium">{integration.name}</h4>
-                    <p className="text-gray-400 text-sm">{integration.description}</p>
+                    <p className="text-gray-400 text-sm whitespace-nowrap truncate">{integration.description}</p>
                   </div>
                 </div>
                 

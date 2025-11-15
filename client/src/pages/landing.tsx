@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn, MapPin, Clock, Award, ChevronDown, ChevronUp, MessageSquare, Star, CheckCircle2 } from "lucide-react";
 import cartLogo from "@assets/cart-logo_1757013744084.png";
-import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
 import openLogo from "@assets/open-logo_1757013744090.png";
 import shopifyLogo from "@assets/shopify-logo_1757013744091.png";
 import logoPath from "@assets/logo_1756142152045.png";
@@ -376,10 +375,12 @@ export default function Landing() {
                   loading="lazy"
                 />
                 <img 
-                  src={digistoreLogo} 
-                  alt="Digistore24 - Gateway de pagamento integrado à estrutura N1" 
-                  className="h-6 sm:h-5 lg:h-7"
-                  loading="lazy"
+                  src="/digistore-logo.png"
+                  alt="Digistore24 - Gateway de pagamento integrado à estrutura N1"
+                  width="30"
+                  height="30"
+                  className="text-blue-400 rounded h-6 sm:h-5 lg:h-7"
+                  decoding="async"
                 />
                 <img 
                   src={openLogo} 

@@ -461,6 +461,15 @@ export class ShopifySyncService {
       updatedAt: new Date(),
     };
     
+    // Calcular custos de produto e envio no momento da criação/atualização
+    const { calculateOrderCosts } = await import('./utils/order-cost-calculator');
+    const orderStatus = this.mapShopifyFulfillmentStatus(shopifyOrder.fulfillment_status || '');
+    const costs = await calculateOrderCosts(orderStatus, shopifyOrder.line_items || [], operation.storeId);
+    
+    // Adicionar custos calculados ao orderData
+    orderData.productCost = costs.productCost.toFixed(2);
+    orderData.shippingCost = costs.shippingCost.toFixed(2);
+    
     const isNewOrder = !existingOrder;
     
     // Prepare update data - exclude status if carrier already imported it

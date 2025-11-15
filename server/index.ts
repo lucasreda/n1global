@@ -216,21 +216,28 @@ app.use((req, res, next) => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 
-  // 🛍️ Start Shopify/CartPanda/Digistore24/Big Arena Polling Workers
-  console.log('🛍️  Starting Shopify/CartPanda/Digistore24/Big Arena Polling Workers...');
+  // 🛍️ Polling Workers - DESABILITADOS
+  // Pedidos são criados/atualizados APENAS via webhooks para melhor performance e menos erros
+  // Apenas Big Arena continua usando polling (não suporta webhooks nativamente)
+  console.log('🛍️  Polling Workers Status:');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('✅ Shopify: Webhooks ativos (polling desabilitado)');
+  console.log('✅ CartPanda: Webhooks ativos (polling desabilitado)');
+  console.log('⚠️  Digistore24: Polling desabilitado (verificar suporte a webhooks)');
+  console.log('✅ Big Arena: Polling ativo (não suporta webhooks nativamente)');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  // DESABILITADO: Shopify polling worker - usar apenas webhooks
+  // const { startShopifyPollingWorker } = await import('./workers/shopify-sync-worker');
+  // startShopifyPollingWorker();
 
-  // Start Shopify polling worker
-  const { startShopifyPollingWorker } = await import('./workers/shopify-sync-worker');
-  startShopifyPollingWorker();
+  // DESABILITADO: CartPanda polling worker - usar apenas webhooks
+  // const { startCartPandaPollingWorker } = await import('./workers/cartpanda-sync-worker');
+  // startCartPandaPollingWorker();
 
-  // Start CartPanda polling worker
-  const { startCartPandaPollingWorker } = await import('./workers/cartpanda-sync-worker');
-  startCartPandaPollingWorker();
-
-  // Start Digistore24 polling worker
-  const { startDigistoreSyncWorker } = await import('./workers/digistore-sync-worker');
-  startDigistoreSyncWorker();
+  // DESABILITADO: Digistore24 polling worker - verificar se suporta webhooks nativamente
+  // const { startDigistoreSyncWorker } = await import('./workers/digistore-sync-worker');
+  // startDigistoreSyncWorker();
 
   // Start Big Arena polling worker
   const { startBigArenaSyncWorker } = await import('./workers/big-arena-sync-worker');
@@ -313,7 +320,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen(port, "0.0.0.0", () => {
+  
   // reusePort não é suportado no Windows, então removemos para compatibilidade multiplataforma
   const listenOptions: any = {
     port,

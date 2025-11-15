@@ -220,9 +220,17 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
 });
 
 /**
- * Sincronizar pedidos manualmente
+ * Sincronizar pedidos manualmente - REMOVED: Manual sync removed
+ * Sync now happens automatically via webhooks only
  */
 router.post("/digistore/sync", authenticateToken, validateOperationAccess, async (req, res) => {
+  // Manual sync removed - orders now come via webhooks only
+  return res.status(403).json({
+    error: "Sincronização manual removida",
+    message: "Os pedidos agora são importados apenas via webhooks configurados"
+  });
+  
+  /* REMOVED - Manual sync code
   try {
     const { operationId } = req.query;
 
@@ -245,6 +253,9 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
     const transactionId =
       customOrderId.length > 0 ? `${orderSlug}-${timestamp}` : `${timestamp}`;
 
+    // ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+    // Em produção, pedidos devem ser criados/atualizados via webhooks (se disponível) para melhor performance
+    // Digistore24 pode não suportar webhooks nativamente - verificar documentação da API
     console.log(`🔄 Iniciando sincronização manual Digistore24 para operação: ${operationId}`);
 
     // Buscar integração
@@ -396,6 +407,7 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
       details: error instanceof Error ? error.message : "Erro desconhecido"
     });
   }
+  */
 });
 
 /**
