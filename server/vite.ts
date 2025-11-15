@@ -107,12 +107,43 @@ export function serveStatic(app: Express) {
     if (fs.existsSync(assetsDir)) {
       const assetsFiles = fs.readdirSync(assetsDir);
       console.log(`📦 Assets files (${assetsFiles.length}):`, assetsFiles.slice(0, 5).join(", "), assetsFiles.length > 5 ? `...` : "");
+      
+      // Verify critical assets exist
+      const hasCss = assetsFiles.some(f => f.endsWith('.css'));
+      const hasJs = assetsFiles.some(f => f.endsWith('.js'));
+      console.log(`📦 Assets check - CSS: ${hasCss ? '✅' : '❌'}, JS: ${hasJs ? '✅' : '❌'}`);
+    } else {
+      console.warn("⚠️ Assets directory not found:", assetsDir);
     }
   } catch (error) {
     console.warn("⚠️ Could not list files in dist/public:", error);
   }
 
+  // Add middleware to log asset requests for debugging
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/assets/')) {
+      const originalSend = res.send;
+      const originalEnd = res.end;
+      
+      res.send = function(body: any) {
+        console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${res.getHeader('Content-Type')}`);
+        return originalSend.call(this, body);
+      };
+      
+      res.end = function(chunk?: any) {
+        if (chunk && res.statusCode === 200) {
+          console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${res.getHeader('Content-Type')}`);
+        } else if (res.statusCode !== 200) {
+          console.warn(`⚠️ [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}`);
+        }
+        return originalEnd.call(this, chunk);
+      };
+    }
+    next();
+  });
+
   // Serve static files with proper headers and caching
+  // IMPORTANT: This must be called BEFORE the catch-all route
   app.use(express.static(distPath, {
     maxAge: process.env.NODE_ENV === "production" ? "1y" : "0",
     etag: true,
@@ -128,12 +159,25 @@ export function serveStatic(app: Express) {
   }));
 
   // fall through to index.html if the file doesn't exist
-  // but skip API routes
+  // but skip API routes and static assets
   app.use("*", (req, res, next) => {
     // Skip API routes - let them be handled by API routes
     if (req.originalUrl.startsWith("/api")) {
       return next();
     }
+    
+    // Skip static asset requests - they should already be handled by express.static above
+    if (req.originalUrl.startsWith("/assets/") || 
+        req.originalUrl.startsWith("/images/") || 
+        req.originalUrl.endsWith(".css") || 
+        req.originalUrl.endsWith(".js") ||
+        req.originalUrl.endsWith(".png") ||
+        req.originalUrl.endsWith(".jpg") ||
+        req.originalUrl.endsWith(".svg") ||
+        req.originalUrl.endsWith(".ico")) {
+      return next();
+    }
+    
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
