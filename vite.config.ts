@@ -40,13 +40,13 @@ export default defineConfig({
       "@assets": path.resolve(projectRoot, "attached_assets"),
     },
   },
-  root: projectRoot,
+  root: clientDir,
   build: {
     outDir: path.resolve(projectRoot, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: indexHtmlPath,
+        main: path.resolve(clientDir, "index.html"),
       },
     },
   },
