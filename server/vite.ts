@@ -119,6 +119,23 @@ export function serveStatic(app: Express) {
     console.warn("⚠️ Could not list files in dist/public:", error);
   }
 
+  // Add middleware to log ALL requests before express.static
+  // This helps diagnose why asset requests might not be reaching the server
+  app.use((req, res, next) => {
+    // Log ALL requests to see what's being intercepted
+    if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
+      console.log(`🔍 [ALL REQUESTS] ${req.method} ${req.path} - Original URL: ${req.originalUrl}`);
+      console.log(`🔍 [ALL REQUESTS] Headers: ${JSON.stringify(Object.keys(req.headers))}`);
+      
+      // Log when response finishes
+      res.on('finish', () => {
+        const contentType = res.getHeader('Content-Type') || 'unknown';
+        console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${contentType}`);
+      });
+    }
+    next();
+  });
+
   // Serve static files with proper headers and caching
   // IMPORTANT: This must be called BEFORE the catch-all route
   // index: false prevents express.static from automatically serving index.html
@@ -138,9 +155,11 @@ export function serveStatic(app: Express) {
         res.setHeader("Content-Type", "text/css; charset=utf-8");
         // Prevent CSS from being blocked
         res.setHeader("X-Content-Type-Options", "nosniff");
+        console.log(`✅ [STATIC] Serving CSS: ${filePath}`);
       } else if (filePath.endsWith(".js")) {
         res.setHeader("Content-Type", "application/javascript; charset=utf-8");
         res.setHeader("X-Content-Type-Options", "nosniff");
+        console.log(`✅ [STATIC] Serving JS: ${filePath}`);
       } else if (filePath.endsWith(".json")) {
         res.setHeader("Content-Type", "application/json; charset=utf-8");
       } else if (filePath.endsWith(".png")) {
@@ -156,26 +175,6 @@ export function serveStatic(app: Express) {
       }
     },
   }));
-
-  // Add middleware to log asset requests BEFORE express.static
-  // This intercepts requests and logs when they complete
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
-      // Log the request immediately
-      console.log(`🔍 [ASSET REQUEST] ${req.method} ${req.path}`);
-      
-      // Log when response finishes (after express.static serves the file)
-      res.on('finish', () => {
-        if (res.statusCode === 200 || res.statusCode === 304) {
-          const contentType = res.getHeader('Content-Type') || 'unknown';
-          console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${contentType}`);
-        } else if (res.statusCode >= 400) {
-          console.warn(`⚠️ [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode} (arquivo não encontrado ou erro)`);
-        }
-      });
-    }
-    next();
-  });
 
   // fall through to index.html if the file doesn't exist
   // but skip API routes and static assets
