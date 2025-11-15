@@ -39,6 +39,10 @@ export default defineConfig({
       "@shared": path.resolve(projectRoot, "shared"),
       "@assets": path.resolve(projectRoot, "attached_assets"),
     },
+    extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
+  },
+  optimizeDeps: {
+    include: ["@shared/schema"],
   },
   root: clientDir,
   build: {
