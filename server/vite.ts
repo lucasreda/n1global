@@ -119,9 +119,14 @@ export function serveStatic(app: Express) {
     console.warn("⚠️ Could not list files in dist/public:", error);
   }
 
-  // Add middleware to log asset requests for debugging
+  // Add middleware to log asset requests and ensure correct headers
   app.use((req, res, next) => {
-    if (req.path.startsWith('/assets/')) {
+    if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
+      // Enable CORS for assets
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      
       const originalEnd = res.end;
       
       res.end = function(chunk?: any) {
@@ -146,12 +151,32 @@ export function serveStatic(app: Express) {
     maxAge: process.env.NODE_ENV === "production" ? "1y" : "0",
     etag: true,
     lastModified: true,
-    setHeaders: (res, filePath) => {
+    setHeaders: (res, filePath, stat) => {
+      // Enable CORS for all static files
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      
       // Set proper Content-Type for CSS and JS files
       if (filePath.endsWith(".css")) {
         res.setHeader("Content-Type", "text/css; charset=utf-8");
+        // Prevent CSS from being blocked
+        res.setHeader("X-Content-Type-Options", "nosniff");
       } else if (filePath.endsWith(".js")) {
         res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+      } else if (filePath.endsWith(".json")) {
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+      } else if (filePath.endsWith(".png")) {
+        res.setHeader("Content-Type", "image/png");
+      } else if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) {
+        res.setHeader("Content-Type", "image/jpeg");
+      } else if (filePath.endsWith(".svg")) {
+        res.setHeader("Content-Type", "image/svg+xml");
+      } else if (filePath.endsWith(".webp")) {
+        res.setHeader("Content-Type", "image/webp");
+      } else if (filePath.endsWith(".avif")) {
+        res.setHeader("Content-Type", "image/avif");
       }
     },
   }));
@@ -224,11 +249,15 @@ export function serveStatic(app: Express) {
       console.warn("⚠️ Could not read index.html for logging:", error);
     }
     
-    // Set headers to prevent caching of index.html
+    // Set headers to prevent caching of index.html and ensure proper loading
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    // Ensure assets can be loaded
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    // Remove CSP that might block assets (if any)
+    // Don't set strict CSP - let browser load assets normally
     
     res.sendFile(indexPath, (err) => {
       if (err) {
