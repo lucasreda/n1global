@@ -158,14 +158,36 @@ export function serveStatic(app: Express) {
         // Force revalidation to prevent stale cache
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         res.setHeader("Vary", "Accept-Encoding");
-        console.log(`✅ [STATIC] Serving CSS: ${filePath}`);
+        
+        // Verify CSS file is not empty or corrupted
+        try {
+          const stats = fs.statSync(filePath);
+          console.log(`✅ [STATIC] Serving CSS: ${filePath} (size: ${stats.size} bytes)`);
+          if (stats.size === 0) {
+            console.error(`❌ [STATIC] CSS file is empty: ${filePath}`);
+          } else if (stats.size < 100) {
+            console.warn(`⚠️ [STATIC] CSS file seems too small: ${filePath} (${stats.size} bytes)`);
+          }
+        } catch (error) {
+          console.error(`❌ [STATIC] Error reading CSS file stats: ${filePath}`, error);
+        }
       } else if (filePath.endsWith(".js")) {
         res.setHeader("Content-Type", "application/javascript; charset=utf-8");
         res.setHeader("X-Content-Type-Options", "nosniff");
         // Force revalidation to prevent stale cache
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         res.setHeader("Vary", "Accept-Encoding");
-        console.log(`✅ [STATIC] Serving JS: ${filePath}`);
+        
+        // Verify JS file is not empty or corrupted
+        try {
+          const stats = fs.statSync(filePath);
+          console.log(`✅ [STATIC] Serving JS: ${filePath} (size: ${stats.size} bytes)`);
+          if (stats.size === 0) {
+            console.error(`❌ [STATIC] JS file is empty: ${filePath}`);
+          }
+        } catch (error) {
+          console.error(`❌ [STATIC] Error reading JS file stats: ${filePath}`, error);
+        }
       } else if (filePath.endsWith(".json")) {
         res.setHeader("Content-Type", "application/json; charset=utf-8");
       } else if (filePath.endsWith(".png")) {
