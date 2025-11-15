@@ -236,41 +236,52 @@ export function serveStatic(app: Express) {
       return res.status(500).send("index.html not found");
     }
     
-    // Read and log which assets are referenced in index.html
-    try {
-      const indexContent = fs.readFileSync(indexPath, "utf-8");
-      
-      // Extract CSS and JS asset references
-      const cssMatches = indexContent.match(/href=["']([^"']*\.css[^"']*)["']/g);
-      const jsMatches = indexContent.match(/src=["']([^"']*\.js[^"']*)["']/g);
-      
-      if (cssMatches && cssMatches.length > 0) {
-        console.log(`📄 [HTML] CSS assets in index.html:`, cssMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
-      }
-      if (jsMatches && jsMatches.length > 0) {
-        console.log(`📄 [HTML] JS assets in index.html:`, jsMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
-      }
-      
-      // Check if referenced assets actually exist
-      const allAssets = [
-        ...(cssMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || []),
-        ...(jsMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || [])
-      ];
-      
-      for (const asset of allAssets) {
-        if (asset && asset.startsWith('/')) {
-          const assetPath = path.resolve(distPath, asset.substring(1));
-          const exists = fs.existsSync(assetPath);
-          if (!exists) {
-            console.error(`❌ [HTML] Referenced asset not found: ${asset} at ${assetPath}`);
-          } else {
-            console.log(`✅ [HTML] Asset exists: ${asset}`);
+          // Read and log which assets are referenced in index.html
+          // Also remove crossorigin attribute from CSS links to prevent CORS issues
+          try {
+            let indexContent = fs.readFileSync(indexPath, "utf-8");
+            
+            // Remove crossorigin attribute from CSS links (can cause CORS issues)
+            // Vite adds crossorigin="anonymous" by default, but this can block CSS loading
+            indexContent = indexContent.replace(
+              /<link\s+rel=["']stylesheet["']\s+crossorigin[^>]*>/g,
+              (match) => match.replace(/\s+crossorigin(=["'][^"']*["'])?/g, '')
+            );
+            
+            // Write the modified HTML back
+            fs.writeFileSync(indexPath, indexContent, "utf-8");
+            
+            // Extract CSS and JS asset references
+            const cssMatches = indexContent.match(/href=["']([^"']*\.css[^"']*)["']/g);
+            const jsMatches = indexContent.match(/src=["']([^"']*\.js[^"']*)["']/g);
+            
+            if (cssMatches && cssMatches.length > 0) {
+              console.log(`📄 [HTML] CSS assets in index.html:`, cssMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
+            }
+            if (jsMatches && jsMatches.length > 0) {
+              console.log(`📄 [HTML] JS assets in index.html:`, jsMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
+            }
+            
+            // Check if referenced assets actually exist
+            const allAssets = [
+              ...(cssMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || []),
+              ...(jsMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || [])
+            ];
+            
+            for (const asset of allAssets) {
+              if (asset && asset.startsWith('/')) {
+                const assetPath = path.resolve(distPath, asset.substring(1));
+                const exists = fs.existsSync(assetPath);
+                if (!exists) {
+                  console.error(`❌ [HTML] Referenced asset not found: ${asset} at ${assetPath}`);
+                } else {
+                  console.log(`✅ [HTML] Asset exists: ${asset}`);
+                }
+              }
+            }
+          } catch (error) {
+            console.warn("⚠️ Could not read index.html for logging:", error);
           }
-        }
-      }
-    } catch (error) {
-      console.warn("⚠️ Could not read index.html for logging:", error);
-    }
     
     // Set headers to prevent caching of index.html and ensure proper loading
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
