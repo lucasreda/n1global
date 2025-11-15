@@ -236,52 +236,71 @@ export function serveStatic(app: Express) {
       return res.status(500).send("index.html not found");
     }
     
-          // Read and log which assets are referenced in index.html
-          // Also remove crossorigin attribute from CSS links to prevent CORS issues
-          try {
-            let indexContent = fs.readFileSync(indexPath, "utf-8");
-            
-            // Remove crossorigin attribute from CSS links (can cause CORS issues)
-            // Vite adds crossorigin="anonymous" by default, but this can block CSS loading
-            indexContent = indexContent.replace(
-              /<link\s+rel=["']stylesheet["']\s+crossorigin[^>]*>/g,
-              (match) => match.replace(/\s+crossorigin(=["'][^"']*["'])?/g, '')
-            );
-            
-            // Write the modified HTML back
-            fs.writeFileSync(indexPath, indexContent, "utf-8");
-            
-            // Extract CSS and JS asset references
-            const cssMatches = indexContent.match(/href=["']([^"']*\.css[^"']*)["']/g);
-            const jsMatches = indexContent.match(/src=["']([^"']*\.js[^"']*)["']/g);
-            
-            if (cssMatches && cssMatches.length > 0) {
-              console.log(`📄 [HTML] CSS assets in index.html:`, cssMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
-            }
-            if (jsMatches && jsMatches.length > 0) {
-              console.log(`📄 [HTML] JS assets in index.html:`, jsMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
-            }
-            
-            // Check if referenced assets actually exist
-            const allAssets = [
-              ...(cssMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || []),
-              ...(jsMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || [])
-            ];
-            
-            for (const asset of allAssets) {
-              if (asset && asset.startsWith('/')) {
-                const assetPath = path.resolve(distPath, asset.substring(1));
-                const exists = fs.existsSync(assetPath);
-                if (!exists) {
-                  console.error(`❌ [HTML] Referenced asset not found: ${asset} at ${assetPath}`);
-                } else {
-                  console.log(`✅ [HTML] Asset exists: ${asset}`);
-                }
-              }
-            }
-          } catch (error) {
-            console.warn("⚠️ Could not read index.html for logging:", error);
+    // Read HTML and modify in memory (don't modify disk file)
+    let indexContent: string;
+    try {
+      indexContent = fs.readFileSync(indexPath, "utf-8");
+      
+      // Remove crossorigin attribute from CSS links (can cause CORS issues)
+      // Vite adds crossorigin="anonymous" by default, but this can block CSS loading
+      const originalContent = indexContent;
+      indexContent = indexContent.replace(
+        /<link([^>]*\s+rel=["']stylesheet["'][^>]*)>/gi,
+        (match) => {
+          // Remove crossorigin attribute if present
+          const cleaned = match.replace(/\s+crossorigin(=["'][^"']*["'])?/gi, '');
+          if (cleaned !== match) {
+            console.log(`🔧 [HTML] Removed crossorigin from CSS link`);
           }
+          return cleaned;
+        }
+      );
+      
+      // Also remove crossorigin from script tags if present
+      indexContent = indexContent.replace(
+        /<script([^>]*\s+type=["']module["'][^>]*)>/gi,
+        (match) => {
+          // Remove crossorigin attribute if present
+          const cleaned = match.replace(/\s+crossorigin(=["'][^"']*["'])?/gi, '');
+          if (cleaned !== match) {
+            console.log(`🔧 [HTML] Removed crossorigin from script tag`);
+          }
+          return cleaned;
+        }
+      );
+      
+      // Extract CSS and JS asset references
+      const cssMatches = indexContent.match(/href=["']([^"']*\.css[^"']*)["']/g);
+      const jsMatches = indexContent.match(/src=["']([^"']*\.js[^"']*)["']/g);
+      
+      if (cssMatches && cssMatches.length > 0) {
+        console.log(`📄 [HTML] CSS assets in index.html:`, cssMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
+      }
+      if (jsMatches && jsMatches.length > 0) {
+        console.log(`📄 [HTML] JS assets in index.html:`, jsMatches.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean).join(", "));
+      }
+      
+      // Check if referenced assets actually exist
+      const allAssets = [
+        ...(cssMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || []),
+        ...(jsMatches?.map(m => m.match(/["']([^"']+)["']/)?.[1]).filter(Boolean) || [])
+      ];
+      
+      for (const asset of allAssets) {
+        if (asset && asset.startsWith('/')) {
+          const assetPath = path.resolve(distPath, asset.substring(1));
+          const exists = fs.existsSync(assetPath);
+          if (!exists) {
+            console.error(`❌ [HTML] Referenced asset not found: ${asset} at ${assetPath}`);
+          } else {
+            console.log(`✅ [HTML] Asset exists: ${asset}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("⚠️ Could not read index.html:", error);
+      return res.status(500).send("Error reading index.html");
+    }
     
     // Set headers to prevent caching of index.html and ensure proper loading
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -295,12 +314,8 @@ export function serveStatic(app: Express) {
     // Ensure CORS is enabled for assets
     res.setHeader("Access-Control-Allow-Origin", "*");
     
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        console.error(`❌ [HTML] Error serving index.html:`, err);
-      } else {
-        console.log(`✅ [HTML] Successfully served index.html for ${req.originalUrl}`);
-      }
-    });
+    // Send the modified HTML content directly (not from file)
+    res.send(indexContent);
+    console.log(`✅ [HTML] Successfully served index.html for ${req.originalUrl} (crossorigin removed)`);
   });
 }
