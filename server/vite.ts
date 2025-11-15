@@ -119,30 +119,6 @@ export function serveStatic(app: Express) {
     console.warn("⚠️ Could not list files in dist/public:", error);
   }
 
-  // Add middleware to log asset requests and ensure correct headers
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
-      // Enable CORS for assets
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-      
-      const originalEnd = res.end;
-      
-      res.end = function(chunk?: any) {
-        // 200 = OK, 304 = Not Modified (valid cached response)
-        if (res.statusCode === 200 || res.statusCode === 304) {
-          const contentType = res.getHeader('Content-Type') || 'unknown';
-          console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${contentType}`);
-        } else if (res.statusCode >= 400) {
-          console.warn(`⚠️ [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode} (arquivo não encontrado ou erro)`);
-        }
-        return originalEnd.call(this, chunk);
-      };
-    }
-    next();
-  });
-
   // Serve static files with proper headers and caching
   // IMPORTANT: This must be called BEFORE the catch-all route
   // index: false prevents express.static from automatically serving index.html
@@ -180,6 +156,45 @@ export function serveStatic(app: Express) {
       }
     },
   }));
+
+  // Add middleware to log asset requests AFTER express.static
+  // This ensures we log requests that actually reach express.static
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
+      // Log the request immediately
+      console.log(`🔍 [ASSET REQUEST] ${req.method} ${req.path}`);
+      
+      const originalEnd = res.end;
+      const originalSend = res.send;
+      const originalSendFile = res.sendFile;
+      
+      // Log when response is sent
+      const logResponse = () => {
+        if (res.statusCode === 200 || res.statusCode === 304) {
+          const contentType = res.getHeader('Content-Type') || 'unknown';
+          console.log(`📦 [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode}, Content-Type: ${contentType}`);
+        } else if (res.statusCode >= 400) {
+          console.warn(`⚠️ [ASSET] ${req.method} ${req.path} - Status: ${res.statusCode} (arquivo não encontrado ou erro)`);
+        }
+      };
+      
+      res.end = function(chunk?: any) {
+        logResponse();
+        return originalEnd.call(this, chunk);
+      };
+      
+      res.send = function(body?: any) {
+        logResponse();
+        return originalSend.call(this, body);
+      };
+      
+      res.sendFile = function(path: string, ...args: any[]) {
+        logResponse();
+        return originalSendFile.apply(this, [path, ...args]);
+      };
+    }
+    next();
+  });
 
   // fall through to index.html if the file doesn't exist
   // but skip API routes and static assets
