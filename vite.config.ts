@@ -11,6 +11,14 @@ const projectRoot = process.cwd();
 const clientDir = path.resolve(projectRoot, "client");
 const indexHtmlPath = path.resolve(clientDir, "index.html");
 
+// Log paths for debugging in Railway
+if (process.env.NODE_ENV === "production") {
+  console.log("🔍 [VITE CONFIG] projectRoot:", projectRoot);
+  console.log("🔍 [VITE CONFIG] clientDir:", clientDir);
+  console.log("🔍 [VITE CONFIG] indexHtmlPath:", indexHtmlPath);
+  console.log("🔍 [VITE CONFIG] index.html exists:", require("fs").existsSync(indexHtmlPath));
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -31,12 +39,14 @@ export default defineConfig({
       "@assets": path.resolve(projectRoot, "attached_assets"),
     },
   },
-  root: clientDir,
+  root: projectRoot,
   build: {
     outDir: path.resolve(projectRoot, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
-      input: indexHtmlPath,
+      input: {
+        main: indexHtmlPath,
+      },
     },
   },
   publicDir: path.resolve(clientDir, "public"),
