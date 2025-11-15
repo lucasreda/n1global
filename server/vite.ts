@@ -98,6 +98,19 @@ export function serveStatic(app: Express) {
   }
 
   console.log(`📁 Serving static files from: ${distPath}`);
+  
+  // Log what files exist in dist/public for debugging
+  try {
+    const files = fs.readdirSync(distPath);
+    console.log(`📦 Files in dist/public:`, files.slice(0, 10).join(", "), files.length > 10 ? `... (${files.length} total)` : "");
+    const assetsDir = path.join(distPath, "assets");
+    if (fs.existsSync(assetsDir)) {
+      const assetsFiles = fs.readdirSync(assetsDir);
+      console.log(`📦 Assets files (${assetsFiles.length}):`, assetsFiles.slice(0, 5).join(", "), assetsFiles.length > 5 ? `...` : "");
+    }
+  } catch (error) {
+    console.warn("⚠️ Could not list files in dist/public:", error);
+  }
 
   // Serve static files with proper headers and caching
   app.use(express.static(distPath, {
