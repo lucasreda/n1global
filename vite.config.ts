@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,7 +17,7 @@ if (process.env.NODE_ENV === "production") {
   console.log("🔍 [VITE CONFIG] projectRoot:", projectRoot);
   console.log("🔍 [VITE CONFIG] clientDir:", clientDir);
   console.log("🔍 [VITE CONFIG] indexHtmlPath:", indexHtmlPath);
-  console.log("🔍 [VITE CONFIG] index.html exists:", require("fs").existsSync(indexHtmlPath));
+  console.log("🔍 [VITE CONFIG] index.html exists:", fs.existsSync(indexHtmlPath));
 }
 
 export default defineConfig({
