@@ -5,6 +5,58 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+// Plugin to remove crossorigin attribute from HTML during build
+function removeCrossoriginPlugin() {
+  return {
+    name: 'remove-crossorigin',
+    generateBundle(options: any, bundle: any) {
+      // This runs after all files are generated
+      // We'll handle HTML modification in server/vite.ts instead
+    },
+    writeBundle(options: any) {
+      // After build, modify index.html to remove crossorigin
+      const htmlPath = path.resolve(options.dir || options.file, 'index.html');
+      if (fs.existsSync(htmlPath)) {
+        try {
+          let htmlContent = fs.readFileSync(htmlPath, 'utf-8');
+          const original = htmlContent;
+          
+          // Remove crossorigin from CSS links
+          htmlContent = htmlContent.replace(
+            /<link([^>]*?)>/gi,
+            (match) => {
+              if (!match.includes('rel="stylesheet') && !match.includes("rel='stylesheet")) {
+                return match;
+              }
+              return match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
+                         .replace(/\s+crossorigin/gi, '');
+            }
+          );
+          
+          // Remove crossorigin from script tags
+          htmlContent = htmlContent.replace(
+            /<script([^>]*?)>/gi,
+            (match) => {
+              if (!match.includes('type="module') && !match.includes("type='module")) {
+                return match;
+              }
+              return match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
+                         .replace(/\s+crossorigin/gi, '');
+            }
+          );
+          
+          if (htmlContent !== original) {
+            fs.writeFileSync(htmlPath, htmlContent, 'utf-8');
+            console.log('✅ [BUILD] Removed crossorigin attributes from index.html');
+          }
+        } catch (error) {
+          console.warn('⚠️ [BUILD] Could not remove crossorigin from index.html:', error);
+        }
+      }
+    },
+  };
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Use process.cwd() as fallback for Railway compatibility
@@ -25,6 +77,8 @@ export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
+    // Remove crossorigin from HTML during build
+    removeCrossoriginPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
