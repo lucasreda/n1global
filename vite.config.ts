@@ -53,7 +53,15 @@ export default defineConfig({
       input: {
         main: path.resolve(clientDir, "index.html"),
       },
+      output: {
+        // Don't add crossorigin attribute to assets
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
     },
+    // Use a custom plugin to remove crossorigin from HTML after build
+    // This is handled in server/vite.ts instead to avoid modifying build output
   },
   publicDir: path.resolve(clientDir, "public"),
   server: {

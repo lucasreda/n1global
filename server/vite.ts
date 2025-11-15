@@ -163,10 +163,25 @@ export function serveStatic(app: Express) {
         try {
           const stats = fs.statSync(filePath);
           console.log(`✅ [STATIC] Serving CSS: ${filePath} (size: ${stats.size} bytes)`);
+          
           if (stats.size === 0) {
             console.error(`❌ [STATIC] CSS file is empty: ${filePath}`);
           } else if (stats.size < 100) {
             console.warn(`⚠️ [STATIC] CSS file seems too small: ${filePath} (${stats.size} bytes)`);
+          } else {
+            // Verify CSS content integrity - read first 200 characters
+            try {
+              const cssContent = fs.readFileSync(filePath, "utf-8", { encoding: "utf-8" });
+              const preview = cssContent.substring(0, 200).replace(/\n/g, ' ').trim();
+              console.log(`📄 [CSS] Content preview (first 200 chars): ${preview}...`);
+              
+              // Check if CSS looks valid (should start with CSS syntax)
+              if (!cssContent.trim().match(/^(\/\*|@|[\w\-\.#\[\]:(),\s])/)) {
+                console.warn(`⚠️ [CSS] CSS content may be corrupted - doesn't start with expected CSS syntax`);
+              }
+            } catch (readError) {
+              console.error(`❌ [STATIC] Error reading CSS content: ${filePath}`, readError);
+            }
           }
         } catch (error) {
           console.error(`❌ [STATIC] Error reading CSS file stats: ${filePath}`, error);
@@ -241,33 +256,67 @@ export function serveStatic(app: Express) {
     try {
       indexContent = fs.readFileSync(indexPath, "utf-8");
       
+      // Log original HTML snippet showing CSS/JS links for debugging
+      const originalCssLinks = indexContent.match(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi);
+      const originalScriptTags = indexContent.match(/<script[^>]*type=["']module["'][^>]*>/gi);
+      
+      if (originalCssLinks && originalCssLinks.length > 0) {
+        console.log(`🔍 [HTML] Original CSS links:`, originalCssLinks.map(link => link.substring(0, 100)).join(' | '));
+      }
+      if (originalScriptTags && originalScriptTags.length > 0) {
+        console.log(`🔍 [HTML] Original script tags:`, originalScriptTags.map(script => script.substring(0, 100)).join(' | '));
+      }
+      
       // Remove crossorigin attribute from CSS links (can cause CORS issues)
       // Vite adds crossorigin="anonymous" by default, but this can block CSS loading
-      const originalContent = indexContent;
+      // Match all variations: crossorigin, crossorigin="", crossorigin='', crossorigin="anonymous", crossorigin='anonymous', crossorigin=anonymous
+      const beforeCss = indexContent;
       indexContent = indexContent.replace(
-        /<link([^>]*\s+rel=["']stylesheet["'][^>]*)>/gi,
+        /<link([^>]*?)>/gi,
         (match) => {
-          // Remove crossorigin attribute if present
-          const cleaned = match.replace(/\s+crossorigin(=["'][^"']*["'])?/gi, '');
+          // Only process stylesheet links
+          if (!match.includes('rel="stylesheet') && !match.includes("rel='stylesheet")) {
+            return match;
+          }
+          // Remove crossorigin attribute in all its variations
+          const cleaned = match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
+                               .replace(/\s+crossorigin/gi, '');
           if (cleaned !== match) {
-            console.log(`🔧 [HTML] Removed crossorigin from CSS link`);
+            console.log(`🔧 [HTML] Removed crossorigin from CSS link: ${match.substring(0, 80)}...`);
           }
           return cleaned;
         }
       );
       
       // Also remove crossorigin from script tags if present
+      const beforeScript = indexContent;
       indexContent = indexContent.replace(
-        /<script([^>]*\s+type=["']module["'][^>]*)>/gi,
+        /<script([^>]*?)>/gi,
         (match) => {
-          // Remove crossorigin attribute if present
-          const cleaned = match.replace(/\s+crossorigin(=["'][^"']*["'])?/gi, '');
+          // Only process module scripts
+          if (!match.includes('type="module') && !match.includes("type='module")) {
+            return match;
+          }
+          // Remove crossorigin attribute in all its variations
+          const cleaned = match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
+                               .replace(/\s+crossorigin/gi, '');
           if (cleaned !== match) {
-            console.log(`🔧 [HTML] Removed crossorigin from script tag`);
+            console.log(`🔧 [HTML] Removed crossorigin from script tag: ${match.substring(0, 80)}...`);
           }
           return cleaned;
         }
       );
+      
+      // Log modified HTML snippet for verification
+      const modifiedCssLinks = indexContent.match(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi);
+      const modifiedScriptTags = indexContent.match(/<script[^>]*type=["']module["'][^>]*>/gi);
+      
+      if (modifiedCssLinks && modifiedCssLinks.length > 0) {
+        console.log(`✅ [HTML] Modified CSS links:`, modifiedCssLinks.map(link => link.substring(0, 100)).join(' | '));
+      }
+      if (modifiedScriptTags && modifiedScriptTags.length > 0) {
+        console.log(`✅ [HTML] Modified script tags:`, modifiedScriptTags.map(script => script.substring(0, 100)).join(' | '));
+      }
       
       // Extract CSS and JS asset references
       const cssMatches = indexContent.match(/href=["']([^"']*\.css[^"']*)["']/g);
