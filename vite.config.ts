@@ -31,10 +31,10 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
-      input: path.resolve(__dirname, "client", "index.html"),
+      input: "./index.html",
     },
   },
-  publicDir: path.resolve(__dirname, "client", "public"),
+  publicDir: "public",
   server: {
     fs: {
       strict: true,
