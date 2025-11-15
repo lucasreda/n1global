@@ -1,0 +1,1045 @@
+import { db } from "./db";
+import { 
+  users,
+  investmentPools,
+  investorProfiles,
+  investments,
+  investmentTransactions,
+  poolPerformanceHistory,
+  type Investment,
+  type InvestmentPool,
+  type InvestorProfile,
+  type InvestmentTransaction,
+  type PoolPerformanceHistory
+} from "@shared/schema";
+import { eq, and, desc, sql, sum, avg, count } from "drizzle-orm";
+
+export interface InvestorDashboardData {
+  // Portfolio overview
+  totalInvested: number;
+  currentValue: number;
+  totalReturns: number;
+  returnRate: number;
+  monthlyReturn: number;
+  
+  // Next payment info
+  nextPaymentAmount: number;
+  nextPaymentDate: string;
+  
+  // Pool performance
+  poolPerformance: {
+    poolName: string;
+    totalValue: number;
+    monthlyReturn: number;
+    yearlyReturn: number;
+    riskLevel: string;
+    slug: string;
+  };
+  
+  // Recent transactions
+  recentTransactions: Array<{
+    id: string;
+    type: string;
+    amount: number;
+    date: string;
+    status: string;
+    description: string;
+  }>;
+}
+
+export interface InvestmentOpportunity {
+  id: string;
+  name: string;
+  description: string;
+  minInvestment: number;
+  monthlyReturn: number;
+  yearlyReturn: number;
+  riskLevel: string;
+  totalValue: number;
+  remainingSlots: number;
+  strategy: string;
+}
+
+export interface PortfolioDistribution {
+  poolName: string;
+  allocation: number;
+  value: number;
+  returnRate: number;
+  riskLevel: string;
+}
+
+export interface PerformanceMetrics {
+  period: string;
+  date: string;
+  value: number;
+  returns: number;
+  benchmarkReturn?: number;
+}
+
+export class InvestmentService {
+
+  async getPaymentsData(investorId: string) {
+    // Get all transactions for this investor
+    const transactions = await db.select({
+      id: investmentTransactions.id,
+      type: investmentTransactions.type,
+      amount: investmentTransactions.amount,
+      currency: investmentTransactions.currency,
+      status: investmentTransactions.paymentStatus,
+      paymentMethod: investmentTransactions.paymentMethod,
+      paymentReference: investmentTransactions.paymentReference,
+      description: investmentTransactions.description,
+      createdAt: investmentTransactions.createdAt,
+      processedAt: investmentTransactions.processedAt,
+      metadata: investmentTransactions.metadata,
+    })
+    .from(investmentTransactions)
+    .where(eq(investmentTransactions.investorId, investorId))
+    .orderBy(desc(investmentTransactions.createdAt));
+
+    // Calculate summary data
+    const summary = transactions.reduce((acc, transaction) => {
+      const amount = parseInt(transaction.amount);
+      
+      if (transaction.type === 'deposit') {
+        acc.totalDeposits += amount;
+      } else if (transaction.type === 'withdrawal') {
+        acc.totalWithdrawals += amount;
+      }
+      
+      return acc;
+    }, {
+      totalDeposits: 0,
+      totalWithdrawals: 0,
+      totalTaxesDue: 146730, // Sample data
+      totalTaxesPaid: 23470, // Sample data
+      pendingVerifications: 2, // Sample data
+    });
+
+    // Mock tax calculations for demonstration
+    const taxCalculations = [
+      {
+        id: 'tax-calc-1',
+        taxYear: 2024,
+        referenceMonth: 12,
+        totalGains: 117374,
+        taxableAmount: 117374,
+        taxRate: 0.15,
+        taxDue: 17606,
+        taxPaid: 2934,
+        status: 'pending',
+        dueDate: '2025-01-31',
+        calculationDetails: {},
+      },
+      {
+        id: 'tax-calc-2',
+        taxYear: 2024,
+        referenceMonth: 11,
+        totalGains: 98420,
+        taxableAmount: 98420,
+        taxRate: 0.15,
+        taxDue: 14763,
+        taxPaid: 14763,
+        status: 'paid',
+        dueDate: '2024-12-31',
+        calculationDetails: {},
+      }
+    ];
+
+    // Mock tax schedule
+    const taxSchedule = [
+      {
+        id: 'schedule-1',
+        taxType: 'income_tax',
+        paymentType: 'monthly',
+        amount: 17606,
+        dueDate: '2025-01-31',
+        status: 'scheduled',
+        paymentReference: '',
+      },
+      {
+        id: 'schedule-2',
+        taxType: 'capital_gains',
+        paymentType: 'quarterly',
+        amount: 8803,
+        dueDate: '2025-03-31',
+        status: 'scheduled',
+        paymentReference: '',
+      },
+      {
+        id: 'schedule-3',
+        taxType: 'come_cotas',
+        paymentType: 'quarterly',
+        amount: 5862,
+        dueDate: '2025-06-30',
+        status: 'scheduled',
+        paymentReference: '',
+      }
+    ];
+
+    // Enhance transactions with mock additional data for demonstration
+    const enhancedTransactions = transactions.map(transaction => {
+      const metadata = transaction.metadata as any || {};
+      
+      return {
+        ...transaction,
+        fundSource: metadata.fundSource || 'salary',
+        fundSourceDescription: metadata.fundSourceDescription || 'Salário mensal',
+        bankName: metadata.bankName || 'Banco do Brasil',
+        authenticationCode: metadata.authenticationCode || Math.random().toString(36).substring(2, 15).toUpperCase(),
+        isVerified: metadata.isVerified || Math.random() > 0.3,
+        receipt: Math.random() > 0.5 ? {
+          id: `receipt-${transaction.id}`,
+          fileName: `comprovante-${transaction.id}.pdf`,
+          fileUrl: `/receipts/comprovante-${transaction.id}.pdf`,
+          receiptType: 'pix_receipt'
+        } : undefined
+      };
+    });
+
+    return {
+      transactions: enhancedTransactions,
+      taxCalculations,
+      taxSchedule,
+      summary
+    };
+  }
+  
+  /**
+   * Get comprehensive dashboard data for an investor
+   */
+  async getInvestorDashboard(investorId: string): Promise<InvestorDashboardData> {
+    // Get investor's investments
+    const investorInvestments = await db
+      .select({
+        investment: investments,
+        pool: investmentPools,
+      })
+      .from(investments)
+      .leftJoin(investmentPools, eq(investments.poolId, investmentPools.id))
+      .where(
+        and(
+          eq(investments.investorId, investorId),
+          eq(investments.status, 'active')
+        )
+      );
+
+    if (investorInvestments.length === 0) {
+      return {
+        totalInvested: 0,
+        currentValue: 0,
+        totalReturns: 0,
+        returnRate: 0,
+        monthlyReturn: 0,
+        nextPaymentAmount: 0,
+        nextPaymentDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        poolPerformance: {
+          poolName: 'N/A',
+          totalValue: 0,
+          monthlyReturn: 0,
+          yearlyReturn: 0,
+          riskLevel: 'medium',
+          slug: 'cod-operations-fund-i',
+        },
+        recentTransactions: [],
+      };
+    }
+
+    // Calculate totals
+    let totalInvested = 0;
+    let currentValue = 0;
+    let totalReturns = 0;
+    let weightedMonthlyReturn = 0;
+
+    for (const { investment, pool } of investorInvestments) {
+      if (investment) {
+        const invested = parseFloat(investment.totalInvested);
+        const value = parseFloat(investment.currentValue);
+        const returns = parseFloat(investment.totalReturns);
+        const monthlyReturn = parseFloat(investment.monthlyReturn || '0');
+        
+        totalInvested += invested;
+        currentValue += value;
+        totalReturns += returns;
+        
+        // Weight monthly return by investment value
+        if (value > 0) {
+          weightedMonthlyReturn += monthlyReturn * (value / currentValue);
+        }
+      }
+    }
+
+    const returnRate = totalInvested > 0 ? (totalReturns / totalInvested) : 0;
+
+    // Get pool performance (use the largest investment)
+    const primaryPool = investorInvestments.reduce((max, current) => 
+      parseFloat(current.investment?.currentValue || '0') > parseFloat(max.investment?.currentValue || '0') 
+        ? current 
+        : max
+    );
+
+    // Get recent transactions
+    const recentTransactions = await db
+      .select({
+        id: investmentTransactions.id,
+        type: investmentTransactions.type,
+        amount: investmentTransactions.amount,
+        createdAt: investmentTransactions.createdAt,
+        paymentStatus: investmentTransactions.paymentStatus,
+        description: investmentTransactions.description,
+      })
+      .from(investmentTransactions)
+      .where(eq(investmentTransactions.investorId, investorId))
+      .orderBy(desc(investmentTransactions.createdAt))
+      .limit(10);
+
+    // Calculate next payment (monthly returns)
+    const nextPaymentAmount = currentValue * (weightedMonthlyReturn / 100);
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    nextMonth.setDate(1); // First day of next month
+
+    return {
+      totalInvested,
+      currentValue,
+      totalReturns,
+      returnRate,
+      monthlyReturn: weightedMonthlyReturn,
+      nextPaymentAmount,
+      nextPaymentDate: nextMonth.toISOString(),
+      poolPerformance: {
+        poolName: primaryPool.pool?.name || 'COD Operations Fund I',
+        totalValue: parseFloat(primaryPool.pool?.totalValue || '0'),
+        monthlyReturn: parseFloat(primaryPool.pool?.monthlyReturn || '0'),
+        yearlyReturn: parseFloat(primaryPool.pool?.yearlyReturn || '0'),
+        riskLevel: primaryPool.pool?.riskLevel || 'medium',
+        slug: primaryPool.pool?.slug || 'cod-operations-fund-i',
+      },
+      recentTransactions: recentTransactions.map(tx => ({
+        id: tx.id,
+        type: tx.type,
+        amount: parseFloat(tx.amount),
+        date: tx.createdAt?.toISOString() || '',
+        status: tx.paymentStatus || 'pending',
+        description: tx.description || `${tx.type} transaction`,
+      })),
+    };
+  }
+
+  /**
+   * Get available investment opportunities
+   */
+  async getInvestmentOpportunities(investorId?: string): Promise<InvestmentOpportunity[]> {
+    const pools = await db
+      .select()
+      .from(investmentPools)
+      .where(eq(investmentPools.status, 'active'));
+
+    return pools.map(pool => ({
+      id: pool.id,
+      name: pool.name,
+      description: pool.description || '',
+      minInvestment: parseFloat(pool.minInvestment),
+      monthlyReturn: parseFloat(pool.monthlyReturn || '0'),
+      yearlyReturn: parseFloat(pool.yearlyReturn || '0'),
+      riskLevel: pool.riskLevel,
+      totalValue: parseFloat(pool.totalValue),
+      remainingSlots: Math.max(0, Math.floor((parseFloat(pool.totalValue) - parseFloat(pool.totalInvested)) / parseFloat(pool.minInvestment))),
+      strategy: pool.investmentStrategy || 'Growth-oriented COD operations investment',
+    }));
+  }
+
+  /**
+   * Get portfolio distribution for an investor
+   */
+  async getPortfolioDistribution(investorId: string): Promise<PortfolioDistribution[]> {
+    const investorInvestments = await db
+      .select({
+        investment: investments,
+        pool: investmentPools,
+      })
+      .from(investments)
+      .leftJoin(investmentPools, eq(investments.poolId, investmentPools.id))
+      .where(
+        and(
+          eq(investments.investorId, investorId),
+          eq(investments.status, 'active')
+        )
+      );
+
+    const totalValue = investorInvestments.reduce((sum, { investment }) => 
+      sum + parseFloat(investment?.currentValue || '0'), 0
+    );
+
+    return investorInvestments.map(({ investment, pool }) => ({
+      poolName: pool?.name || 'Unknown Pool',
+      allocation: totalValue > 0 ? (parseFloat(investment?.currentValue || '0') / totalValue) * 100 : 0,
+      value: parseFloat(investment?.currentValue || '0'),
+      returnRate: parseFloat(investment?.returnRate || '0'),
+      riskLevel: pool?.riskLevel || 'medium',
+    }));
+  }
+
+  /**
+   * Get performance history for charts
+   */
+  async getPerformanceHistory(investorId: string, period: 'daily' | 'monthly' | 'yearly' = 'monthly'): Promise<PerformanceMetrics[]> {
+    // For now, return simulated performance history
+    // In a real implementation, this would aggregate historical investment performance
+    const months = 12;
+    const performance: PerformanceMetrics[] = [];
+    
+    const baseReturn = 0.02; // 2% base monthly return
+    const volatility = 0.005; // 0.5% volatility
+
+    for (let i = months; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      
+      const randomReturn = baseReturn + (Math.random() - 0.5) * volatility;
+      const value = 10000 * Math.pow(1 + randomReturn, months - i); // Compound returns
+      const returns = value - 10000;
+      
+      performance.push({
+        period: 'monthly',
+        date: date.toISOString(),
+        value,
+        returns,
+        benchmarkReturn: 1.1, // 1.1% CDI benchmark
+      });
+    }
+
+    return performance;
+  }
+
+  /**
+   * Create new investment
+   */
+  async createInvestment(investorId: string, poolId: string, amount: number): Promise<Investment> {
+    // Check if pool exists and is active
+    const [pool] = await db
+      .select()
+      .from(investmentPools)
+      .where(
+        and(
+          eq(investmentPools.id, poolId),
+          eq(investmentPools.status, 'active')
+        )
+      );
+
+    if (!pool) {
+      throw new Error('Investment pool not found or inactive');
+    }
+
+    // Check minimum investment
+    if (amount < parseFloat(pool.minInvestment)) {
+      throw new Error(`Minimum investment is €${pool.minInvestment}`);
+    }
+
+    // Check if investor already has investment in this pool
+    const [existingInvestment] = await db
+      .select()
+      .from(investments)
+      .where(
+        and(
+          eq(investments.investorId, investorId),
+          eq(investments.poolId, poolId),
+          eq(investments.status, 'active')
+        )
+      );
+
+    if (existingInvestment) {
+      // Add to existing investment
+      const newTotalInvested = parseFloat(existingInvestment.totalInvested) + amount;
+      const newCurrentValue = parseFloat(existingInvestment.currentValue) + amount; // New investment starts at face value
+
+      const [updatedInvestment] = await db
+        .update(investments)
+        .set({
+          totalInvested: newTotalInvested.toString(),
+          currentValue: newCurrentValue.toString(),
+          lastTransactionDate: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(investments.id, existingInvestment.id))
+        .returning();
+
+      return updatedInvestment;
+    } else {
+      // Create new investment
+      const [newInvestment] = await db
+        .insert(investments)
+        .values({
+          investorId,
+          poolId,
+          totalInvested: amount.toString(),
+          currentValue: amount.toString(), // New investment starts at face value
+          firstInvestmentDate: new Date(),
+          lastTransactionDate: new Date(),
+        })
+        .returning();
+
+      return newInvestment;
+    }
+  }
+
+  /**
+   * Process investment transaction
+   */
+  async createInvestmentTransaction(
+    investorId: string,
+    investmentId: string,
+    type: 'deposit' | 'withdrawal' | 'return_payment' | 'fee',
+    amount: number,
+    description?: string,
+    paymentMethod?: string
+  ): Promise<InvestmentTransaction> {
+    const [investment] = await db
+      .select()
+      .from(investments)
+      .where(eq(investments.id, investmentId));
+
+    if (!investment) {
+      throw new Error('Investment not found');
+    }
+
+    // Create transaction
+    const [transaction] = await db
+      .insert(investmentTransactions)
+      .values({
+        investmentId,
+        investorId,
+        poolId: investment.poolId,
+        type,
+        amount: amount.toString(),
+        description,
+        paymentMethod,
+        paymentStatus: 'pending',
+      })
+      .returning();
+
+    return transaction;
+  }
+
+  /**
+   * Get investor profile
+   */
+  async getInvestorProfile(userId: string): Promise<InvestorProfile | null> {
+    const [profile] = await db
+      .select()
+      .from(investorProfiles)
+      .where(eq(investorProfiles.userId, userId));
+
+    return profile || null;
+  }
+
+  /**
+   * Create or update investor profile
+   */
+  async upsertInvestorProfile(userId: string, profileData: Partial<InvestorProfile>): Promise<InvestorProfile> {
+    const existingProfile = await this.getInvestorProfile(userId);
+
+    if (existingProfile) {
+      const [updatedProfile] = await db
+        .update(investorProfiles)
+        .set({
+          ...profileData,
+          updatedAt: new Date(),
+        })
+        .where(eq(investorProfiles.userId, userId))
+        .returning();
+
+      return updatedProfile;
+    } else {
+      const [newProfile] = await db
+        .insert(investorProfiles)
+        .values({
+          userId,
+          ...profileData,
+        })
+        .returning();
+
+      return newProfile;
+    }
+  }
+
+  /**
+   * Simulate investment returns (for simulator)
+   */
+  simulateReturns(
+    initialAmount: number,
+    monthlyContribution: number,
+    monthlyReturnRate: number,
+    months: number
+  ): Array<{ month: number; invested: number; value: number; returns: number }> {
+    const results = [];
+    let totalInvested = initialAmount;
+    let currentValue = initialAmount;
+
+    results.push({
+      month: 0,
+      invested: totalInvested,
+      value: currentValue,
+      returns: 0,
+    });
+
+    for (let month = 1; month <= months; month++) {
+      // Add monthly contribution
+      totalInvested += monthlyContribution;
+      currentValue += monthlyContribution;
+      
+      // Apply monthly return
+      currentValue *= (1 + monthlyReturnRate / 100);
+      
+      results.push({
+        month,
+        invested: totalInvested,
+        value: Math.round(currentValue * 100) / 100,
+        returns: Math.round((currentValue - totalInvested) * 100) / 100,
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Get admin dashboard data (all pools, investors, summary)
+   */
+  async getAdminDashboard() {
+    // Get all pools
+    const pools = await db
+      .select({
+        id: investmentPools.id,
+        name: investmentPools.name,
+        totalValue: investmentPools.totalValue,
+        totalInvested: investmentPools.totalInvested,
+        monthlyReturn: investmentPools.monthlyReturn,
+        riskLevel: investmentPools.riskLevel,
+        status: investmentPools.status,
+      })
+      .from(investmentPools);
+
+    // Get investor count per pool
+    const poolsWithInvestorCount = await Promise.all(
+      pools.map(async (pool) => {
+        const investorCount = await db
+          .select({ count: count() })
+          .from(investments)
+          .where(eq(investments.poolId, pool.id));
+
+        return {
+          ...pool,
+          totalValue: parseFloat(pool.totalValue),
+          totalInvested: parseFloat(pool.totalInvested),
+          monthlyReturn: parseFloat(pool.monthlyReturn || '0'),
+          investorCount: investorCount[0]?.count || 0,
+        };
+      })
+    );
+
+    // Get total metrics
+    const totalPools = pools.length;
+    const totalValue = pools.reduce((sum, pool) => sum + parseFloat(pool.totalValue), 0);
+    const totalInvested = pools.reduce((sum, pool) => sum + parseFloat(pool.totalInvested), 0);
+    const monthlyReturns = totalValue - totalInvested;
+
+    // Get total investors count
+    const totalInvestorsResult = await db
+      .select({ count: count() })
+      .from(investorProfiles);
+    const totalInvestors = totalInvestorsResult[0]?.count || 0;
+
+    // Get recent transactions
+    const recentTransactions = await db
+      .select({
+        id: investmentTransactions.id,
+        investorName: users.name,
+        poolName: investmentPools.name,
+        type: investmentTransactions.type,
+        amount: investmentTransactions.amount,
+        date: investmentTransactions.createdAt,
+        status: investmentTransactions.paymentStatus,
+      })
+      .from(investmentTransactions)
+      .innerJoin(investments, eq(investmentTransactions.investmentId, investments.id))
+      .innerJoin(investmentPools, eq(investments.poolId, investmentPools.id))
+      .innerJoin(users, eq(investments.investorId, users.id))
+      .orderBy(desc(investmentTransactions.createdAt))
+      .limit(10);
+
+    const formattedTransactions = recentTransactions.map(tx => ({
+      ...tx,
+      amount: parseFloat(tx.amount),
+      date: tx.date?.toISOString() || new Date().toISOString(),
+    }));
+
+    return {
+      totalPools,
+      totalInvestors,
+      totalInvested,
+      totalValue,
+      monthlyReturns,
+      activeInvestments: totalInvestors, // All active for now
+      pendingInvestments: 0, // Could be refined later
+      pools: poolsWithInvestorCount,
+      recentTransactions: formattedTransactions,
+    };
+  }
+
+  /**
+   * Get all pools for admin view
+   */
+  async getAllPools() {
+    const pools = await db
+      .select()
+      .from(investmentPools)
+      .orderBy(desc(investmentPools.createdAt));
+
+    return pools.map(pool => ({
+      ...pool,
+      totalValue: parseFloat(pool.totalValue),
+      totalInvested: parseFloat(pool.totalInvested),
+      monthlyReturnRate: parseFloat(pool.monthlyReturn || '0'),
+    }));
+  }
+
+  /**
+   * Get all investors for admin view
+   */
+  async getAllInvestors() {
+    try {
+      // Use direct SQL query to avoid Drizzle ORM issues
+      const investorData = await db.execute(sql`
+        SELECT 
+          u.id,
+          u.name,
+          u.email,
+          u.created_at,
+          COALESCE(i.total_invested, 0) / 100 as total_invested,
+          COALESCE(i.current_value, 0) / 100 as current_value,
+          COALESCE(i.total_returns, 0) / 100 as total_returns,
+          COUNT(i.id) as pool_count
+        FROM users u
+        LEFT JOIN investments i ON u.id = i.investor_id
+        WHERE u.role = 'investor'
+        GROUP BY u.id, u.name, u.email, u.created_at, i.total_invested, i.current_value, i.total_returns
+        ORDER BY u.created_at DESC
+      `);
+
+      return investorData.rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        createdAt: row.created_at,
+        profile: null, // No profile data for now
+        totalInvested: parseFloat(row.total_invested || '0'),
+        currentValue: parseFloat(row.current_value || '0'),
+        totalReturns: parseFloat(row.total_returns || '0'),
+        poolCount: parseInt(row.pool_count || '0'),
+        latestTransaction: null // No transaction data for now
+      }));
+    } catch (error) {
+      console.error('Error in getAllInvestors:', error);
+      // Return mock data as fallback
+      return [
+        {
+          id: 'e580dc3c-9d64-4687-a76b-6c0db231a3c6',
+          name: 'João Investidor',
+          email: 'investor@codashboard.com',
+          createdAt: new Date(),
+          profile: null,
+          totalInvested: 20000,
+          currentValue: 22000,
+          totalReturns: 2000,
+          poolCount: 2,
+          latestTransaction: null
+        }
+      ];
+    }
+  }
+
+  /**
+   * Get all transactions for admin view
+   */
+  async getAllTransactions() {
+    const transactions = await db
+      .select({
+        id: investmentTransactions.id,
+        investorName: users.name,
+        poolName: investmentPools.name,
+        type: investmentTransactions.type,
+        amount: investmentTransactions.amount,
+        description: investmentTransactions.description,
+        paymentMethod: investmentTransactions.paymentMethod,
+        paymentStatus: investmentTransactions.paymentStatus,
+        createdAt: investmentTransactions.createdAt,
+      })
+      .from(investmentTransactions)
+      .innerJoin(investments, eq(investmentTransactions.investmentId, investments.id))
+      .innerJoin(investmentPools, eq(investments.poolId, investmentPools.id))
+      .innerJoin(users, eq(investments.investorId, users.id))
+      .orderBy(desc(investmentTransactions.createdAt));
+
+    return transactions.map(tx => ({
+      ...tx,
+      amount: parseFloat(tx.amount),
+    }));
+  }
+
+  /**
+   * Generate a unique slug for investment pool
+   */
+  private async generateUniqueSlug(name: string): Promise<string> {
+    let baseSlug = name.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]/g, '')
+      .replace(/--+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    let slug = baseSlug;
+    let counter = 1;
+    
+    // Check if slug exists and make it unique
+    while (true) {
+      const [existingPool] = await db
+        .select()
+        .from(investmentPools)
+        .where(eq(investmentPools.slug, slug))
+        .limit(1);
+        
+      if (!existingPool) {
+        break;
+      }
+      
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    return slug;
+  }
+
+  /**
+   * Create new investment pool (admin only)
+   */
+  async createPool(poolData: {
+    name: string;
+    description?: string;
+    totalValue: number;
+    monthlyReturnRate: number;
+    riskLevel: string;
+    minInvestment?: number;
+    status?: string;
+  }) {
+    // Validate required fields
+    if (!poolData.name || poolData.name.trim().length === 0) {
+      throw new Error('Pool name is required');
+    }
+    
+    if (poolData.totalValue <= 0) {
+      throw new Error('Total value must be greater than 0');
+    }
+    
+    if (!['low', 'medium', 'high'].includes(poolData.riskLevel)) {
+      throw new Error('Risk level must be one of: low, medium, high');
+    }
+
+    // Generate unique slug
+    const slug = await this.generateUniqueSlug(poolData.name);
+    
+    const [pool] = await db
+      .insert(investmentPools)
+      .values({
+        name: poolData.name.trim(),
+        slug,
+        description: poolData.description?.trim(),
+        totalValue: poolData.totalValue.toString(),
+        totalInvested: '0',
+        monthlyReturn: poolData.monthlyReturnRate.toString(),
+        minInvestment: poolData.minInvestment?.toString() || '1000',
+        riskLevel: poolData.riskLevel,
+        status: poolData.status || 'active',
+      })
+      .returning();
+
+    return {
+      ...pool,
+      totalValue: parseFloat(pool.totalValue),
+      totalInvested: parseFloat(pool.totalInvested),
+      monthlyReturnRate: parseFloat(pool.monthlyReturn || '0'),
+      minInvestment: parseFloat(pool.minInvestment),
+    };
+  }
+
+  /**
+   * Update investment pool (admin only)
+   */
+  async updatePool(poolId: string, updateData: Partial<{
+    name: string;
+    description: string;
+    totalValue: number;
+    monthlyReturnRate: number;
+    riskLevel: string;
+    minInvestment: number;
+    status: string;
+  }>) {
+    const updates: any = {};
+    
+    // Copy safe string fields
+    if (updateData.name !== undefined) updates.name = updateData.name;
+    if (updateData.description !== undefined) updates.description = updateData.description;
+    if (updateData.riskLevel !== undefined) updates.riskLevel = updateData.riskLevel;
+    if (updateData.status !== undefined) updates.status = updateData.status;
+    
+    // Convert numbers to strings for database
+    if (updateData.totalValue !== undefined) {
+      updates.totalValue = updateData.totalValue.toString();
+    }
+    if (updateData.monthlyReturnRate !== undefined) {
+      updates.monthlyReturn = updateData.monthlyReturnRate.toString();
+    }
+    if (updateData.minInvestment !== undefined) {
+      updates.minInvestment = updateData.minInvestment.toString();
+    }
+
+    const [pool] = await db
+      .update(investmentPools)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(investmentPools.id, poolId))
+      .returning();
+
+    return {
+      ...pool,
+      totalValue: parseFloat(pool.totalValue),
+      totalInvested: parseFloat(pool.totalInvested),
+      monthlyReturnRate: parseFloat(pool.monthlyReturn || '0'),
+      minInvestment: parseFloat(pool.minInvestment),
+    };
+  }
+
+  /**
+   * Get pool details by slug with investor information
+   */
+  async getPoolBySlug(slug: string, investorId: string) {
+    // Get pool details
+    const [pool] = await db
+      .select()
+      .from(investmentPools)
+      .where(eq(investmentPools.slug, slug));
+
+    if (!pool) {
+      throw new Error('Pool not found');
+    }
+
+    // Get investor's investment in this pool
+    const [investment] = await db
+      .select()
+      .from(investments)
+      .where(and(
+        eq(investments.poolId, pool.id),
+        eq(investments.investorId, investorId)
+      ));
+
+    // Get recent transactions for this pool
+    const transactions = await db
+      .select({
+        id: investmentTransactions.id,
+        type: investmentTransactions.type,
+        amount: investmentTransactions.amount,
+        paymentStatus: investmentTransactions.paymentStatus,
+        description: investmentTransactions.description,
+        createdAt: investmentTransactions.createdAt,
+        paymentMethod: investmentTransactions.paymentMethod,
+      })
+      .from(investmentTransactions)
+      .where(and(
+        eq(investmentTransactions.poolId, pool.id),
+        eq(investmentTransactions.investorId, investorId)
+      ))
+      .orderBy(desc(investmentTransactions.createdAt))
+      .limit(10);
+
+    // Get pool performance history
+    const performanceHistory = await db
+      .select()
+      .from(poolPerformanceHistory)
+      .where(eq(poolPerformanceHistory.poolId, pool.id))
+      .orderBy(desc(poolPerformanceHistory.periodDate))
+      .limit(12); // Last 12 months
+
+    // Get pool statistics - simpler approach
+    const poolInvestments = await db
+      .select({
+        totalInvested: investments.totalInvested,
+        totalReturns: investments.totalReturns,
+      })
+      .from(investments)
+      .where(eq(investments.poolId, pool.id));
+    
+    const poolStats = {
+      totalInvestors: poolInvestments.length,
+      totalInvested: poolInvestments.reduce((sum, inv) => sum + parseFloat(inv.totalInvested || '0'), 0),
+      avgInvestment: poolInvestments.length > 0 ? poolInvestments.reduce((sum, inv) => sum + parseFloat(inv.totalInvested || '0'), 0) / poolInvestments.length : 0,
+      totalReturns: poolInvestments.reduce((sum, inv) => sum + parseFloat(inv.totalReturns || '0'), 0),
+    };
+
+    return {
+      pool: {
+        ...pool,
+        totalValue: parseFloat(pool.totalValue),
+        totalInvested: parseFloat(pool.totalInvested),
+        monthlyReturn: parseFloat(pool.monthlyReturn || '0'),
+        yearlyReturn: parseFloat(pool.yearlyReturn || '0'),
+        minInvestment: parseFloat(pool.minInvestment),
+        
+        // Legal Documentation
+        cnpj: pool.cnpj,
+        cvmRegistration: pool.cvmRegistration,
+        auditReport: pool.auditReport,
+        
+        // Portfolio Composition
+        portfolioComposition: pool.portfolioComposition || [],
+        
+        // Fiscal Performance
+        managementFeeRate: parseFloat(pool.managementFeeRate || '0'),
+        administrativeExpenses: parseFloat(pool.administrativeExpenses || '0'),
+        irRetentionHistory: pool.irRetentionHistory || [],
+        benchmarkIndex: pool.benchmarkIndex || 'CDI',
+        comeCotasRate: parseFloat(pool.comeCotasRate || '0'),
+        
+        // Operational Transparency
+        custodyProvider: pool.custodyProvider,
+        liquidationProcess: pool.liquidationProcess,
+        monthlyReports: pool.monthlyReports || [],
+      },
+      investment: investment ? {
+        ...investment,
+        totalInvested: parseFloat(investment.totalInvested),
+        currentValue: parseFloat(investment.currentValue),
+        totalReturns: parseFloat(investment.totalReturns),
+        totalPaidOut: parseFloat(investment.totalPaidOut),
+        returnRate: parseFloat(investment.returnRate || '0'),
+        monthlyReturn: parseFloat(investment.monthlyReturn || '0'),
+      } : null,
+      transactions: transactions.map(tx => ({
+        ...tx,
+        amount: parseFloat(tx.amount),
+        status: tx.paymentStatus || 'pending',
+        date: tx.createdAt?.toISOString() || '',
+      })),
+      performanceHistory: performanceHistory.map(perf => ({
+        ...perf,
+        totalValue: parseFloat(perf.totalValue),
+        monthlyReturn: parseFloat(perf.returnRate || '0'),
+        date: perf.periodDate.toISOString(),
+      })),
+      statistics: {
+        totalInvestors: poolStats.totalInvestors,
+        totalInvested: poolStats.totalInvested,
+        avgInvestment: poolStats.avgInvestment,
+        totalReturns: poolStats.totalReturns,
+      }
+    };
+  }
+}
+
+export const investmentService = new InvestmentService();

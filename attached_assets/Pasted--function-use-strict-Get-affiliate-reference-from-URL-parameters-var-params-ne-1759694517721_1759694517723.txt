@@ -1,0 +1,118 @@
+
+(function() {
+  'use strict';
+  
+  // Get affiliate reference from URL parameters
+  var params = new URLSearchParams(window.location.search);
+  var affiliateRef = params.get('ref') || params.get('aff') || params.get('affiliate');
+  
+  if (!affiliateRef) {
+    console.log('[Affiliate Tracking] No affiliate reference found in URL');
+    return;
+  }
+  
+  console.log('[Affiliate Tracking] Affiliate reference detected:', affiliateRef);
+  
+  // Save to localStorage for future conversion
+  try {
+    localStorage.setItem('affiliate_ref', affiliateRef);
+    localStorage.setItem('affiliate_ref_timestamp', new Date().toISOString());
+    console.log('[Affiliate Tracking] Reference saved to localStorage');
+  } catch (e) {
+    console.error('[Affiliate Tracking] Failed to save to localStorage:', e);
+  }
+  
+  // Prepare tracking data
+  var trackingData = {
+    referrer: document.referrer || '',
+    landingUrl: window.location.href,
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString()
+  };
+  
+  // Send click tracking to backend
+  var apiUrl = window.location.origin + '/api/affiliate/tracking/click/' + encodeURIComponent(affiliateRef);
+  
+  fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(trackingData)
+  })
+  .then(function(response) {
+    if (response.ok) {
+      console.log('[Affiliate Tracking] Click registered successfully');
+      return response.json();
+    } else {
+      console.error('[Affiliate Tracking] Failed to register click:', response.status);
+    }
+  })
+  .then(function(data) {
+    if (data) {
+      console.log('[Affiliate Tracking] Tracking ID:', data.trackingId);
+    }
+  })
+  .catch(function(error) {
+    console.error('[Affiliate Tracking] Error sending tracking data:', error);
+  });
+  
+  // Dynamic Pixel Injection
+  console.log('[Affiliate Pixels] Loading pixels for ref:', affiliateRef);
+  
+  var pixelApiUrl = window.location.origin + '/api/affiliate/pixels/by-ref/' + encodeURIComponent(affiliateRef) + '/code';
+  
+  fetch(pixelApiUrl, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(function(response) {
+    if (!response.ok) {
+      console.error('[Affiliate Pixels] Failed to load pixels:', response.status);
+      return null;
+    }
+    return response.json();
+  })
+  .then(function(data) {
+    if (!data || !data.pixelCodes || data.pixelCodes.length === 0) {
+      console.log('[Affiliate Pixels] No pixels configured for this affiliate');
+      return;
+    }
+    
+    console.log('[Affiliate Pixels] Injecting', data.pixelCodes.length, 'pixel(s)');
+    
+    // Inject each pixel code into the document head
+    data.pixelCodes.forEach(function(pixelCode, index) {
+      var container = document.createElement('div');
+      container.innerHTML = pixelCode.trim();
+      
+      // Extract and inject script tags
+      var scripts = container.querySelectorAll('script');
+      scripts.forEach(function(script) {
+        var newScript = document.createElement('script');
+        if (script.src) {
+          newScript.src = script.src;
+          newScript.async = script.async;
+        } else {
+          newScript.textContent = script.textContent;
+        }
+        document.head.appendChild(newScript);
+      });
+      
+      // Extract and inject noscript tags
+      var noscripts = container.querySelectorAll('noscript');
+      noscripts.forEach(function(noscript) {
+        document.head.appendChild(noscript.cloneNode(true));
+      });
+      
+      console.log('[Affiliate Pixels] Pixel', index + 1, 'injected successfully');
+    });
+    
+    console.log('[Affiliate Pixels] All pixels injected successfully');
+  })
+  .catch(function(error) {
+    console.error('[Affiliate Pixels] Error loading pixels:', error);
+  });
+})();

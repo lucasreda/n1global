@@ -1,0 +1,45 @@
+  📝 Generating solução section...
+❌ Content generation failed: BadRequestError: 400 'messages' must contain the word 'json' in some form, to use 'response_format' of type 'json_object'.
+    at Function.generate (/home/runner/workspace/node_modules/openai/src/core/error.ts:72:14)
+    at OpenAI.makeStatusError (/home/runner/workspace/node_modules/openai/src/client.ts:463:28)
+    at OpenAI.makeRequest (/home/runner/workspace/node_modules/openai/src/client.ts:713:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ContentGenerationEngine.generateSectionContent (/home/runner/workspace/server/ai/engines/ContentGenerationEngine.ts:98:24)
+    at async ContentGenerationEngine.generateContent (/home/runner/workspace/server/ai/engines/ContentGenerationEngine.ts:50:32)
+    at async AIPageOrchestrator.generatePage (/home/runner/workspace/server/ai/AIPageOrchestrator.ts:97:29)
+    at async generateAIPageModel (/home/runner/workspace/server/funnel-routes.ts:2049:20)
+    at async <anonymous> (/home/runner/workspace/server/funnel-routes.ts:1179:30) {
+  status: 400,
+  headers: Headers {
+    date: 'Thu, 25 Sep 2025 16:16:10 GMT',
+    'content-type': 'application/json',
+    'content-length': '219',
+    connection: 'keep-alive',
+    'access-control-expose-headers': 'X-Request-ID',
+    'openai-organization': 'user-eycg9wftngs4ffjqba7vpmmx',
+    'openai-processing-ms': '32',
+    'openai-project': 'proj_zIUo90kubtqLQasgamMKihCv',
+    'openai-version': '2020-10-01',
+    'x-envoy-upstream-service-time': '159',
+    'x-ratelimit-limit-requests': '5000',
+    'x-ratelimit-limit-tokens': '450000',
+    'x-ratelimit-remaining-requests': '4999',
+    'x-ratelimit-remaining-tokens': '449713',
+    'x-ratelimit-reset-requests': '12ms',
+    'x-ratelimit-reset-tokens': '38ms',
+    'x-request-id': 'req_ba0a6a8f233d495e8ddb92ced6ed575d',
+    'x-openai-proxy-wasm': 'v0.1',
+    'cf-cache-status': 'DYNAMIC',
+    'set-cookie': '__cf_bm=2JJyziksre5UaI7ypUQAbo46IVDdbl.9bsll3TSlF94-1758816970-1.0.1.1-y3UOCmz_cjnrH7_QmO4uReeS69bxizj4DFjoQq1wUZ5LbCqMYiBhjkLQc5wo1.kdTQ_KeR6szFFyoXypxSNG76hoCzwOSNj3poAmRLWDd7I; path=/; expires=Thu, 25-Sep-25 16:46:10 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None, _cfuvid=BX_gfwetSl6OpMjI_RMsCRgeRh1szPZNKn3rP5YwwTE-1758816970373-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    server: 'cloudflare',
+    'cf-ray': '984bd30d2b61936f-SEA',
+    'alt-svc': 'h3=":443"; ma=86400'
+  },
+  requestID: 'req_ba0a6a8f233d495e8ddb92ced6ed575d',
+  error: {
+    message: "'messages' must contain the word 'json' in some form, to use 'response_format' of type 'json_object'.",
+    type: 'invalid_request_error',
+    param: 'messages',
+    code: null

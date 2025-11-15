@@ -1,0 +1,206 @@
+📋 PLANO COMPLETO - BUILDER V4 PROFISSIONAL
+🏗️ ARQUITETURA DA INTERFACE
+Barra Lateral Esquerda → Sistema de Abas:
+
+Aba 1: ELEMENTOS (elementos individuais drag & drop)
+Aba 2: LAYOUTS (templates/componentes prontos)
+📦 ABA 1: ELEMENTOS (55 elementos organizados)
+TEXTO & TIPOGRAFIA (11)
+Text (p), H1, H2, H3, H4, H5, H6, Blockquote, Code Block, Span, Label
+LAYOUT (15)
+Container, Section, Flex Row, Flex Column, Grid 2-col, Grid 3-col, Grid 4-col, Card, Centered Container, Full Width Section, Stack Vertical, Stack Horizontal, Sticky Container, Wrapper, Divider
+MÍDIA (8)
+Image, Video, Background Video, Icon, SVG, Embed (iframe), Image Gallery, Avatar
+FORMULÁRIOS (13)
+Form, Input Text, Input Email, Input Number, Input Phone, Input Password, Textarea, Select, Checkbox, Radio Button, Toggle Switch, Slider/Range, File Upload
+INTERATIVOS (8)
+Button, Link, Link Button, Icon Button, Badge, Pill, Tooltip, Progress Bar
+🎨 ABA 2: LAYOUTS (Component Library - 20 templates)
+HERO SECTIONS (4)
+Hero Center - Título + subtítulo + CTA centralizado
+Hero Split - Texto esquerda + imagem direita
+Hero Video - Vídeo de fundo + overlay + texto
+Hero Minimal - Título grande + botão
+NAVIGATION (3)
+Navbar Simple - Logo + menu horizontal
+Navbar Dropdown - Logo + menu com dropdowns
+Footer 3-Col - 3 colunas de links + copyright
+CONTENT SECTIONS (5)
+Features Grid - Grid 3x3 com ícones
+Testimonials - Carrossel de depoimentos
+Pricing Table - 3 cards de preço lado a lado
+FAQ Accordion - Lista de perguntas/respostas
+Stats Counter - 4 contadores com números
+CALL TO ACTION (3)
+CTA Banner - Fundo colorido + título + botão
+CTA Split - Texto + imagem lado a lado
+Newsletter - Input email + botão subscribe
+FORMS & CONTACT (3)
+Contact Form - Nome, email, mensagem, botão
+Login Form - Email + senha + botão
+Signup Form - Nome, email, senha, botão
+MISC (2)
+Blog Card - Imagem + título + excerpt + link
+Team Member - Avatar circular + nome + cargo
+🎯 ESPECIFICAÇÕES TÉCNICAS
+Estrutura de Arquivos
+client/src/components/page-builder/
+├── ElementsToolbarV4.tsx → REFATORAR com abas
+├── ElementsTab.tsx → Nova aba de elementos
+├── LayoutsTab.tsx → Nova aba de layouts
+├── element-templates/ → Pasta com templates
+│   ├── text-elements.ts
+│   ├── layout-elements.ts
+│   ├── media-elements.ts
+│   ├── form-elements.ts
+│   └── interactive-elements.ts
+└── layout-templates/ → Pasta com component library
+    ├── hero-templates.ts
+    ├── navigation-templates.ts
+    ├── content-templates.ts
+    ├── cta-templates.ts
+    └── form-templates.ts
+Interface das Abas
+// Tabs component usando shadcn/ui
+<Tabs defaultValue="elements">
+  <TabsList>
+    <TabsTrigger value="elements">Elementos</TabsTrigger>
+    <TabsTrigger value="layouts">Layouts</TabsTrigger>
+  </TabsList>
+  <TabsContent value="elements">
+    <ElementsTab />
+  </TabsContent>
+  <TabsContent value="layouts">
+    <LayoutsTab />
+  </TabsContent>
+</Tabs>
+📝 PROMPT PARA O BUILDER
+# TAREFA: Expandir Visual Editor V4 com Sistema de Abas e Component Library
+## OBJETIVO
+Transformar o ElementsToolbarV4 em um sistema profissional com 2 abas:
+1. **Aba Elementos**: 55 elementos individuais organizados por categoria
+2. **Aba Layouts**: 20 templates prontos (Component Library)
+## IMPLEMENTAÇÃO
+### PASSO 1: Refatorar ElementsToolbarV4.tsx
+- Adicionar Tabs do shadcn/ui (import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs')
+- Criar 2 abas: "Elementos" e "Layouts"
+- Manter funcionalidade drag & drop existente
+- Manter mesma interface ElementsToolbarV4Props
+### PASSO 2: Criar ElementsTab.tsx
+Organizar 55 elementos em categorias colapsáveis (Accordion do shadcn):
+**TEXTO & TIPOGRAFIA** (11 elementos):
+- Text (p), H1, H2, H3, H4, H5, H6, Blockquote, Code Block, Span, Label
+**LAYOUT** (15 elementos):
+- Container, Section, Flex Row, Flex Column, Grid 2-col, Grid 3-col, Grid 4-col, Card, Centered Container, Full Width Section, Stack Vertical, Stack Horizontal, Sticky Container, Wrapper, Divider
+**MÍDIA** (8 elementos):
+- Image, Video, Background Video, Icon (usar Lucide), SVG, Embed (iframe), Image Gallery, Avatar
+**FORMULÁRIOS** (13 elementos):
+- Form, Input Text, Input Email, Input Number, Input Phone, Input Password, Textarea, Select, Checkbox, Radio Button, Toggle Switch, Slider/Range, File Upload
+**INTERATIVOS** (8 elementos):
+- Button, Link, Link Button, Icon Button, Badge, Pill, Tooltip, Progress Bar
+### PASSO 3: Criar LayoutsTab.tsx
+Grid de cards clicáveis com preview visual. 20 templates:
+**HERO SECTIONS**:
+1. Hero Center - div centralizado com h1 + p + button
+2. Hero Split - flex com div texto (h1+p+button) + img
+3. Hero Video - video background + overlay + texto centralizado
+4. Hero Minimal - h1 grande + button centralizado
+**NAVIGATION**:
+5. Navbar Simple - header flex com logo + nav (ul > li > a)
+6. Navbar Dropdown - header com logo + nav aninhado
+7. Footer 3-Col - footer grid 3 colunas + copyright
+**CONTENT**:
+8. Features Grid - section com grid 3x3 (icon + h3 + p)
+9. Testimonials - section com cards de depoimento
+10. Pricing Table - section flex 3 cards de preço
+11. FAQ Accordion - section com divs expansíveis
+12. Stats Counter - section flex 4 números grandes
+**CALL TO ACTION**:
+13. CTA Banner - section bg colorido + h2 + button
+14. CTA Split - section flex 50/50 texto + imagem
+15. Newsletter - section com input email + button
+**FORMS**:
+16. Contact Form - form com inputs (nome, email, textarea, button)
+17. Login Form - form com email + password + button
+18. Signup Form - form com nome + email + password + button
+**MISC**:
+19. Blog Card - article com img + h3 + p + link
+20. Team Member - div com img circular + h4 + p
+### PASSO 4: Especificações dos Elementos
+Cada elemento deve ter:
+- `id`: string única
+- `name`: nome exibido
+- `icon`: ícone Lucide apropriado
+- `category`: categoria do elemento
+- `createNode()`: função que retorna PageNodeV4 com:
+  - Tag HTML semântica correta
+  - Type apropriado (text, heading, container, etc)
+  - Styles responsivos (desktop, tablet, mobile)
+  - Attributes quando necessário (href, src, type, placeholder, etc)
+Novos elementos precisam de ícones do lucide-react:
+- Input: KeyRound, Mail, Phone, Lock, Type
+- Select: ChevronDown
+- Checkbox: CheckSquare
+- Radio: Circle
+- Toggle: ToggleLeft
+- Slider: SlidersHorizontal
+- Upload: Upload
+- Code: Code
+- Blockquote: Quote
+- Badge: Tag
+- etc
+### PASSO 5: Layout Templates (Component Library)
+Cada template retorna PageNodeV4 completo com children aninhados:
+```typescript
+{
+  id: nanoid(),
+  tag: 'section',
+  type: 'container',
+  children: [
+    // estrutura completa do template
+  ],
+  styles: {
+    desktop: { /* estilos */ },
+    tablet: { /* responsive */ },
+    mobile: { /* responsive */ }
+  }
+}
+Templates devem ter:
+
+Estrutura HTML semântica (section, header, nav, footer, article, etc)
+Estilos profissionais (spacing, cores, tipografia)
+Responsividade (desktop/tablet/mobile)
+Placeholder text realista
+Ícones apropriados onde necessário
+PASSO 6: UI/UX
+ElementsTab:
+
+Accordion para categorias (fechadas por padrão, exceto primeira)
+Grid 2 colunas de botões drag & drop
+Ícone + nome do elemento
+Hover effect
+LayoutsTab:
+
+Grid de cards (2 colunas)
+Preview visual do template (thumbnail ou ícone)
+Nome do template
+Click para inserir (não drag)
+Categoria em badge pequeno
+REQUISITOS TÉCNICOS
+Manter compatibilidade com PageModelV4
+Usar componentes shadcn/ui existentes (Tabs, Accordion, Card)
+Manter drag & drop functionality do @dnd-kit
+Todos os estilos devem usar ResponsiveStylesV4
+Validação semântica automática (usar semantic-rules.ts)
+Types TypeScript corretos
+Icons apenas do lucide-react
+VALIDAÇÃO
+Após implementação, verificar:
+
+✅ 55 elementos individuais funcionando
+✅ 20 templates prontos inserindo corretamente
+✅ Drag & drop funcionando
+✅ Categorias organizadas
+✅ Responsividade dos templates
+✅ Sem erros TypeScript
+✅ Semantic validation funcionando

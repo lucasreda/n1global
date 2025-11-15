@@ -1,0 +1,2264 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Users, 
+  UserPlus,
+  Edit,
+  Trash2,
+  Shield,
+  User,
+  Briefcase,
+  Crown,
+  Settings,
+  DollarSign,
+  Store,
+  Truck,
+  Plus,
+  X,
+  Check,
+  Search
+} from "lucide-react";
+import { WarehouseAccountCard } from "@/components/admin/warehouse-account-card";
+import { 
+  FHBIntegrationForm, 
+  EuropeanFulfillmentIntegrationForm, 
+  ElogyIntegrationForm,
+  type WarehouseFormData 
+} from "@/components/admin/warehouse-integration-forms";
+import { apiRequest } from "@/lib/queryClient";
+
+// Define available pages for different user types
+const USER_PAGES = [
+  { id: 'dashboard', name: 'Dashboard', description: 'Visão geral e métricas', icon: '📊' },
+  { id: 'hub', name: 'Hub', description: 'Marketplace e produtos', icon: '🛍️' },
+  { id: 'orders', name: 'Pedidos', description: 'Gestão de pedidos', icon: '📦' },
+  { id: 'ads', name: 'Anúncios', description: 'Campanhas publicitárias', icon: '📢' },
+  { id: 'analytics', name: 'Analytics', description: 'Análises e relatórios', icon: '📈' },
+  { id: 'creatives', name: 'Criativos', description: 'Gestão de criativos publicitários', icon: '🎨' },
+  { id: 'funnels', name: 'Funis de Venda', description: 'Criação e edição de funis de vendas', icon: '🔄' },
+  { id: 'support', name: 'Suporte', description: 'Central de suporte ao cliente', icon: '🎧' },
+  { id: 'integrations', name: 'Integrações', description: 'Configuração de integrações', icon: '🔌' },
+  { id: 'tools', name: 'Ferramentas', description: 'Ferramentas do sistema', icon: '🔧' }
+];
+
+const ADMIN_PAGES = [
+  { id: 'dashboard', name: 'Dashboard', description: 'Painel administrativo', icon: '📊' },
+  { id: 'orders', name: 'Pedidos', description: 'Gestão global de pedidos', icon: '📦' },
+  { id: 'stores', name: 'Lojas', description: 'Gestão de lojas', icon: '🏪' },
+  { id: 'users', name: 'Usuários', description: 'Gestão de usuários', icon: '👥' },
+  { id: 'products', name: 'Produtos', description: 'Gestão de produtos', icon: '📋' },
+  { id: 'global', name: 'Global', description: 'Configurações globais', icon: '🌍' },
+  { id: 'support', name: 'Suporte', description: 'Central de suporte', icon: '🎧' },
+  { id: 'hub-control', name: 'Hub Control', description: 'Controle do marketplace', icon: '⚙️' },
+  { id: 'settings', name: 'Configurações', description: 'Configurações gerais', icon: '⚙️' }
+];
+
+interface SystemUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  permissions?: string[];
+  isSupplier?: boolean;
+  supplierType?: string;
+  lastLoginAt?: string;
+  isActive?: boolean;
+  onboardingCompleted?: boolean;
+}
+
+export default function AdminUsers() {
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterId, setFilterId] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all"); // "all", "active", "inactive"
+  
+  // Modal states
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteWarehouseModal, setShowDeleteWarehouseModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
+  const [warehouseAccountToDelete, setWarehouseAccountToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
+  
+  const [createWizardStep, setCreateWizardStep] = useState<'basic' | 'integrations'>('basic');
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'store',
+    operationIds: [] as string[]
+  });
+  
+  // State for warehouse accounts being configured
+  const [newWarehouseAccounts, setNewWarehouseAccounts] = useState<Array<{
+    tempId: string;
+    providerKey: string;
+    accountName: string;
+    credentials: Record<string, string>;
+    operationIds: string[];
+  }>>([]);
+  
+  // State for adding new warehouse account
+  const [addingAccount, setAddingAccount] = useState<{
+    providerKey: string;
+    accountName: string;
+    credentials: Record<string, string>;
+    operationIds: string[];
+  } | null>(null);
+  const [editUserData, setEditUserData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: '',
+    permissions: [] as string[],
+    onboardingCompleted: false,
+    isActive: true,
+    forcePasswordChange: false
+  });
+  const [activeTab, setActiveTab] = useState("general");
+  
+  // State for warehouse accounts in edit modal
+  const [addingEditWarehouseAccount, setAddingEditWarehouseAccount] = useState<{
+    providerKey: string;
+    formData: WarehouseFormData;
+  } | null>(null);
+  const [editingWarehouseAccountId, setEditingWarehouseAccountId] = useState<string | null>(null);
+  const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
+
+  // Automatically open Accordion when adding account
+  useEffect(() => {
+    if (addingEditWarehouseAccount?.providerKey) {
+      setAccordionValue(addingEditWarehouseAccount.providerKey);
+    }
+  }, [addingEditWarehouseAccount?.providerKey]);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: systemUsers, isLoading: usersLoading } = useQuery<SystemUser[]>({
+    queryKey: ['/api/admin/users']
+  });
+
+  // Filter users based on search and filters
+  const filteredUsers = systemUsers?.filter(user => {
+    // Search filter (nome e email apenas)
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        user.name.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+
+    // ID filter (filtro específico)
+    if (filterId) {
+      const idLower = filterId.toLowerCase();
+      if (!user.id.toLowerCase().includes(idLower)) return false;
+    }
+
+    // Date filter (data de criação)
+    if (filterDateFrom || filterDateTo) {
+      const userDate = new Date(user.createdAt);
+      userDate.setHours(0, 0, 0, 0); // Reset time to start of day
+      
+      if (filterDateFrom) {
+        const fromDate = new Date(filterDateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (userDate < fromDate) return false;
+      }
+      
+      if (filterDateTo) {
+        const toDate = new Date(filterDateTo);
+        toDate.setHours(23, 59, 59, 999); // End of day
+        if (userDate > toDate) return false;
+      }
+    }
+
+    // Role filter
+    if (filterRole !== "all" && user.role !== filterRole) return false;
+
+    // Status filter
+    if (filterStatus === "active" && user.isActive === false) return false;
+    if (filterStatus === "inactive" && user.isActive !== false) return false;
+
+    return true;
+  }) || [];
+
+  // Get unique roles for filter dropdown
+  const uniqueRoles = Array.from(new Set(systemUsers?.map(u => u.role) || [])).sort();
+
+  // Buscar warehouse providers catalog - always fetch for better UX
+  const { data: warehouseProviders, isLoading: warehouseProvidersLoading, isError: warehouseProvidersError } = useQuery<Array<{
+    key: string;
+    name: string;
+    description: string | null;
+    requiredFields: Array<{ fieldName: string; label: string; fieldType: string; required: boolean }>;
+  }>>({
+    queryKey: ['/api/warehouse/providers'],
+    staleTime: 0, // No cache - always fetch fresh data
+  });
+
+
+  // Buscar todas as operações disponíveis
+  const { data: allOperations, isLoading: operationsLoading } = useQuery<{ id: string; name: string; country: string }[]>({
+    queryKey: ['/api/operations'],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      console.log('🔑 Fetching operations with token:', token ? 'exists' : 'missing');
+      const response = await fetch('/api/operations', {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      console.log('📡 Operations response status:', response.status);
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Operations fetch error:', error);
+        throw new Error(error.message || 'Erro ao buscar operações');
+      }
+      const data = await response.json();
+      console.log('✅ Operations loaded:', data.length, 'items');
+      return data;
+    }
+  });
+
+  // Buscar operações do usuário atual sendo editado
+  const { data: userOperations } = useQuery<{ operationId: string }[]>({
+    queryKey: ['/api/admin/users', userToEdit?.id, 'operations'],
+    enabled: !!userToEdit?.id,
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/users/${userToEdit?.id}/operations`, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error('Erro ao buscar operações do usuário');
+      return response.json();
+    }
+  });
+
+  // Buscar warehouse accounts do usuário em edição
+  const { data: userWarehouseAccounts } = useQuery<Array<{
+    id: string;
+    displayName: string;
+    providerKey: string;
+    providerName: string;
+    isActive: boolean;
+    initialSyncCompleted: boolean;
+    initialSyncCompletedAt?: string | null;
+    lastTestedAt?: string | null;
+    lastSyncAt?: string | null;
+    operationIds?: string[];
+  }>>({
+    queryKey: ['/api/user/warehouse-accounts', userToEdit?.id],
+    enabled: !!userToEdit?.id,
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/user/warehouse-accounts?userId=${userToEdit?.id}`, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error('Erro ao buscar warehouse accounts');
+      return response.json();
+    }
+  });
+
+  // Mutation para criar warehouse account
+  const createWarehouseAccountMutation = useMutation({
+    mutationFn: async (accountData: {
+      userId: string;
+      providerKey: string;
+      accountName: string;
+      credentials: Record<string, string>;
+      operationIds: string[];
+    }) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch('/api/user/warehouse-accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          userId: accountData.userId,
+          providerKey: accountData.providerKey,
+          displayName: accountData.accountName, // Backend expects displayName
+          credentials: accountData.credentials,
+          operationIds: accountData.operationIds
+        })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao criar conta');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/warehouse-accounts', userToEdit?.id] });
+      toast({
+        title: "Conta criada",
+        description: "A conta de warehouse foi criada com sucesso."
+      });
+      setAddingEditWarehouseAccount(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao criar conta",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation para deletar warehouse account
+  const deleteWarehouseAccountMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/user/warehouse-accounts/${accountId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include"
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao deletar conta');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/warehouse-accounts', userToEdit?.id] });
+      toast({
+        title: "Conta excluída",
+        description: "A conta de warehouse foi removida com sucesso."
+      });
+      setShowDeleteWarehouseModal(false);
+      setWarehouseAccountToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir conta",
+        description: error.message,
+        variant: "destructive"
+      });
+      setShowDeleteWarehouseModal(false);
+      setWarehouseAccountToDelete(null);
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao excluir usuário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      toast({
+        title: "Usuário excluído",
+        description: "O usuário foi removido com sucesso do sistema.",
+      });
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir usuário",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: { name: string; email: string; password: string; role: string; operationIds: string[] }) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao criar usuário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: async (createdUser) => {
+      // Criar warehouse accounts se houver alguma configurada
+      let successCount = 0;
+      let failedAccounts: string[] = [];
+      
+      if (newWarehouseAccounts.length > 0) {
+        const token = localStorage.getItem("auth_token");
+        
+        for (const account of newWarehouseAccounts) {
+          try {
+            const accountResponse = await fetch('/api/user/warehouse-accounts', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token && { "Authorization": `Bearer ${token}` }),
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                userId: createdUser.id,
+                providerKey: account.providerKey,
+                displayName: account.accountName,
+                credentials: account.credentials
+              }),
+            });
+            
+            if (accountResponse.ok) {
+              successCount++;
+              console.log(`✅ Warehouse account created successfully: ${account.accountName}`);
+            } else {
+              const errorText = await accountResponse.text();
+              failedAccounts.push(account.accountName);
+              console.error(`❌ Failed to create warehouse account ${account.accountName}:`, {
+                status: accountResponse.status,
+                statusText: accountResponse.statusText,
+                error: errorText,
+                requestData: {
+                  userId: createdUser.id,
+                  providerKey: account.providerKey,
+                  displayName: account.accountName,
+                  hasCredentials: !!account.credentials
+                }
+              });
+            }
+          } catch (error) {
+            failedAccounts.push(account.accountName);
+            console.error(`❌ Exception creating warehouse account ${account.accountName}:`, {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+              account: {
+                providerKey: account.providerKey,
+                accountName: account.accountName,
+                hasCredentials: !!account.credentials
+              }
+            });
+          }
+        }
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      
+      // Mensagem de sucesso personalizada
+      let message = "O usuário foi criado com sucesso.";
+      if (successCount > 0 && failedAccounts.length === 0) {
+        message = `Usuário criado com ${successCount} conta(s) de warehouse.`;
+      } else if (successCount > 0 && failedAccounts.length > 0) {
+        message = `Usuário criado com ${successCount} conta(s). ${failedAccounts.length} falhou(aram).`;
+      }
+      
+      toast({
+        title: "Usuário criado",
+        description: message,
+      });
+      
+      // Alerta separado para contas que falharam
+      if (failedAccounts.length > 0) {
+        setTimeout(() => {
+          toast({
+            title: "Algumas contas não foram criadas",
+            description: `Configure manualmente: ${failedAccounts.join(', ')}`,
+            variant: "destructive"
+          });
+        }, 1000);
+      }
+      
+      setShowCreateUserModal(false);
+      setNewUserData({ name: '', email: '', password: '', role: 'store', operationIds: [] });
+      setNewWarehouseAccounts([]);
+      setAddingAccount(null);
+      setCreateWizardStep('basic');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao criar usuário",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editUserMutation = useMutation({
+    mutationFn: async (userData: { 
+      id: string; 
+      name?: string; 
+      email?: string; 
+      password?: string; 
+      role?: string; 
+      permissions?: string[];
+      onboardingCompleted?: boolean;
+      isActive?: boolean;
+      forcePasswordChange?: boolean;
+    }) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/users/${userData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao editar usuário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      toast({
+        title: "Usuário atualizado",
+        description: "Os dados do usuário foram atualizados com sucesso.",
+      });
+      setShowEditModal(false);
+      setUserToEdit(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao editar usuário",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getRoleBadge = (role: string) => {
+    const roleConfig = {
+      'super_admin': { 
+        label: 'Super Admin', 
+        icon: Crown, 
+        color: 'text-red-500' 
+      },
+      'admin': { 
+        label: 'Administrador', 
+        icon: Settings, 
+        color: 'text-purple-500' 
+      },
+      'admin_financeiro': { 
+        label: 'Admin Financeiro', 
+        icon: DollarSign, 
+        color: 'text-yellow-500' 
+      },
+      'store': { 
+        label: 'Loja', 
+        icon: Store, 
+        color: 'text-blue-500' 
+      },
+      'supplier': { 
+        label: 'Fornecedor', 
+        icon: Truck, 
+        color: 'text-green-500' 
+      },
+      'user': { 
+        label: 'Cliente', 
+        icon: User, 
+        color: 'text-gray-500' 
+      },
+    };
+    
+    const config = roleConfig[role as keyof typeof roleConfig] || {
+      label: role,
+      icon: User,
+      color: 'text-gray-500'
+    };
+    
+    const IconComponent = config.icon;
+    
+    return (
+      <div className="flex items-center gap-2 py-1">
+        <IconComponent className={`h-4 w-4 ${config.color}`} />
+        <span className={`text-sm font-medium ${config.color}`}>
+          {config.label}
+        </span>
+      </div>
+    );
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'super_admin':
+        return <Shield className="h-4 w-4 text-red-600" />;
+      case 'admin':
+        return <Shield className="h-4 w-4 text-purple-600" />;
+      case 'admin_financeiro':
+        return <Briefcase className="h-4 w-4 text-yellow-600" />;
+      case 'supplier':
+        return <Briefcase className="h-4 w-4 text-green-600" />;
+      default:
+        return <User className="h-4 w-4 text-blue-600" />;
+    }
+  };
+
+  // Get available pages based on user role
+  const getAvailablePages = (role: string) => {
+    if (role === 'super_admin') return ADMIN_PAGES;
+    return USER_PAGES;
+  };
+
+  // Toggle permission for a specific page - functional and idempotent
+  const togglePermission = (pageId: string, nextChecked?: boolean) => {
+    setEditUserData(prev => {
+      const has = prev.permissions.includes(pageId);
+      const shouldAdd = nextChecked !== undefined ? Boolean(nextChecked) : !has;
+      if (shouldAdd === has) return prev; // no-op prevents extra renders
+      
+      const permissions = shouldAdd 
+        ? [...prev.permissions, pageId] 
+        : prev.permissions.filter(p => p !== pageId);
+      
+      return { ...prev, permissions };
+    });
+  };
+
+  const handleEditUser = (user: SystemUser) => {
+    setUserToEdit(user);
+    setEditUserData({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role,
+      permissions: user.permissions || [],
+      onboardingCompleted: user.onboardingCompleted || false,
+      isActive: user.isActive ?? true,
+      forcePasswordChange: false
+    });
+    setActiveTab("general");
+    setShowEditModal(true);
+  };
+
+  const handleSubmitEdit = () => {
+    if (!userToEdit) return;
+    
+    const updateData: any = { id: userToEdit.id };
+    let hasChanges = false;
+    
+    if (editUserData.name !== userToEdit.name) {
+      updateData.name = editUserData.name;
+      hasChanges = true;
+    }
+    if (editUserData.email !== userToEdit.email) {
+      updateData.email = editUserData.email;
+      hasChanges = true;
+    }
+    if (editUserData.password) {
+      updateData.password = editUserData.password;
+      hasChanges = true;
+    }
+    if (editUserData.role !== userToEdit.role) {
+      updateData.role = editUserData.role;
+      hasChanges = true;
+    }
+    if (JSON.stringify(editUserData.permissions) !== JSON.stringify(userToEdit.permissions || [])) {
+      updateData.permissions = editUserData.permissions;
+      hasChanges = true;
+    }
+    if (editUserData.onboardingCompleted !== (userToEdit.onboardingCompleted || false)) {
+      updateData.onboardingCompleted = editUserData.onboardingCompleted;
+      hasChanges = true;
+    }
+    if (editUserData.isActive !== (userToEdit.isActive ?? true)) {
+      updateData.isActive = editUserData.isActive;
+      hasChanges = true;
+    }
+    if (editUserData.forcePasswordChange) {
+      updateData.forcePasswordChange = editUserData.forcePasswordChange;
+      hasChanges = true;
+    }
+    
+    // Só fazer a mutação se houver mudanças
+    if (!hasChanges) {
+      toast({
+        title: "Nenhuma alteração",
+        description: "Nenhum campo foi modificado.",
+      });
+      setShowEditModal(false);
+      return;
+    }
+    
+    editUserMutation.mutate(updateData);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-bold tracking-tight text-gray-900 dark:text-gray-100" style={{fontSize: '22px'}}>
+            Usuários
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Gerencie todos os usuários do sistema
+          </p>
+        </div>
+        <Button onClick={() => setShowCreateUserModal(true)} className="text-white">
+          <UserPlus className="h-4 w-4 mr-2 text-white" />
+          Novo Usuário
+        </Button>
+      </div>
+
+      {/* Search and Filters */}
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            {/* First Row: Search and ID Filter */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Search Input - Nome e Email */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              {/* ID Filter */}
+              <div className="w-full md:w-[200px] relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filtrar por ID..."
+                  value={filterId}
+                  onChange={(e) => setFilterId(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Second Row: Date Filters, Role Filter, Status Filter and Clear Button */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Date From Filter */}
+              <div className="w-full md:w-[180px]">
+                <Label htmlFor="filter-date-from" className="text-sm text-muted-foreground mb-2 block">
+                  Data de criação (De)
+                </Label>
+                <Input
+                  id="filter-date-from"
+                  type="date"
+                  value={filterDateFrom}
+                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                />
+              </div>
+
+              {/* Date To Filter */}
+              <div className="w-full md:w-[180px]">
+                <Label htmlFor="filter-date-to" className="text-sm text-muted-foreground mb-2 block">
+                  Data de criação (Até)
+                </Label>
+                <Input
+                  id="filter-date-to"
+                  type="date"
+                  value={filterDateTo}
+                  onChange={(e) => setFilterDateTo(e.target.value)}
+                  min={filterDateFrom || undefined}
+                />
+              </div>
+
+              {/* Filter by Role */}
+              <div className="w-full md:w-[200px]">
+                <Label htmlFor="filter-role" className="text-sm text-muted-foreground mb-2 block">
+                  Filtrar por função
+                </Label>
+                <Select value={filterRole} onValueChange={setFilterRole}>
+                  <SelectTrigger id="filter-role">
+                    <SelectValue placeholder="Todas as funções" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as funções</SelectItem>
+                    {uniqueRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filter by Status */}
+              <div className="w-full md:w-[200px]">
+                <Label htmlFor="filter-status" className="text-sm text-muted-foreground mb-2 block">
+                  Filtrar por status
+                </Label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger id="filter-status">
+                    <SelectValue placeholder="Todos os status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="active">Ativos</SelectItem>
+                    <SelectItem value="inactive">Inativos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters Button */}
+              {(searchTerm || filterId || filterDateFrom || filterDateTo || filterRole !== "all" || filterStatus !== "all") && (
+                <div className="w-full md:w-auto flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setFilterId("");
+                      setFilterDateFrom("");
+                      setFilterDateTo("");
+                      setFilterRole("all");
+                      setFilterStatus("all");
+                    }}
+                    className="w-full md:w-auto"
+                  >
+                    Limpar Filtros
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Users Table */}
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+        <CardContent>
+          <div className="mt-[15px] mb-4">
+            <p className="text-sm text-gray-400">
+              Usuários ({filteredUsers.length} de {systemUsers?.length || 0})
+            </p>
+          </div>
+          {usersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando usuários...</p>
+              </div>
+            </div>
+          ) : filteredUsers && filteredUsers.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold">Usuário</th>
+                    <th className="text-left py-3 px-4 font-semibold">Função</th>
+                    <th className="text-left py-3 px-4 font-semibold">Status</th>
+                    <th className="text-left py-3 px-4 font-semibold">Criado em</th>
+                    <th className="text-left py-3 px-4 font-semibold">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          {getRoleIcon(user.role)}
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {getRoleBadge(user.role)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge 
+                          variant={user.isActive !== false ? "default" : "secondary"}
+                          className={user.isActive !== false ? "text-white" : ""}
+                        >
+                          {user.isActive !== false ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm">
+                          {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setUserToDelete(user);
+                              setShowDeleteModal(true);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                {searchTerm || filterId || filterDateFrom || filterDateTo || filterRole !== "all" || filterStatus !== "all"
+                  ? "Nenhum usuário encontrado"
+                  : "Nenhum usuário encontrado"}
+              </h3>
+              <p className="text-muted-foreground">
+                {searchTerm || filterId || filterDateFrom || filterDateTo || filterRole !== "all" || filterStatus !== "all"
+                  ? "Tente ajustar os filtros de busca"
+                  : "Comece criando o primeiro usuário do sistema"}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create User Modal - 2 Step Wizard */}
+      <Dialog open={showCreateUserModal} onOpenChange={(open) => {
+        setShowCreateUserModal(open);
+        if (!open) {
+          setCreateWizardStep('basic');
+          setNewUserData({ name: '', email: '', password: '', role: 'store', operationIds: [] });
+          setNewWarehouseAccounts([]);
+          setAddingAccount(null);
+        }
+      }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Usuário</DialogTitle>
+            <DialogDescription>
+              {createWizardStep === 'basic' 
+                ? 'Preencha as informações básicas do usuário' 
+                : 'Configure as integrações de warehouse (opcional)'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs value={createWizardStep} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic" disabled>
+                1. Informações Básicas
+              </TabsTrigger>
+              <TabsTrigger 
+                value="integrations" 
+                disabled={newUserData.role !== 'user'}
+                className="disabled:opacity-50"
+              >
+                2. Integrações{newUserData.role !== 'user' && ' (somente clientes)'}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="basic" className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={newUserData.name}
+                  onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                  placeholder="Nome completo"
+                  data-testid="input-new-user-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                  data-testid="input-new-user-email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  placeholder="Senha segura"
+                  data-testid="input-new-user-password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Função</Label>
+                <Select 
+                  value={newUserData.role} 
+                  onValueChange={(value) => {
+                    setNewUserData({ ...newUserData, role: value });
+                    if (value !== 'user' && createWizardStep === 'integrations') {
+                      setCreateWizardStep('basic');
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-new-user-role">
+                    <SelectValue placeholder="Selecione a função" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Cliente</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
+                    <SelectItem value="supplier">Fornecedor</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="integrations" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                      Integrações de Warehouse (Opcional)
+                    </h4>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      Configure contas de warehouse (FHB, European Fulfillment, eLogy, Big Arena) para este usuário. 
+                      Você pode pular esta etapa e configurar depois.
+                    </p>
+                  </div>
+                </div>
+
+                {warehouseProvidersLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                    <p className="text-sm text-muted-foreground mt-2">Carregando providers...</p>
+                  </div>
+                ) : warehouseProvidersError ? (
+                  <div className="text-center py-8">
+                    <Badge variant="destructive">Erro ao carregar providers</Badge>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Você pode configurar as integrações depois na edição do usuário
+                    </p>
+                  </div>
+                ) : warehouseProviders && warehouseProviders.length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full">
+                    {warehouseProviders.map((provider) => (
+                      <AccordionItem key={provider.key} value={provider.key} data-testid={`accordion-provider-${provider.key}`}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <div className="flex items-center gap-3">
+                              <Truck className="h-4 w-4 text-muted-foreground" />
+                              <div className="text-left">
+                                <p className="font-medium">{provider.name}</p>
+                                {provider.description && (
+                                  <p className="text-xs text-muted-foreground">{provider.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="ml-auto mr-2">
+                              {newWarehouseAccounts.filter(acc => acc.providerKey === provider.key).length} conta(s)
+                            </Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 pt-2">
+                            {provider.key === 'big_arena' && (
+                              <div className="p-3 border border-blue-500/30 bg-blue-500/10 rounded-lg text-xs text-blue-100 leading-relaxed">
+                                <p className="font-semibold text-blue-200 mb-1">Como conectar a Big Arena</p>
+                                <ul className="list-disc list-inside space-y-1 text-blue-100/90">
+                                  <li>Informe o <strong>API Token</strong> fornecido pelo suporte Big Arena.</li>
+                                  <li>Campo de domínio é opcional. Preencha apenas se sua conta utiliza subdomínio dedicado (ex: <code className="bg-blue-900/40 px-1 py-0.5 rounded">api.sualoja.bigarena.com</code>).</li>
+                                  <li>Após salvar, as sincronizações automáticas de pedidos, estoque e tracking serão configuradas pelos workers.</li>
+                                </ul>
+                              </div>
+                            )}
+
+                            {newWarehouseAccounts
+                              .filter(acc => acc.providerKey === provider.key)
+                              .map((account) => (
+                                <div 
+                                  key={account.tempId} 
+                                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                                  data-testid={`warehouse-account-${account.tempId}`}
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">{account.accountName}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Configurar operações após criação
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setNewWarehouseAccounts(prev => prev.filter(a => a.tempId !== account.tempId));
+                                      toast({
+                                        title: "Conta removida",
+                                        description: "A conta foi removida da lista."
+                                      });
+                                    }}
+                                    data-testid={`button-remove-account-${account.tempId}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+
+                            {addingAccount?.providerKey === provider.key ? (
+                              <div className="p-4 border rounded-lg space-y-3" data-testid={`form-add-account-${provider.key}`}>
+                                {/* FHB uses App ID and Secret fields, not username/password */}
+                                {provider.key === 'fhb' ? (
+                                  <div>
+                                    <div className="mb-2 p-2 bg-green-100 text-green-800 text-xs rounded">
+                                      ✅ USANDO FORMULÁRIO FHB (App ID + Secret)
+                                    </div>
+                                    <FHBIntegrationForm
+                                      formData={{
+                                        accountName: addingAccount.accountName || '',
+                                        credentials: addingAccount.credentials || {},
+                                        operationIds: addingAccount.operationIds || []
+                                      }}
+                                      onChange={(formData) => setAddingAccount({
+                                        providerKey: provider.key,
+                                        accountName: formData.accountName,
+                                        credentials: formData.credentials,
+                                        operationIds: formData.operationIds
+                                      })}
+                                      availableOperations={[]}
+                                    />
+                                  </div>
+                                ) : null}
+                                {provider.key === 'european_fulfillment' && (
+                                  <EuropeanFulfillmentIntegrationForm
+                                    formData={{
+                                      accountName: addingAccount.accountName || '',
+                                      credentials: addingAccount.credentials || {},
+                                      operationIds: addingAccount.operationIds || []
+                                    }}
+                                    onChange={(formData) => setAddingAccount({
+                                      providerKey: provider.key,
+                                      accountName: formData.accountName,
+                                      credentials: formData.credentials,
+                                      operationIds: formData.operationIds
+                                    })}
+                                    availableOperations={[]}
+                                  />
+                                )}
+                                {provider.key === 'elogy' && (
+                                  <ElogyIntegrationForm
+                                    formData={{
+                                      accountName: addingAccount.accountName || '',
+                                      credentials: addingAccount.credentials || {},
+                                      operationIds: addingAccount.operationIds || []
+                                    }}
+                                    onChange={(formData) => setAddingAccount({
+                                      providerKey: provider.key,
+                                      accountName: formData.accountName,
+                                      credentials: formData.credentials,
+                                      operationIds: formData.operationIds
+                                    })}
+                                    availableOperations={[]}
+                                  />
+                                )}
+                                {/* Generic form for other providers (Big Arena, etc.) */}
+                                {(provider.key !== 'fhb' && provider.key !== 'european_fulfillment' && provider.key !== 'elogy') && (
+                                  <>
+                                    <div className="mb-2 p-2 bg-yellow-100 text-yellow-800 text-xs rounded">
+                                      ⚙️ Formulário genérico ({provider.name})
+                                    </div>
+                                    <div>
+                                      <Label htmlFor={`account-name-${provider.key}`}>Nome da Conta</Label>
+                                      <Input
+                                        id={`account-name-${provider.key}`}
+                                        placeholder="Ex: Big Arena Principal"
+                                        value={addingAccount.accountName}
+                                        onChange={(e) => setAddingAccount({ ...addingAccount, accountName: e.target.value })}
+                                        data-testid={`input-account-name-${provider.key}`}
+                                      />
+                                    </div>
+
+                                    {provider.requiredFields.map((field) => (
+                                      <div key={field.fieldName}>
+                                        <Label htmlFor={`${provider.key}-${field.fieldName}`}>
+                                          {field.label} {field.required && <span className="text-destructive">*</span>}
+                                        </Label>
+                                        {field.fieldType === 'select' && field.fieldName === 'country' ? (
+                                          <Select
+                                            value={addingAccount.credentials[field.fieldName] || ''}
+                                            onValueChange={(value) => setAddingAccount({
+                                              ...addingAccount,
+                                              credentials: { ...addingAccount.credentials, [field.fieldName]: value }
+                                            })}
+                                          >
+                                            <SelectTrigger data-testid={`select-credential-${provider.key}-${field.fieldName}`}>
+                                              <SelectValue placeholder="Selecione o país" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="spain">🇪🇸 Espanha</SelectItem>
+                                              <SelectItem value="portugal">🇵🇹 Portugal</SelectItem>
+                                              <SelectItem value="italy">🇮🇹 Itália</SelectItem>
+                                              <SelectItem value="poland">🇵🇱 Polônia</SelectItem>
+                                              <SelectItem value="slovakia">🇸🇰 Eslováquia</SelectItem>
+                                              <SelectItem value="czechrepublic">🇨🇿 República Tcheca</SelectItem>
+                                              <SelectItem value="romania">🇷🇴 Romênia</SelectItem>
+                                              <SelectItem value="bulgaria">🇧🇬 Bulgária</SelectItem>
+                                              <SelectItem value="greece">🇬🇷 Grécia</SelectItem>
+                                              <SelectItem value="hungary">🇭🇺 Hungria</SelectItem>
+                                              <SelectItem value="slovenia">🇸🇮 Eslovênia</SelectItem>
+                                              <SelectItem value="croatia">🇭🇷 Croácia</SelectItem>
+                                              <SelectItem value="austria">🇦🇹 Áustria</SelectItem>
+                                              <SelectItem value="germany">🇩🇪 Alemanha</SelectItem>
+                                              <SelectItem value="france">🇫🇷 França</SelectItem>
+                                              <SelectItem value="belgium">🇧🇪 Bélgica</SelectItem>
+                                              <SelectItem value="netherlands">🇳🇱 Holanda</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        ) : (
+                                          <Input
+                                            id={`${provider.key}-${field.fieldName}`}
+                                            type={field.fieldType === 'password' ? 'password' : 'text'}
+                                            placeholder={field.placeholder || `Digite ${field.label.toLowerCase()}`}
+                                            value={addingAccount.credentials[field.fieldName] || ''}
+                                            onChange={(e) => setAddingAccount({
+                                              ...addingAccount,
+                                              credentials: { ...addingAccount.credentials, [field.fieldName]: e.target.value }
+                                            })}
+                                            data-testid={`input-credential-${provider.key}-${field.fieldName}`}
+                                          />
+                                        )}
+                                      </div>
+                                    ))}
+                                  </>
+                                )}
+
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setAddingAccount(null)}
+                                    data-testid={`button-cancel-add-${provider.key}`}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      if (!addingAccount.accountName.trim()) {
+                                        toast({
+                                          title: "Nome obrigatório",
+                                          description: "Preencha o nome da conta.",
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+
+                                      // Validate required fields based on provider type
+                                      let missingFields: Array<{ label: string }> = [];
+                                      
+                                      if (provider.key === 'fhb') {
+                                        if (!addingAccount.credentials['appId']?.trim()) {
+                                          missingFields.push({ label: 'App ID' });
+                                        }
+                                        if (!addingAccount.credentials['secret']?.trim()) {
+                                          missingFields.push({ label: 'Secret' });
+                                        }
+                                      } else if (provider.key === 'european_fulfillment') {
+                                        if (!addingAccount.credentials['email']?.trim()) {
+                                          missingFields.push({ label: 'Email European Fulfillment' });
+                                        }
+                                        if (!addingAccount.credentials['password']?.trim()) {
+                                          missingFields.push({ label: 'Senha European Fulfillment' });
+                                        }
+                                      } else if (provider.key === 'elogy') {
+                                        if (!addingAccount.credentials['email']?.trim()) {
+                                          missingFields.push({ label: 'Email eLogy' });
+                                        }
+                                        if (!addingAccount.credentials['password']?.trim()) {
+                                          missingFields.push({ label: 'Senha eLogy' });
+                                        }
+                                      } else {
+                                        missingFields = provider.requiredFields
+                                          .filter(f => f.required && !addingAccount.credentials[f.fieldName]?.trim())
+                                          .map(f => ({ label: f.label }));
+                                      }
+                                      
+                                      if (missingFields.length > 0) {
+                                        toast({
+                                          title: "Campos obrigatórios faltando",
+                                          description: `Preencha: ${missingFields.map(f => f.label).join(', ')}`,
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+
+                                      const sanitizedCredentials = Object.fromEntries(
+                                        Object.entries(addingAccount.credentials).map(([key, value]) => [
+                                          key,
+                                          typeof value === 'string' ? value.trim() : value
+                                        ])
+                                      );
+
+                                      const newAccount = {
+                                        ...structuredClone(addingAccount),
+                                        accountName: addingAccount.accountName.trim(),
+                                        credentials: sanitizedCredentials,
+                                        tempId: `temp-${Date.now()}-${Math.random()}`,
+                                        operationIds: []
+                                      };
+                                      setNewWarehouseAccounts(prev => [...prev, newAccount]);
+                                      setAddingAccount(null);
+                                      toast({
+                                        title: "Conta adicionada",
+                                        description: `${addingAccount.accountName} foi adicionada.`
+                                      });
+                                    }}
+                                    data-testid={`button-save-add-${provider.key}`}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Adicionar Conta
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => setAddingAccount({
+                                  providerKey: provider.key,
+                                  accountName: '',
+                                  credentials: {},
+                                  operationIds: []
+                                })}
+                                data-testid={`button-add-account-${provider.key}`}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Conta {provider.name}
+                              </Button>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Nenhum provider disponível</p>
+                  </div>
+                )}
+
+                {newWarehouseAccounts.length > 0 && (
+                  <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm text-green-900 dark:text-green-100">
+                      <Check className="h-4 w-4 inline mr-1" />
+                      {newWarehouseAccounts.length} conta(s) de warehouse configurada(s)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="flex justify-between items-center">
+            <div>
+              {createWizardStep === 'integrations' && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setCreateWizardStep('basic')}
+                  data-testid="button-wizard-back"
+                >
+                  ← Voltar
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateUserModal(false)}
+                data-testid="button-cancel-create-user"
+              >
+                Cancelar
+              </Button>
+              {createWizardStep === 'basic' ? (
+                newUserData.role === 'user' ? (
+                  <Button 
+                    onClick={() => {
+                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
+                        toast({
+                          title: "Campos obrigatórios",
+                          description: "Preencha nome, email e senha antes de continuar.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      setCreateWizardStep('integrations');
+                    }}
+                    data-testid="button-wizard-next"
+                  >
+                    Próximo →
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => {
+                      if (!newUserData.name.trim() || !newUserData.email.trim() || !newUserData.password.trim()) {
+                        toast({
+                          title: "Campos obrigatórios",
+                          description: "Preencha nome, email e senha antes de criar o usuário.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      createUserMutation.mutate(newUserData);
+                    }}
+                    disabled={createUserMutation.isPending}
+                    data-testid="button-create-user-submit"
+                  >
+                    {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
+                  </Button>
+                )
+              ) : (
+                <Button 
+                  onClick={() => createUserMutation.mutate(newUserData)}
+                  disabled={createUserMutation.isPending}
+                  data-testid="button-create-user-complete"
+                >
+                  {createUserMutation.isPending ? 'Criando...' : 'Concluir e Criar'}
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal */}
+      <Dialog open={showEditModal} onOpenChange={(open) => {
+        if (!open) {
+          setActiveTab("general");
+          setEditingWarehouseAccountId(null);
+          setAddingEditWarehouseAccount(null);
+          setAccordionValue(undefined);
+          setShowEditModal(false);
+        }
+      }}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-400">
+              <Edit className="h-5 w-5" />
+              Editar Usuário
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Edite as informações do usuário <strong className="text-white">{userToEdit?.name}</strong>. 
+              Deixe a senha em branco para não alterá-la.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 bg-white/10 border border-white/20">
+              <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
+                Informações Gerais
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="data-[state=active]:bg-blue-600">
+                Permissões
+              </TabsTrigger>
+              <TabsTrigger value="operations" className="data-[state=active]:bg-blue-600">
+                Operações
+              </TabsTrigger>
+              <TabsTrigger value="warehouse" className="data-[state=active]:bg-blue-600" data-testid="tab-warehouse">
+                Armazéns
+              </TabsTrigger>
+            </TabsList>
+            
+            <form onSubmit={(e) => { e.preventDefault(); handleSubmitEdit(); }} className="space-y-4">
+              <TabsContent value="general" className="mt-4 space-y-4">
+                <div>
+                  <Label htmlFor="edit-name" className="text-sm text-slate-400">Nome</Label>
+                  <Input
+                    id="edit-name"
+                    value={editUserData.name}
+                    onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                    placeholder="Nome completo do usuário"
+                    required
+                    data-testid="input-edit-user-name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-email" className="text-sm text-slate-400">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editUserData.email}
+                    onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                    placeholder="usuario@exemplo.com"
+                    required
+                    data-testid="input-edit-user-email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-password" className="text-sm text-slate-400">
+                    Nova Senha (deixe em branco para não alterar)
+                  </Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    value={editUserData.password}
+                    onChange={(e) => setEditUserData({ ...editUserData, password: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                    placeholder="Nova senha (opcional)"
+                    data-testid="input-edit-user-password"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-role" className="text-sm text-slate-400">Tipo de Usuário</Label>
+                  <Select value={editUserData.role} onValueChange={(value) => setEditUserData({ ...editUserData, role: value })}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-edit-user-role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      <SelectItem value="user" className="text-white hover:bg-gray-700">Usuário</SelectItem>
+                      <SelectItem value="admin" className="text-white hover:bg-gray-700">Admin</SelectItem>
+                      <SelectItem value="supplier" className="text-white hover:bg-gray-700">Supplier</SelectItem>
+                      <SelectItem value="super_admin" className="text-white hover:bg-gray-700">Super Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Account Status Card */}
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${editUserData.isActive ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                        {editUserData.isActive ? '✅' : '🔒'}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-white mb-1">
+                        Status da Conta
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {editUserData.isActive 
+                          ? 'Conta ativa - usuário pode fazer login'
+                          : 'Conta desativada - acesso bloqueado'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Checkbox
+                        checked={editUserData.isActive}
+                        onCheckedChange={(checked) => 
+                          setEditUserData({ ...editUserData, isActive: checked === true })
+                        }
+                        data-testid="checkbox-user-active"
+                      />
+                    </div>
+                  </div>
+                  {!editUserData.isActive && (
+                    <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400">
+                      ⚠️ Este usuário não poderá acessar o sistema até que a conta seja reativada
+                    </div>
+                  )}
+                </div>
+
+                {/* Activity Statistics Card */}
+                {userToEdit?.lastLoginAt && (
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/20">
+                          📊
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-white mb-1">
+                          Atividade Recente
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Último login: {new Date(userToEdit.lastLoginAt).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Security Card */}
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${editUserData.forcePasswordChange ? 'bg-orange-500/20' : 'bg-gray-500/20'}`}>
+                        🔐
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-white mb-1">
+                        Segurança da Senha
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {editUserData.forcePasswordChange 
+                          ? 'Usuário será obrigado a alterar a senha no próximo login'
+                          : 'Nenhuma ação de segurança pendente'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Checkbox
+                        checked={editUserData.forcePasswordChange}
+                        onCheckedChange={(checked) => 
+                          setEditUserData({ ...editUserData, forcePasswordChange: checked === true })
+                        }
+                        data-testid="checkbox-force-password-change"
+                      />
+                    </div>
+                  </div>
+                  {editUserData.forcePasswordChange && (
+                    <div className="mt-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded text-xs text-orange-400">
+                      🔔 O usuário receberá um aviso para alterar sua senha imediatamente após o login
+                    </div>
+                  )}
+                </div>
+
+                {/* Onboarding Status Card */}
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${editUserData.onboardingCompleted ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
+                        {editUserData.onboardingCompleted ? '✅' : '👤'}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-white mb-1">
+                        Status do Onboarding
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {editUserData.onboardingCompleted 
+                          ? 'O onboarding foi concluído pelo usuário'
+                          : 'O onboarding ainda não foi concluído'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Checkbox
+                        checked={editUserData.onboardingCompleted}
+                        onCheckedChange={(checked) => 
+                          setEditUserData({ ...editUserData, onboardingCompleted: checked === true })
+                        }
+                        data-testid="checkbox-onboarding-completed"
+                      />
+                    </div>
+                  </div>
+                  {editUserData.onboardingCompleted && (
+                    <div className="mt-3 p-2 bg-green-500/10 border border-green-500/20 rounded text-xs text-green-400">
+                      ✨ Usuário pode acessar todas as funcionalidades do sistema
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="permissions" className="mt-4">
+                <div className="space-y-4">
+                  <div className="text-sm text-slate-400">
+                    Controle as páginas que este usuário pode acessar baseado no seu tipo de conta.
+                  </div>
+                  
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-3">
+                      {editUserData.role === 'super_admin' ? '🔧 Páginas Administrativas' : '👤 Páginas do Cliente'}
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {getAvailablePages(editUserData.role).map((page) => {
+                        const hasPermission = editUserData.permissions.includes(page.id);
+                        
+                        return (
+                          <div 
+                            key={page.id}
+                            className={`flex items-start space-x-3 p-3 rounded-md border transition-colors ${
+                              hasPermission 
+                                ? 'bg-blue-50/10 border-blue-500/30' 
+                                : 'bg-white/5 border-white/20'
+                            }`}
+                            data-testid={`permission-${page.id}`}
+                          >
+                            <Checkbox 
+                              checked={hasPermission}
+                              onCheckedChange={(checked) => togglePermission(page.id, checked === true)}
+                              className="mt-1"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">{page.icon}</span>
+                                <span className="text-sm font-medium text-white">
+                                  {page.name}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 mt-1">
+                                {page.description}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md">
+                      <div className="flex items-center gap-2 text-blue-400 text-sm">
+                        <span>💡</span>
+                        <span className="font-medium">Dica:</span>
+                      </div>
+                      <p className="text-xs text-blue-300 mt-1">
+                        {editUserData.role === 'super_admin' 
+                          ? 'Usuários super admin podem acessar páginas administrativas do painel /inside'
+                          : 'Usuários normais podem acessar páginas do dashboard principal do cliente'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Permissions summary */}
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-2">
+                      📋 Resumo das Permissões
+                    </h4>
+                    <div className="text-xs text-slate-400">
+                      {editUserData.permissions.length > 0 ? (
+                        <>
+                          <span className="text-green-400 font-medium">
+                            {editUserData.permissions.length} páginas permitidas:
+                          </span>{' '}
+                          {editUserData.permissions.map(permissionId => {
+                            const page = getAvailablePages(editUserData.role).find(p => p.id === permissionId);
+                            return page?.name;
+                          }).filter(Boolean).join(', ')}
+                        </>
+                      ) : (
+                        <span className="text-orange-400">
+                          ⚠️ Nenhuma página selecionada - usuário não terá acesso a nenhuma funcionalidade
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="operations" className="mt-4">
+                <div className="space-y-4">
+                  <div className="text-sm text-slate-400">
+                    Operações (lojas/regiões) às quais este usuário tem acesso.
+                  </div>
+                  
+                  {!userOperations ? (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-6 text-center">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-slate-400 text-sm">
+                        Carregando operações do usuário...
+                      </p>
+                    </div>
+                  ) : userOperations.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {userOperations.map((userOp) => {
+                        const operation = allOperations?.find(op => op.id === userOp.operationId);
+                        if (!operation) return null;
+                        
+                        return (
+                          <div 
+                            key={userOp.operationId}
+                            className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-lg p-4 backdrop-blur-sm"
+                            data-testid={`user-operation-${userOp.operationId}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                  <span className="text-lg">🏪</span>
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-semibold text-white mb-1">
+                                  {operation.name}
+                                </h4>
+                                <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+                                  <span>📍</span>
+                                  <span>{operation.country}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-xs text-green-400">
+                                    ✓ Acesso ativo
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-8 text-center">
+                      <div className="w-16 h-16 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
+                        <span className="text-3xl">⚠️</span>
+                      </div>
+                      <h4 className="text-sm font-medium text-white mb-2">
+                        Nenhuma operação atribuída
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Este usuário não tem acesso a nenhuma operação no momento.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Operations summary */}
+                  {userOperations && userOperations.length > 0 && (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">📊</span>
+                        <h4 className="text-sm font-medium text-white">
+                          Resumo de Acesso
+                        </h4>
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        <span className="text-green-400 font-medium">
+                          {userOperations.length} {userOperations.length === 1 ? 'operação' : 'operações'}
+                        </span>
+                        {' '}com acesso ativo
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="warehouse" className="mt-4">
+                <div className="space-y-4">
+                  <div className="text-sm text-slate-400">
+                    Gerencie as contas de warehouse (FHB, European Fulfillment, eLogy, Big Arena) deste usuário.
+                  </div>
+                  
+                  {/* Lista de warehouse accounts existentes */}
+                  {!userWarehouseAccounts ? (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-6 text-center">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-slate-400 text-sm">
+                        Carregando warehouse accounts...
+                      </p>
+                    </div>
+                  ) : userWarehouseAccounts.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-white">
+                        Contas Configuradas ({userWarehouseAccounts.length})
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {userWarehouseAccounts.map((account) => (
+                          <WarehouseAccountCard
+                            key={account.id}
+                            account={account}
+                            operations={allOperations}
+                            onDelete={(accountId) => {
+                              setWarehouseAccountToDelete({
+                                id: accountId,
+                                name: account.displayName
+                              });
+                              setShowDeleteWarehouseModal(true);
+                            }}
+                            showActions={true}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-8 text-center">
+                      <div className="w-16 h-16 rounded-full bg-gray-500/20 flex items-center justify-center mx-auto mb-4">
+                        <Truck className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h4 className="text-sm font-medium text-white mb-2">
+                        Nenhuma conta configurada
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Adicione contas de warehouse para sincronizar pedidos.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Adicionar nova conta */}
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Adicionar Nova Conta
+                    </h4>
+                    
+                    {warehouseProvidersLoading ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
+                        <p className="text-xs text-muted-foreground mt-2">Carregando providers...</p>
+                      </div>
+                    ) : warehouseProvidersError ? (
+                      <div className="text-center py-4">
+                        <Badge variant="destructive">Erro ao carregar providers</Badge>
+                      </div>
+                    ) : warehouseProviders && warehouseProviders.length > 0 ? (
+                      <Accordion 
+                        type="single" 
+                        collapsible 
+                        className="w-full" 
+                        value={accordionValue}
+                        onValueChange={setAccordionValue}
+                        key={addingEditWarehouseAccount?.providerKey || 'empty'}
+                      >
+                        {warehouseProviders.map((provider) => {
+                          const isAddingAccount = addingEditWarehouseAccount?.providerKey === provider.key;
+                          return (
+                          <AccordionItem key={provider.key} value={provider.key} data-testid={`accordion-edit-provider-${provider.key}`}>
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-3">
+                                <Truck className="h-4 w-4 text-muted-foreground" />
+                                <div className="text-left">
+                                  <p className="font-medium">{provider.name}</p>
+                                  {provider.description && (
+                                    <p className="text-xs text-muted-foreground">{provider.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              {provider.key === 'big_arena' && !isAddingAccount && (
+                                <div className="mb-3 p-3 border border-blue-500/30 bg-blue-500/10 rounded-lg text-xs text-blue-100 leading-relaxed">
+                                  <p className="font-semibold text-blue-200 mb-1">Como conectar a Big Arena</p>
+                                  <ul className="list-disc list-inside space-y-1 text-blue-100/90">
+                                    <li>Informe o <strong>API Token</strong> fornecido pelo suporte Big Arena.</li>
+                                    <li>Campo de domínio é opcional. Preencha apenas se sua conta utiliza subdomínio dedicado (ex: <code className="bg-blue-900/40 px-1 py-0.5 rounded">api.sualoja.bigarena.com</code>).</li>
+                                    <li>Após salvar, as sincronizações automáticas de pedidos, estoque e tracking serão configuradas pelos workers.</li>
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {isAddingAccount && addingEditWarehouseAccount && addingEditWarehouseAccount.providerKey === provider.key ? (
+                                <div className="p-4 border border-white/20 rounded-lg space-y-3 bg-white/5">
+                                  {/* DEBUG: Test render */}
+                                  <div className="text-red-400 text-sm font-bold">
+                                    FORMULÁRIO ESTÁ SENDO RENDERIZADO - Provider: {provider.key}
+                                  </div>
+                                  {provider.key === 'fhb' && (
+                                    <FHBIntegrationForm
+                                      formData={addingEditWarehouseAccount.formData}
+                                      onChange={(formData) => setAddingEditWarehouseAccount({ providerKey: provider.key, formData })}
+                                      availableOperations={userOperations ? allOperations?.filter(op => userOperations.some(uo => uo.operationId === op.id)) || [] : []}
+                                    />
+                                  )}
+                                  {provider.key === 'european_fulfillment' && (
+                                    <EuropeanFulfillmentIntegrationForm
+                                      formData={addingEditWarehouseAccount.formData}
+                                      onChange={(formData) => setAddingEditWarehouseAccount({ providerKey: provider.key, formData })}
+                                      availableOperations={userOperations ? allOperations?.filter(op => userOperations.some(uo => uo.operationId === op.id)) || [] : []}
+                                    />
+                                  )}
+                                  {provider.key === 'elogy' && (
+                                    <ElogyIntegrationForm
+                                      formData={addingEditWarehouseAccount.formData}
+                                      onChange={(formData) => setAddingEditWarehouseAccount({ providerKey: provider.key, formData })}
+                                      availableOperations={userOperations ? allOperations?.filter(op => userOperations.some(uo => uo.operationId === op.id)) || [] : []}
+                                    />
+                                  )}
+                                  {(provider.key !== 'fhb' && provider.key !== 'european_fulfillment' && provider.key !== 'elogy') && (() => {
+                                    // Get fields with fallback for Big Arena
+                                    const fields = Array.isArray(provider.requiredFields) ? provider.requiredFields : [];
+                                    const finalFields = fields.length > 0 ? fields : (
+                                      provider.key === 'big_arena' ? [
+                                        { fieldName: 'apiToken', fieldType: 'password', label: 'API Token', placeholder: 'seu_token_api', required: true }
+                                      ] : []
+                                    );
+
+                                    return (
+                                      <div className="space-y-3">
+                                        <div>
+                                          <Label htmlFor={`edit-account-name-${provider.key}`} className="text-xs text-slate-300">
+                                            Nome da Conta
+                                          </Label>
+                                          <Input
+                                            id={`edit-account-name-${provider.key}`}
+                                            value={addingEditWarehouseAccount?.formData?.accountName || ''}
+                                            onChange={(e) =>
+                                              setAddingEditWarehouseAccount({
+                                                providerKey: provider.key,
+                                                formData: { 
+                                                  ...(addingEditWarehouseAccount?.formData || {}), 
+                                                  accountName: e.target.value 
+                                                }
+                                              })
+                                            }
+                                            placeholder="Ex: Big Arena Principal"
+                                            className="bg-white/10 border-white/20 text-white"
+                                          />
+                                        </div>
+                                        
+                                        {finalFields.map((field: any) => (
+                                          <div key={field.fieldName}>
+                                            <Label htmlFor={`edit-${provider.key}-${field.fieldName}`} className="text-xs text-slate-300">
+                                              {field.label} {field.required && <span className="text-red-400">*</span>}
+                                            </Label>
+                                            <Input
+                                              id={`edit-${provider.key}-${field.fieldName}`}
+                                              type={field.fieldType === 'password' ? 'password' : 'text'}
+                                              placeholder={field.placeholder || ''}
+                                              value={addingEditWarehouseAccount?.formData?.credentials?.[field.fieldName] || ''}
+                                              onChange={(e) =>
+                                                setAddingEditWarehouseAccount({
+                                                  providerKey: provider.key,
+                                                  formData: {
+                                                    ...(addingEditWarehouseAccount?.formData || {}),
+                                                    credentials: {
+                                                      ...(addingEditWarehouseAccount?.formData?.credentials || {}),
+                                                      [field.fieldName]: e.target.value
+                                                    }
+                                                  }
+                                                })
+                                              }
+                                              className="bg-white/10 border-white/20 text-white"
+                                            />
+                                            {!field.required && (
+                                              <p className="text-[10px] text-slate-400 mt-1">
+                                                Campo opcional
+                                              </p>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
+                                  
+                                  <div className="flex gap-2 justify-end">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setAddingEditWarehouseAccount(null);
+                                        setAccordionValue(undefined);
+                                      }}
+                                      data-testid={`button-cancel-add-${provider.key}`}
+                                    >
+                                      Cancelar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => {
+                                        if (!addingEditWarehouseAccount.formData.accountName.trim()) {
+                                          toast({
+                                            title: "Campo obrigatório",
+                                            description: "Preencha o nome da conta.",
+                                            variant: "destructive"
+                                          });
+                                          return;
+                                        }
+                                        if (!userToEdit?.id) return;
+                                        if (provider.key !== 'fhb' && provider.key !== 'european_fulfillment' && provider.key !== 'elogy') {
+                                          const missingFields = (provider.requiredFields || []).filter(field => {
+                                            if (!field.required) return false;
+                                            const value = addingEditWarehouseAccount.formData.credentials?.[field.fieldName];
+                                            return !(typeof value === 'string' && value.trim().length > 0);
+                                          });
+                                          if (missingFields.length > 0) {
+                                            toast({
+                                              title: "Campos obrigatórios faltando",
+                                              description: `Preencha: ${missingFields.map(f => f.label).join(', ')}`,
+                                              variant: "destructive"
+                                            });
+                                            return;
+                                          }
+                                        }
+                                        const sanitizedCredentials = Object.fromEntries(
+                                          Object.entries(addingEditWarehouseAccount.formData.credentials || {}).map(([key, value]) => [
+                                            key,
+                                            typeof value === 'string' ? value.trim() : value
+                                          ])
+                                        );
+                                        createWarehouseAccountMutation.mutate({
+                                          userId: userToEdit.id,
+                                          providerKey: provider.key,
+                                          accountName: addingEditWarehouseAccount.formData.accountName.trim(),
+                                          credentials: sanitizedCredentials,
+                                          operationIds: addingEditWarehouseAccount.formData.operationIds
+                                        });
+                                      }}
+                                      disabled={createWarehouseAccountMutation.isPending}
+                                      data-testid={`button-save-add-${provider.key}`}
+                                    >
+                                      {createWarehouseAccountMutation.isPending ? 'Salvando...' : 'Salvar Conta'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => {
+                                    setAccordionValue(provider.key);
+                                    setAddingEditWarehouseAccount({
+                                      providerKey: provider.key,
+                                      formData: { accountName: '', credentials: {}, operationIds: [] }
+                                    });
+                                  }}
+                                  data-testid={`button-add-${provider.key}`}
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Adicionar Conta {provider.name}
+                                </Button>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+                          );
+                        })}
+                      </Accordion>
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Nenhum provider disponível
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <DialogFooter className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setActiveTab("general");
+                    setShowEditModal(false);
+                  }}
+                  className="border-white/20 text-white hover:bg-white/10"
+                  data-testid="button-cancel-edit-user"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={editUserMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  data-testid="button-save-edit-user"
+                >
+                  {editUserMutation.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar Alterações'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o usuário <strong>{userToDelete?.name}</strong> ({userToDelete?.email})?
+              <br /><br />
+              <span className="text-red-600 font-medium">
+                Esta ação não pode ser desfeita e todos os dados associados serão perdidos.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Warehouse Account Confirmation Modal */}
+      <Dialog open={showDeleteWarehouseModal} onOpenChange={setShowDeleteWarehouseModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão de Conta</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir a conta de warehouse <strong>{warehouseAccountToDelete?.name}</strong>?
+              <br /><br />
+              <span className="text-red-600 font-medium">
+                Esta ação não pode ser desfeita. Todos os pedidos staging desta conta ficarão órfãos (preservados para histórico).
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteWarehouseModal(false);
+                setWarehouseAccountToDelete(null);
+              }}
+              data-testid="button-cancel-delete-warehouse"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => warehouseAccountToDelete && deleteWarehouseAccountMutation.mutate(warehouseAccountToDelete.id)}
+              disabled={deleteWarehouseAccountMutation.isPending}
+              data-testid="button-confirm-delete-warehouse"
+            >
+              {deleteWarehouseAccountMutation.isPending ? 'Excluindo...' : 'Excluir Conta'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

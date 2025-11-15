@@ -1,0 +1,65 @@
+Adicione sistema de integração "Aplicativos da Operação" no dashboard:
+
+FUNCIONALIDADES:
+
+1. **Página de Integrações** (/inside/integrations)
+   - Card "Aplicativos da Operação" com:
+     - Toggle ativar/desativar
+     - Input para URL do webhook (ex: https://app-operacao.replit.app/api/webhooks/create-user)
+     - Input para WEBHOOK_SECRET (campo password, auto-gera se vazio)
+     - Botão "Testar Conexão" (envia webhook de teste)
+     - Botão "Salvar Configurações"
+   - Mostrar status: ativo/inativo
+   - Logs dos últimos webhooks disparados (tabela com: data, status, pedido_id, resposta)
+
+2. **Banco de Dados - Nova Tabela** (integration_configs)
+   - id (UUID)
+   - user_id (FK para users)
+   - integration_type (text: "operational_app")
+   - webhook_url (text)
+   - webhook_secret (text, criptografado)
+   - is_active (boolean)
+   - created_at, updated_at
+
+3. **Banco de Dados - Tabela de Logs** (webhook_logs)
+   - id (UUID)
+   - integration_config_id (FK)
+   - order_id (FK para orders)
+   - payload (jsonb)
+   - response_status (integer)
+   - response_body (jsonb)
+   - error_message (text, nullable)
+   - created_at
+
+4. **Sistema de Webhooks Automático**
+   - Ao criar novo pedido, verificar se integração está ativa
+   - Gerar HMAC signature (SHA-256) com WEBHOOK_SECRET
+   - Disparar POST para webhook_url com payload:
+     ```json
+     {
+       "event": "order.created",
+       "order": {
+         "id": "pedido_id",
+         "customer_email": "email@cliente.com",
+         "customer_name": "Nome Cliente",
+         "phone": "telefone"
+       }
+     }
+     ```
+   - Headers: Content-Type: application/json, X-Webhook-Signature: hmac_signature
+   - Timeout de 10 segundos
+   - Retry automático (3 tentativas com delay de 5s entre elas)
+   - Salvar log em webhook_logs
+
+5. **API Endpoints**
+   - POST /api/integrations/operational-app - salvar configuração
+   - GET /api/integrations/operational-app - buscar configuração
+   - POST /api/integrations/operational-app/test - testar webhook
+   - GET /api/integrations/operational-app/logs - últimos 50 webhooks
+
+6. **Segurança**
+   - Apenas admin e super_admin podem configurar
+   - WEBHOOK_SECRET criptografado no banco
+   - Validar URL do webhook (deve ser HTTPS em produção)
+
+Usar Drizzle ORM para schema. Criar UI com shadcn/ui components.

@@ -1,0 +1,104 @@
+Implemente as seguintes melhorias no sistema de Suporte Administrativo N1 Hub (/inside/support):
+## ETAPA 1: ATUALIZAR CATEGORIAS B2B
+Remova as categorias atuais (duvidas, reclamacoes, alteracao_endereco, cancelamento, manual) e crie as seguintes categorias B2B:
+1. duvidas_gerais
+   - display_name: "Dúvidas Gerais"
+   - description: "Perguntas sobre funcionalidades, uso da plataforma e navegação"
+   - is_automated: true
+   - priority: 1
+   - color: "#3b82f6"
+2. integracao
+   - display_name: "Integrações"
+   - description: "Problemas e dúvidas sobre Shopify, Meta Ads, Google Ads, Vercel"
+   - is_automated: true
+   - priority: 2
+   - color: "#8b5cf6"
+3. onboarding
+   - display_name: "Onboarding"
+   - description: "Tutoriais, primeiros passos, configuração inicial"
+   - is_automated: true
+   - priority: 3
+   - color: "#10b981"
+4. problema_tecnico
+   - display_name: "Problema Técnico"
+   - description: "Bugs, erros, falhas no sistema"
+   - is_automated: false (requer análise humana)
+   - priority: 4
+   - color: "#ef4444"
+5. financeiro
+   - display_name: "Financeiro"
+   - description: "Cobranças, planos, faturas, reembolsos"
+   - is_automated: false (requer análise humana)
+   - priority: 5
+   - color: "#f59e0b"
+6. feature_request
+   - display_name: "Solicitação de Recurso"
+   - description: "Sugestões de melhorias e novas funcionalidades"
+   - is_automated: false
+   - priority: 6
+   - color: "#06b6d4"
+7. manual
+   - display_name: "Manual"
+   - description: "Casos complexos que requerem análise manual"
+   - is_automated: false
+   - priority: 10
+   - color: "#6b7280"
+Execute via SQL:
+- DELETE FROM support_categories;
+- INSERT as categorias acima
+- UPDATE support_emails para remapear categorias antigas
+## ETAPA 2: CRIAR DIRETIVAS B2B
+Remova as diretivas atuais e crie as seguintes diretivas administrativas:
+### Integrações
+1. Tipo: n1_info | Título: "Erro Shopify - Token Expirado"
+   Conteúdo: "Se o cliente relata erro de token expirado do Shopify, oriente: Vá em Configurações > Integrações > Shopify e clique em 'Reconectar'. Isso renovará a autorização."
+2. Tipo: n1_info | Título: "Como Conectar Meta Ads"
+   Conteúdo: "Para conectar Meta Ads: 1) Acesse a página Ads no dashboard 2) Clique em 'Conectar Meta' 3) Autorize sua conta de negócios 4) Selecione as contas de anúncios desejadas. Importante: Você precisa ser admin da conta de negócios."
+3. Tipo: n1_info | Título: "Como Conectar Google Ads"
+   Conteúdo: "Para conectar Google Ads: 1) Vá em Ads 2) Clique em 'Conectar Google' 3) Autentique com sua conta Google 4) Selecione a conta do Google Ads. Certifique-se de ter permissões de administrador."
+4. Tipo: n1_info | Título: "Vercel Deployment Falhou"
+   Conteúdo: "Se o deploy no Vercel falhou: 1) Verifique se a integração Vercel está ativa em Funnels 2) Tente reconectar o Vercel 3) Verifique os logs de deploy na página Funnels. Se persistir, peça detalhes do erro específico."
+### Funcionalidades
+5. Tipo: n1_info | Título: "Como Criar Funil"
+   Conteúdo: "Para criar um funil: 1) Vá em Funnels 2) Clique em 'Novo Funil' 3) Escolha um template 4) Configure nome, idioma e moeda 5) Clique em 'Criar e Deploy'. O funil será publicado automaticamente no Vercel."
+6. Tipo: n1_info | Título: "Como Adicionar Produtos"
+   Conteúdo: "Para adicionar produtos: 1) Acesse Hub/Marketplace 2) Navegue pelos produtos disponíveis 3) Clique em 'Adicionar à Operação' nos produtos desejados. Os produtos ficarão disponíveis nos seus funnels."
+7. Tipo: n1_info | Título: "Analytics Não Aparecem"
+   Conteúdo: "Se as analytics estão zeradas: 1) Verifique se o pixel de tracking está instalado no funil 2) Aguarde 24-48h para coleta de dados 3) Confirme o período de datas selecionado 4) Verifique se há tráfego real no funil."
+### Planos e Limites
+8. Tipo: n1_info | Título: "Limites por Plano"
+   Conteúdo: "Limites dos planos: Starter (3 funnels, 1 operação) | Pro (10 funnels, 3 operações, analytics avançadas) | Enterprise (ilimitado, suporte prioritário, white label)."
+### Financeiro
+9. Tipo: n1_info | Título: "Como Fazer Upgrade"
+   Conteúdo: "Para fazer upgrade do plano: 1) Acesse Configurações > Plano e Faturamento 2) Escolha o plano desejado 3) Preencha os dados de pagamento 4) Confirme. O upgrade é imediato e você tem acesso instantâneo aos novos limites."
+10. Tipo: n1_info | Título: "Política de Reembolso"
+    Conteúdo: "Política de reembolso: Garantia de 7 dias para reembolso total. Após 7 dias, analisamos caso a caso. Entre em contato com financeiro@n1global.app para solicitar."
+Execute via SQL:
+- DELETE FROM admin_support_directives;
+- INSERT as diretivas acima com sort_order de 0 a 9
+## ETAPA 3: ENRIQUECER CONTEXTO DA IA
+Modifique o método categorizeEmail() em server/support-service.ts para incluir contexto B2B no prompt:
+Adicione ao prompt da IA (após as diretivas administrativas):
+CONTEXTO DO SUPORTE ADMINISTRATIVO N1 HUB:
+Você está atendendo PROPRIETÁRIOS DE OPERAÇÕES (clientes B2B da N1 Hub), não os clientes finais deles.
+
+FUNCIONALIDADES DA PLATAFORMA:
+
+Funnels: Criação de landing pages e checkouts com deploy automático via Vercel
+Hub/Marketplace: Catálogo global de produtos para dropshipping
+Integrações: Shopify, Meta Ads, Google Ads, Vercel
+Analytics: Métricas de tráfego, conversão e receita
+Customer Support: Sistema para cada operação atender seus clientes finais
+CATEGORIZAÇÃO INTELIGENTE:
+
+Se menciona integração (Shopify, Meta, Google, Vercel) → categoria: integracao
+Se menciona bug, erro, falha → categoria: problema_tecnico
+Se menciona cobrança, plano, pagamento → categoria: financeiro
+Se menciona tutorial, como fazer → categoria: onboarding ou duvidas_gerais
+Se menciona sugestão, gostaria que tivesse → categoria: feature_request
+PRIORIZAÇÃO AUTOMÁTICA:
+
+Se email contém "URGENTE", "CRÍTICO", "BLOQUEADO" → prioridade ALTA
+Se categoria = problema_tecnico → verificar se é crítico
+Se categoria = financeiro → requer aprovação humana
+Implemente essas 3 etapas em sequência e depois teste com um email sobre "erro ao conectar Shopify"
