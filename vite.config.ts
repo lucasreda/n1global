@@ -9,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Use process.cwd() as fallback for Railway compatibility
 const projectRoot = process.cwd();
 const clientDir = path.resolve(projectRoot, "client");
+const indexHtmlPath = path.resolve(clientDir, "index.html");
 
 export default defineConfig({
   plugins: [
@@ -34,6 +35,9 @@ export default defineConfig({
   build: {
     outDir: path.resolve(projectRoot, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: indexHtmlPath,
+    },
   },
   publicDir: path.resolve(clientDir, "public"),
   server: {
