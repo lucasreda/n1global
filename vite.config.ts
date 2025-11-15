@@ -9,13 +9,11 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 function removeCrossoriginPlugin() {
   return {
     name: 'remove-crossorigin',
-    generateBundle(options: any, bundle: any) {
-      // This runs after all files are generated
-      // We'll handle HTML modification in server/vite.ts instead
-    },
-    writeBundle(options: any) {
+    writeBundle(outputOptions: any, bundle: any) {
       // After build, modify index.html to remove crossorigin
-      const htmlPath = path.resolve(options.dir || options.file, 'index.html');
+      const outDir = outputOptions.dir || path.dirname(outputOptions.file || 'dist/public');
+      const htmlPath = path.resolve(outDir, 'index.html');
+      
       if (fs.existsSync(htmlPath)) {
         try {
           let htmlContent = fs.readFileSync(htmlPath, 'utf-8');
