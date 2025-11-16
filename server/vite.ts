@@ -104,7 +104,9 @@ export function serveStatic(app: Express) {
     if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
       console.log(`📦 [ASSET REQUEST] ${req.method} ${req.path}`);
       res.on('finish', () => {
-        console.log(`📦 [ASSET RESPONSE] ${req.path} - Status: ${res.statusCode}`);
+        const contentType = res.getHeader('Content-Type') || 'not-set';
+        const contentLength = res.getHeader('Content-Length') || 'not-set';
+        console.log(`📦 [ASSET RESPONSE] ${req.path} - Status: ${res.statusCode}, Content-Type: ${contentType}, Content-Length: ${contentLength}`);
       });
     }
     next();
