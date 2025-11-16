@@ -144,6 +144,33 @@ export function serveStatic(app: Express) {
     }
     
     console.log(`📄 [HTML REQUEST] ${req.method} ${req.originalUrl}`);
+    
+    // Read and log HTML content to verify crossorigin is removed
+    try {
+      const htmlPath = path.resolve(distPath, "index.html");
+      const htmlContent = fs.readFileSync(htmlPath, "utf-8");
+      
+      // Check for crossorigin in CSS links
+      const cssLinks = htmlContent.match(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi);
+      if (cssLinks && cssLinks.length > 0) {
+        cssLinks.forEach((link, idx) => {
+          const hasCrossorigin = /\bcrossorigin\b/i.test(link);
+          console.log(`📄 [HTML] CSS link ${idx + 1}: hasCrossorigin=${hasCrossorigin}, link=${link.substring(0, 150)}`);
+        });
+      }
+      
+      // Check for crossorigin in script tags
+      const scriptTags = htmlContent.match(/<script[^>]*type=["']module["'][^>]*>/gi);
+      if (scriptTags && scriptTags.length > 0) {
+        scriptTags.forEach((script, idx) => {
+          const hasCrossorigin = /\bcrossorigin\b/i.test(script);
+          console.log(`📄 [HTML] Script tag ${idx + 1}: hasCrossorigin=${hasCrossorigin}, script=${script.substring(0, 150)}`);
+        });
+      }
+    } catch (error) {
+      console.warn(`⚠️ [HTML] Could not read HTML for verification:`, error);
+    }
+    
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
