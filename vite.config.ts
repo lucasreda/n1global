@@ -1,81 +1,71 @@
-import { defineConfig } from "vite";
+import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { fileURLToPath } from "url";
 import fs from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-// Plugin to remove crossorigin attribute from HTML during build
-function removeCrossoriginPlugin() {
+// Plugin para remover crossorigin dos links CSS e scripts no HTML gerado
+function removeCrossoriginPlugin(): Plugin {
   return {
-    name: 'remove-crossorigin',
-    writeBundle(outputOptions: any, bundle: any) {
-      // After build, modify index.html to remove crossorigin
-      const outDir = outputOptions.dir || path.dirname(outputOptions.file || 'dist/public');
-      const htmlPath = path.resolve(outDir, 'index.html');
+    name: "remove-crossorigin",
+    closeBundle() {
+      // Usar closeBundle que é chamado após todos os bundles serem escritos
+      const outDir = path.resolve(process.cwd(), "dist/public");
+      const htmlPath = path.resolve(outDir, "index.html");
       
-      if (fs.existsSync(htmlPath)) {
-        try {
-          let htmlContent = fs.readFileSync(htmlPath, 'utf-8');
-          const original = htmlContent;
-          
-          // Remove crossorigin from CSS links
-          htmlContent = htmlContent.replace(
-            /<link([^>]*?)>/gi,
-            (match) => {
-              if (!match.includes('rel="stylesheet') && !match.includes("rel='stylesheet")) {
-                return match;
-              }
-              return match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
-                         .replace(/\s+crossorigin/gi, '');
-            }
-          );
-          
-          // Remove crossorigin from script tags
-          htmlContent = htmlContent.replace(
-            /<script([^>]*?)>/gi,
-            (match) => {
-              if (!match.includes('type="module') && !match.includes("type='module")) {
-                return match;
-              }
-              return match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
-                         .replace(/\s+crossorigin/gi, '');
-            }
-          );
-          
-          if (htmlContent !== original) {
-            fs.writeFileSync(htmlPath, htmlContent, 'utf-8');
-            console.log('✅ [BUILD] Removed crossorigin attributes from index.html');
-          }
-        } catch (error) {
-          console.warn('⚠️ [BUILD] Could not remove crossorigin from index.html:', error);
+      console.log(`🔍 [BUILD] Verificando HTML em: ${htmlPath}`);
+      
+      if (!fs.existsSync(htmlPath)) {
+        console.warn(`⚠️ [BUILD] index.html não encontrado em ${htmlPath}`);
+        return;
+      }
+      
+      try {
+        let htmlContent = fs.readFileSync(htmlPath, "utf-8");
+        const originalContent = htmlContent;
+        
+        // Verificar se há crossorigin antes de remover
+        const hasCrossoriginBefore = /crossorigin/i.test(htmlContent);
+        console.log(`🔍 [BUILD] HTML tem crossorigin antes: ${hasCrossoriginBefore}`);
+        
+        // Remover crossorigin de links CSS (pode estar em qualquer posição no atributo)
+        htmlContent = htmlContent.replace(
+          /<link([^>]*rel=["']stylesheet["'][^>]*)crossorigin(?:=["'][^"']*["'])?([^>]*)>/gi,
+          '<link$1$2>'
+        );
+        
+        // Remover crossorigin de scripts module (pode estar em qualquer posição no atributo)
+        htmlContent = htmlContent.replace(
+          /<script([^>]*type=["']module["'][^>]*)crossorigin(?:=["'][^"']*["'])?([^>]*)>/gi,
+          '<script$1$2>'
+        );
+        
+        // Também remover crossorigin standalone (sem aspas ou com aspas)
+        htmlContent = htmlContent.replace(/\s+crossorigin(?:=["'][^"']*["'])?/gi, '');
+        
+        // Verificar se ainda há crossorigin após remoção
+        const hasCrossoriginAfter = /crossorigin/i.test(htmlContent);
+        console.log(`🔍 [BUILD] HTML tem crossorigin depois: ${hasCrossoriginAfter}`);
+        
+        if (htmlContent !== originalContent) {
+          fs.writeFileSync(htmlPath, htmlContent, "utf-8");
+          console.log("✅ [BUILD] Removed crossorigin attributes from index.html");
+        } else if (hasCrossoriginBefore) {
+          console.warn("⚠️ [BUILD] HTML tinha crossorigin mas não foi removido - regex pode estar incorreto");
+        } else {
+          console.log("ℹ️ [BUILD] HTML não tinha crossorigin para remover");
         }
+      } catch (error) {
+        console.error("❌ [BUILD] Erro ao remover crossorigin do HTML:", error);
       }
     },
   };
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Use process.cwd() as fallback for Railway compatibility
-const projectRoot = process.cwd();
-const clientDir = path.resolve(projectRoot, "client");
-const indexHtmlPath = path.resolve(clientDir, "index.html");
-
-// Log paths for debugging in Railway
-if (process.env.NODE_ENV === "production") {
-  console.log("🔍 [VITE CONFIG] projectRoot:", projectRoot);
-  console.log("🔍 [VITE CONFIG] clientDir:", clientDir);
-  console.log("🔍 [VITE CONFIG] indexHtmlPath:", indexHtmlPath);
-  console.log("🔍 [VITE CONFIG] index.html exists:", fs.existsSync(indexHtmlPath));
-}
-
 export default defineConfig({
-  base: "/",
   plugins: [
     react(),
     runtimeErrorOverlay(),
-    // Remove crossorigin from HTML during build
     removeCrossoriginPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
@@ -88,34 +78,16 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(clientDir, "src"),
-      "@shared": path.resolve(projectRoot, "shared"),
-      "@assets": path.resolve(projectRoot, "attached_assets"),
+      "@": path.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path.resolve(import.meta.dirname, "shared"),
+      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
-    extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
   },
-  optimizeDeps: {
-    include: ["@shared/schema"],
-  },
-  root: clientDir,
+  root: path.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(projectRoot, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: path.resolve(clientDir, "index.html"),
-      },
-      output: {
-        // Don't add crossorigin attribute to assets
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
-      },
-    },
-    // Use a custom plugin to remove crossorigin from HTML after build
-    // This is handled in server/vite.ts instead to avoid modifying build output
   },
-  publicDir: path.resolve(clientDir, "public"),
   server: {
     fs: {
       strict: true,

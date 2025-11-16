@@ -44,13 +44,9 @@ export async function setupVite(app: Express, server: Server) {
   app.use((req, res, next) => {
     // Skip API routes - let them be handled by Express API routes
     if (req.originalUrl?.startsWith("/api")) {
-      console.log("🚫 [VITE] PULANDO rota API:", req.originalUrl);
-      console.log("🚫 [VITE] Path:", req.path);
-      console.log("🚫 [VITE] Chamando next() para passar para Express");
       return next();
     }
     // Use vite middleware for all other routes
-    console.log("✅ [VITE] Processando rota:", req.originalUrl);
     vite.middlewares(req, res, next);
   });
   
@@ -98,26 +94,12 @@ export function serveStatic(app: Express) {
   }
 
   console.log(`📁 Serving static files from: ${distPath}`);
-  
-  // Log asset requests for debugging
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
-      console.log(`📦 [ASSET REQUEST] ${req.method} ${req.path}`);
-      res.on('finish', () => {
-        const contentType = res.getHeader('Content-Type') || 'not-set';
-        const contentLength = res.getHeader('Content-Length') || 'not-set';
-        console.log(`📦 [ASSET RESPONSE] ${req.path} - Status: ${res.statusCode}, Content-Type: ${contentType}, Content-Length: ${contentLength}`);
-      });
-    }
-    next();
-  });
 
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
       // Set proper Content-Type for CSS files
       if (filePath.endsWith('.css')) {
         res.setHeader('Content-Type', 'text/css; charset=utf-8');
-        console.log(`✅ [STATIC] Setting Content-Type: text/css for ${filePath}`);
       }
       // Set proper Content-Type for JS files
       if (filePath.endsWith('.js')) {
@@ -143,32 +125,22 @@ export function serveStatic(app: Express) {
       return next();
     }
     
-    console.log(`📄 [HTML REQUEST] ${req.method} ${req.originalUrl}`);
-    
-    // Read and log HTML content to verify crossorigin is removed
+    // Verificar se HTML tem crossorigin antes de servir (apenas no primeiro acesso)
     try {
       const htmlPath = path.resolve(distPath, "index.html");
       const htmlContent = fs.readFileSync(htmlPath, "utf-8");
-      
-      // Check for crossorigin in CSS links
-      const cssLinks = htmlContent.match(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi);
-      if (cssLinks && cssLinks.length > 0) {
-        cssLinks.forEach((link, idx) => {
-          const hasCrossorigin = /\bcrossorigin\b/i.test(link);
-          console.log(`📄 [HTML] CSS link ${idx + 1}: hasCrossorigin=${hasCrossorigin}, link=${link.substring(0, 150)}`);
-        });
-      }
-      
-      // Check for crossorigin in script tags
-      const scriptTags = htmlContent.match(/<script[^>]*type=["']module["'][^>]*>/gi);
-      if (scriptTags && scriptTags.length > 0) {
-        scriptTags.forEach((script, idx) => {
-          const hasCrossorigin = /\bcrossorigin\b/i.test(script);
-          console.log(`📄 [HTML] Script tag ${idx + 1}: hasCrossorigin=${hasCrossorigin}, script=${script.substring(0, 150)}`);
-        });
+      const hasCrossorigin = /crossorigin/i.test(htmlContent);
+      if (hasCrossorigin) {
+        console.warn(`⚠️ [SERVE] HTML ainda contém crossorigin! Links CSS/Script podem não carregar corretamente.`);
+        // Tentar remover em runtime como fallback
+        const cleanedHtml = htmlContent
+          .replace(/<link([^>]*rel=["']stylesheet["'][^>]*)crossorigin(?:=["'][^"']*["'])?([^>]*)>/gi, '<link$1$2>')
+          .replace(/<script([^>]*type=["']module["'][^>]*)crossorigin(?:=["'][^"']*["'])?([^>]*)>/gi, '<script$1$2>')
+          .replace(/\s+crossorigin(?:=["'][^"']*["'])?/gi, '');
+        return res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).send(cleanedHtml);
       }
     } catch (error) {
-      console.warn(`⚠️ [HTML] Could not read HTML for verification:`, error);
+      console.warn(`⚠️ [SERVE] Erro ao verificar HTML:`, error);
     }
     
     res.sendFile(path.resolve(distPath, "index.html"));
