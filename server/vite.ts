@@ -171,13 +171,18 @@ export function serveStatic(app: Express) {
           } else {
             // Verify CSS content integrity - read first 200 characters
             try {
-              const cssContent = fs.readFileSync(filePath, "utf-8", { encoding: "utf-8" });
+              const cssContent = fs.readFileSync(filePath, "utf-8");
               const preview = cssContent.substring(0, 200).replace(/\n/g, ' ').trim();
               console.log(`📄 [CSS] Content preview (first 200 chars): ${preview}...`);
               
               // Check if CSS looks valid (should start with CSS syntax)
-              if (!cssContent.trim().match(/^(\/\*|@|[\w\-\.#\[\]:(),\s])/)) {
+              const trimmed = cssContent.trim();
+              const startsWithValid = /^(\/\*|@|[\w\-\.#\[\]:(),\s])/.test(trimmed);
+              console.log(`📄 [CSS] CSS validation: startsWithValid=${startsWithValid}, firstChar="${trimmed.charAt(0)}", length=${cssContent.length}`);
+              
+              if (!startsWithValid) {
                 console.warn(`⚠️ [CSS] CSS content may be corrupted - doesn't start with expected CSS syntax`);
+                console.warn(`⚠️ [CSS] First 50 chars: ${trimmed.substring(0, 50)}`);
               }
             } catch (readError) {
               console.error(`❌ [STATIC] Error reading CSS content: ${filePath}`, readError);
