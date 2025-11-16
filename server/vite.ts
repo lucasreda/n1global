@@ -254,23 +254,33 @@ export function serveStatic(app: Express) {
     // Read HTML and modify in memory (don't modify disk file)
     let indexContent: string;
     try {
+      console.log(`🔍 [HTML] Reading index.html from: ${indexPath}`);
       indexContent = fs.readFileSync(indexPath, "utf-8");
+      console.log(`✅ [HTML] Read ${indexContent.length} characters from index.html`);
       
       // Log original HTML snippet showing CSS/JS links for debugging
       const originalCssLinks = indexContent.match(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi);
       const originalScriptTags = indexContent.match(/<script[^>]*type=["']module["'][^>]*>/gi);
       
+      console.log(`🔍 [HTML] Found ${originalCssLinks?.length || 0} CSS links, ${originalScriptTags?.length || 0} script tags`);
+      
       if (originalCssLinks && originalCssLinks.length > 0) {
-        console.log(`🔍 [HTML] Original CSS links:`, originalCssLinks.map(link => link.substring(0, 100)).join(' | '));
+        originalCssLinks.forEach((link, idx) => {
+          console.log(`🔍 [HTML] Original CSS link ${idx + 1}: ${link.substring(0, 150)}`);
+        });
       }
       if (originalScriptTags && originalScriptTags.length > 0) {
-        console.log(`🔍 [HTML] Original script tags:`, originalScriptTags.map(script => script.substring(0, 100)).join(' | '));
+        originalScriptTags.forEach((script, idx) => {
+          console.log(`🔍 [HTML] Original script tag ${idx + 1}: ${script.substring(0, 150)}`);
+        });
       }
       
       // Remove crossorigin attribute from CSS links (can cause CORS issues)
       // Vite adds crossorigin="anonymous" by default, but this can block CSS loading
       // Match all variations: crossorigin, crossorigin="", crossorigin='', crossorigin="anonymous", crossorigin='anonymous', crossorigin=anonymous
-      const beforeCss = indexContent;
+      console.log(`🔧 [HTML] Starting crossorigin removal from CSS links...`);
+      let cssLinksProcessed = 0;
+      let cssLinksModified = 0;
       indexContent = indexContent.replace(
         /<link([^>]*?)>/gi,
         (match) => {
@@ -278,18 +288,26 @@ export function serveStatic(app: Express) {
           if (!match.includes('rel="stylesheet') && !match.includes("rel='stylesheet")) {
             return match;
           }
+          cssLinksProcessed++;
+          const hasCrossorigin = /\bcrossorigin\b/i.test(match);
+          console.log(`🔧 [HTML] Processing CSS link ${cssLinksProcessed}: hasCrossorigin=${hasCrossorigin}, match=${match.substring(0, 100)}`);
+          
           // Remove crossorigin attribute in all its variations
           const cleaned = match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
-                               .replace(/\s+crossorigin/gi, '');
+                               .replace(/\s+crossorigin\b/gi, '');
           if (cleaned !== match) {
-            console.log(`🔧 [HTML] Removed crossorigin from CSS link: ${match.substring(0, 80)}...`);
+            cssLinksModified++;
+            console.log(`🔧 [HTML] ✅ Removed crossorigin from CSS link ${cssLinksProcessed}: ${match.substring(0, 100)} -> ${cleaned.substring(0, 100)}`);
           }
           return cleaned;
         }
       );
+      console.log(`🔧 [HTML] CSS links processed: ${cssLinksProcessed}, modified: ${cssLinksModified}`);
       
       // Also remove crossorigin from script tags if present
-      const beforeScript = indexContent;
+      console.log(`🔧 [HTML] Starting crossorigin removal from script tags...`);
+      let scriptsProcessed = 0;
+      let scriptsModified = 0;
       indexContent = indexContent.replace(
         /<script([^>]*?)>/gi,
         (match) => {
@@ -297,15 +315,21 @@ export function serveStatic(app: Express) {
           if (!match.includes('type="module') && !match.includes("type='module")) {
             return match;
           }
+          scriptsProcessed++;
+          const hasCrossorigin = /\bcrossorigin\b/i.test(match);
+          console.log(`🔧 [HTML] Processing script tag ${scriptsProcessed}: hasCrossorigin=${hasCrossorigin}, match=${match.substring(0, 100)}`);
+          
           // Remove crossorigin attribute in all its variations
           const cleaned = match.replace(/\s+crossorigin\s*=\s*(["']?)([^"'\s>]*)\1/gi, '')
-                               .replace(/\s+crossorigin/gi, '');
+                               .replace(/\s+crossorigin\b/gi, '');
           if (cleaned !== match) {
-            console.log(`🔧 [HTML] Removed crossorigin from script tag: ${match.substring(0, 80)}...`);
+            scriptsModified++;
+            console.log(`🔧 [HTML] ✅ Removed crossorigin from script tag ${scriptsProcessed}: ${match.substring(0, 100)} -> ${cleaned.substring(0, 100)}`);
           }
           return cleaned;
         }
       );
+      console.log(`🔧 [HTML] Script tags processed: ${scriptsProcessed}, modified: ${scriptsModified}`);
       
       // Log modified HTML snippet for verification
       const modifiedCssLinks = indexContent.match(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi);
