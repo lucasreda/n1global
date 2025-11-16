@@ -97,6 +97,19 @@ export function serveStatic(app: Express) {
     );
   }
 
+  console.log(`📁 Serving static files from: ${distPath}`);
+  
+  // Log asset requests for debugging
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/assets/') || req.path.endsWith('.css') || req.path.endsWith('.js')) {
+      console.log(`📦 [ASSET REQUEST] ${req.method} ${req.path}`);
+      res.on('finish', () => {
+        console.log(`📦 [ASSET RESPONSE] ${req.path} - Status: ${res.statusCode}`);
+      });
+    }
+    next();
+  });
+
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
@@ -106,6 +119,15 @@ export function serveStatic(app: Express) {
     if (req.originalUrl.startsWith("/api")) {
       return next();
     }
+    
+    // Skip static asset requests - they should already be handled by express.static above
+    if (req.originalUrl.startsWith("/assets/") || 
+        req.originalUrl.endsWith(".css") || 
+        req.originalUrl.endsWith(".js")) {
+      return next();
+    }
+    
+    console.log(`📄 [HTML REQUEST] ${req.method} ${req.originalUrl}`);
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
