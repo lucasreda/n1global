@@ -1,0 +1,106 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["jq", "ffmpeg"]
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 33703
+externalPort = 5173
+
+[[ports]]
+localPort = 33737
+externalPort = 6000
+
+[[ports]]
+localPort = 35983
+externalPort = 4200
+
+[[ports]]
+localPort = 36013
+externalPort = 6800
+
+[[ports]]
+localPort = 37739
+externalPort = 9000
+
+[[ports]]
+localPort = 38707
+externalPort = 3000
+
+[[ports]]
+localPort = 39137
+externalPort = 8000
+
+[[ports]]
+localPort = 39659
+externalPort = 8008
+
+[[ports]]
+localPort = 40151
+externalPort = 3001
+
+[[ports]]
+localPort = 41313
+externalPort = 5000
+
+[[ports]]
+localPort = 44019
+externalPort = 8081
+
+[[ports]]
+localPort = 45497
+externalPort = 3002
+
+[[ports]]
+localPort = 45643
+externalPort = 8099
+
+[[ports]]
+localPort = 46091
+externalPort = 8080
+
+[[ports]]
+localPort = 46399
+externalPort = 3003
+
+[env]
+PORT = "5000"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[agent]
+integrations = ["javascript_sendgrid:1.0.0", "javascript_database:1.0.0", "perplexity_v0:1.0.0", "javascript_object_storage:1.0.0", "javascript_openai:1.0.0"]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-21841582-91c3-4aa8-a2d5-39b54dc35b43"

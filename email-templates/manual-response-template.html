@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Resposta Manual - Equipe de Suporte</title>
+    </head>
+    <body>
+        <!-- Layout de Email para Respostas Manuais e Novas Mensagens -->
+        <div
+            style="
+                font-family: Arial, sans-serif;
+                max-width: 600px;
+                margin: 0 auto;
+            "
+        >
+            <!-- Header com Logo -->
+            <div style="text-align: left; margin-bottom: 20px">
+                <img
+                    src="{{BASE_URL}}/images/n1-lblue.png"
+                    alt="N1 Support"
+                    style="height: 30px; width: auto; max-width: 200px"
+                    width="200"
+                    height="30"
+                />
+                <h2 style="color: #333; margin: 20px 0 10px 0">
+                    {{EMAIL_TITLE}}
+                </h2>
+                <p style="color: #666; margin: 0">{{TICKET_INFO}}</p>
+            </div>
+
+            <!-- Conteúdo da Mensagem -->
+            <div
+                style="
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                "
+            >
+                <p style="color: #333; line-height: 1.6; white-space: pre-wrap">
+                    {{MESSAGE_CONTENT}}
+                </p>
+            </div>
+
+            <!-- Separador -->
+            <hr
+                style="border: none; border-top: 1px solid #eee; margin: 20px 0"
+            />
+
+            <!-- Informações de Contato -->
+            <p style="color: #666; font-size: 14px; text-align: center">
+                {{CONTACT_MESSAGE}}<br />
+                Para responder, basta responder a este email.
+            </p>
+
+            <!-- Separador Final -->
+            <hr
+                style="
+                    border: none;
+                    border-top: 1px solid #e2e8f0;
+                    margin: 30px 0;
+                "
+            />
+
+            <!-- Assinatura -->
+            <p style="color: #94a3b8; font-size: 12px">
+                {{AGENT_NAME}}<br />
+                Atendimento ao Cliente
+            </p>
+        </div>
+    </body>
+</html>
