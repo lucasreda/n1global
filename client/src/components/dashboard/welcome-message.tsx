@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Sparkles, Sun, Moon, Sunrise } from "lucide-react";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function WelcomeMessage() {
   const { user } = useAuth();
+  const { t, currentLanguage } = useTranslation();
   const [showWelcome, setShowWelcome] = useState(false);
   const [greeting, setGreeting] = useState("");
   const [icon, setIcon] = useState<any>(Sun);
@@ -35,16 +37,16 @@ export function WelcomeMessage() {
     const hour = new Date().getHours();
     
     if (hour >= 5 && hour < 12) {
-      setGreeting("Bom dia");
+      setGreeting(t('dashboard.goodMorning'));
       setIcon(Sunrise);
     } else if (hour >= 12 && hour < 18) {
-      setGreeting("Boa tarde");
+      setGreeting(t('dashboard.goodAfternoon'));
       setIcon(Sun);
     } else {
-      setGreeting("Boa noite");
+      setGreeting(t('dashboard.goodEvening'));
       setIcon(Moon);
     }
-  }, []);
+  }, [t, currentLanguage]);
 
   if (!showWelcome || !user) return null;
 
@@ -69,13 +71,13 @@ export function WelcomeMessage() {
               <Sparkles className="h-4 w-4 text-yellow-400 animate-pulse" />
             </h2>
             <p className="text-sm text-gray-400 mt-1">
-              {getMotivationalMessage()}
+              {getMotivationalMessage(t)}
             </p>
           </div>
           <button
             onClick={() => setShowWelcome(false)}
             className="text-gray-500 hover:text-gray-300 transition-colors"
-            aria-label="Fechar"
+            aria-label={t('dashboard.close')}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -87,19 +89,10 @@ export function WelcomeMessage() {
   );
 }
 
-function getMotivationalMessage(): string {
-  const messages = [
-    "Que hoje seja um dia produtivo e cheio de conquistas!",
-    "Vamos alcançar grandes resultados hoje!",
-    "Seu sucesso começa agora. Vamos em frente!",
-    "Cada dia é uma nova oportunidade de crescer!",
-    "Seu trabalho faz a diferença. Continue assim!",
-    "Hoje é um ótimo dia para superar metas!",
-    "Pronto para fazer a diferença hoje?",
-    "Que sua jornada seja repleta de realizações!",
-  ];
+function getMotivationalMessage(t: any): string {
+  const messages = t('dashboard.motivationalMessages', { returnObjects: true }) as string[];
   
   // Pick a random message based on the day
   const dayIndex = new Date().getDay();
-  return messages[dayIndex] || messages[0];
+  return messages[dayIndex] || messages[0] || "";
 }

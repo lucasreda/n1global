@@ -2,6 +2,7 @@ import { db } from "./db";
 import { orders, stores, operations, type InsertOrder } from "@shared/schema";
 import { BaseFulfillmentProvider } from "./fulfillment-providers/base-fulfillment-provider";
 import { eq, and, not, inArray } from "drizzle-orm";
+import { extractAllSkusFromProducts } from "./utils/sku-parser";
 
 interface SyncOptions {
   forceFullSync?: boolean;
@@ -123,82 +124,13 @@ export class SmartSyncService {
   }
 
   /**
-   * Calcula custos de produto e envio baseado no status e valor do pedido
+   * Calcula custos de produto e envio baseado no status e produtos do pedido
+   * Usa a função utilitária compartilhada para consistência entre todas as plataformas
    */
   private async calculateOrderCosts(status: string, total: string, products: any[], storeId: string): Promise<{ productCost: number; shippingCost: number }> {
-    // Se não há produtos, retorna custos zerados
-    if (!products || products.length === 0) {
-      return { productCost: 0, shippingCost: 0 };
-    }
-
-    // Extrai o SKU do primeiro produto (assumindo um produto por pedido)
-    const firstProduct = products[0];
-    const sku = firstProduct?.sku;
-    
-    if (!sku) {
-      console.warn('⚠️ Produto sem SKU encontrado, usando custos padrão');
-      return { productCost: 0, shippingCost: 0 };
-    }
-
-    try {
-      const { pool } = await import("./db");
-      
-      // Busca custos customizados do produto primeiro (user_products)
-      const customCostsResult = await pool.query(`
-        SELECT 
-          up.custom_cost_price,
-          up.custom_shipping_cost,
-          p.cost_price,
-          p.shipping_cost
-        FROM user_products up
-        JOIN products p ON up.product_id = p.id
-        WHERE up.sku = $1 AND up.store_id = $2 AND up.is_active = true
-        LIMIT 1
-      `, [sku, storeId]);
-
-      let productCostBase = 0;
-      let shippingCostBase = 0;
-
-      if (customCostsResult.rows.length > 0) {
-        const costs = customCostsResult.rows[0];
-        // Usa custo customizado se disponível, senão usa o custo padrão do produto
-        productCostBase = parseFloat(costs.custom_cost_price) || parseFloat(costs.cost_price) || 0;
-        shippingCostBase = parseFloat(costs.custom_shipping_cost) || parseFloat(costs.shipping_cost) || 0;
-        console.log(`💰 Custos encontrados para SKU ${sku}: Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
-      } else {
-        // Fallback: busca diretamente na tabela products
-        const productResult = await pool.query(`
-          SELECT cost_price, shipping_cost
-          FROM products 
-          WHERE sku = $1 AND store_id = $2 
-          LIMIT 1
-        `, [sku, storeId]);
-
-        if (productResult.rows.length > 0) {
-          const costs = productResult.rows[0];
-          productCostBase = parseFloat(costs.cost_price) || 0;
-          shippingCostBase = parseFloat(costs.shipping_cost) || 0;
-          console.log(`💰 Custos padrão para SKU ${sku}: Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
-        } else {
-          console.warn(`⚠️ Produto com SKU ${sku} não encontrado, usando custos zerados`);
-        }
-      }
-
-      // Aplica custos baseado no status do pedido
-      // Custo do produto: aplicado para pedidos confirmados/entregues/pendentes
-      const productCost = ['confirmed', 'delivered', 'shipped', 'in transit', 'in delivery', 'pending'].includes(status) ?
-        productCostBase : 0.00;
-      
-      // Custo de envio: aplicado para pedidos enviados/entregues + pendentes
-      const shippingCost = ['shipped', 'delivered', 'in transit', 'in delivery', 'pending'].includes(status) ?
-        shippingCostBase : 0.00;
-
-      return { productCost, shippingCost };
-      
-    } catch (error) {
-      console.error('❌ Erro ao calcular custos do produto:', error);
-      return { productCost: 0, shippingCost: 0 };
-    }
+    // Usar função utilitária compartilhada
+    const { calculateOrderCosts } = await import('./utils/order-cost-calculator');
+    return calculateOrderCosts(status, products, storeId);
   }
 
   /**

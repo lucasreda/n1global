@@ -7,6 +7,15 @@ import { Loader2, RefreshCw, XCircle, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { SyncTimeline } from "./SyncTimeline";
 import { SyncSummaryCard } from "./SyncSummaryCard";
+import { useTranslation } from "@/hooks/use-translation";
+
+interface PlatformProgress {
+  processedOrders: number;
+  totalOrders: number;
+  newOrders: number;
+  updatedOrders: number;
+  percentage: number;
+}
 
 interface ShopifyProgress {
   processedOrders: number;
@@ -31,8 +40,10 @@ interface CompleteSyncStatus {
   message: string;
   currentStep: 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null;
   overallProgress: number;
-  shopifyProgress: ShopifyProgress;
-  stagingProgress: StagingProgress;
+  platformProgress: PlatformProgress;
+  // Campos antigos mantidos temporariamente para compatibilidade
+  shopifyProgress?: ShopifyProgress;
+  stagingProgress?: StagingProgress;
   errors: number;
   startTime: string | null;
   endTime: string | null;
@@ -56,6 +67,8 @@ export function CompleteSyncDialog({
   onSyncStateChange,
   operationId 
 }: CompleteSyncDialogProps) {
+  console.log('🟢 [DEBUG] CompleteSyncDialog render - isOpen:', isOpen);
+  
   const [syncStatus, setSyncStatus] = useState<CompleteSyncStatus | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [animatedProgress, setAnimatedProgress] = useState(0);
@@ -65,6 +78,83 @@ export function CompleteSyncDialog({
   const pollingIntervalRef = useRef<number | null>(null);
   const hasStartedSyncRef = useRef(false);
   const expectedRunIdRef = useRef<string | null>(null);
+  const { t } = useTranslation();
+
+  // Helper function to translate backend messages
+  const translateSyncMessage = (message: string | null | undefined): string => {
+    if (!message) return t('dashboard.completeSync.preparing');
+    
+    const msg = message.toLowerCase();
+    
+    // Map known backend messages to translations
+    // Check for exact match first, then partial matches
+    if (msg === 'importando pedidos do shopify...' || 
+        msg.includes('importando pedidos do shopify') || 
+        msg.includes('importando pedidos históricos do shopify')) {
+      return t('dashboard.syncMessages.importingShopifyOrders');
+    }
+    if (msg.includes('importando entregas do digistore')) {
+      return t('dashboard.syncMessages.importingDigistore');
+    }
+    if (msg.includes('importando pedidos:') && msg.includes('novos importados')) {
+      // Extract: "Importando pedidos: X novos importados (Página Y)"
+      const importMatch = message.match(/importando pedidos:\s*(\d+)\s*novos?\s*importados?/i);
+      if (importMatch) {
+        const pageMatch = message.match(/página\s*(\d+)/i);
+        if (pageMatch) {
+          return `${t('dashboard.syncMessages.importingOrders', { new: importMatch[1] })} (${t('dashboard.syncMessages.page')} ${pageMatch[1]})`;
+        }
+        return t('dashboard.syncMessages.importingOrders', { new: importMatch[1] });
+      }
+    }
+    if (msg.includes('sincronizando com transportadora')) {
+      return t('dashboard.syncMessages.syncingWithCarrier');
+    }
+    if (msg.includes('sincronizando pedidos com warehouse')) {
+      return t('dashboard.syncMessages.syncingWithWarehouse');
+    }
+    if (msg.includes('sincronização concluída') || msg.includes('sync concluído')) {
+      // Try to extract order count if present: "Sincronização concluída! X pedidos processados."
+      const orderCountMatch = message.match(/sincronização concluída!?\s*(\d+)\s*pedidos?\s*processados?/i);
+      if (orderCountMatch) {
+        return t('dashboard.syncMessages.syncCompletedWithOrders', { count: orderCountMatch[1] });
+      }
+      // Try to extract stats: "Sincronização concluída: X novos, Y atualizados"
+      const statsMatch = message.match(/sincronização concluída:\s*(\d+)\s*novos?,\s*(\d+)\s*atualizados?/i);
+      if (statsMatch) {
+        return t('dashboard.syncMessages.syncCompletedWithStats', { new: statsMatch[1], updated: statsMatch[2] });
+      }
+      return t('dashboard.syncMessages.syncCompleted');
+    }
+    if (msg.includes('processando página')) {
+      // Try to extract page numbers if present
+      const pageMatch = message.match(/processando página (\d+) de (\d+)/i);
+      if (pageMatch) {
+        return `${t('dashboard.syncMessages.processingPage')} ${pageMatch[1]} ${t('dashboard.syncMessages.of')} ${pageMatch[2]}`;
+      }
+      return t('dashboard.syncMessages.processingPage');
+    }
+    if (msg.includes('iniciando importação')) {
+      // Try to extract order count if present
+      const orderMatch = message.match(/iniciando importação de (\d+)/i);
+      if (orderMatch) {
+        return `${t('dashboard.syncMessages.startingImport')} ${orderMatch[1]} ${t('dashboard.syncMessages.orders')}...`;
+      }
+      return t('dashboard.syncMessages.startingImport');
+    }
+    if (msg.includes('erro detectado') && msg.includes('tentando novamente')) {
+      return t('dashboard.syncMessages.errorDetected');
+    }
+    if (msg.includes('falha após') && msg.includes('tentativas')) {
+      const retryMatch = message.match(/falha após (\d+)\s*tentativas?/i);
+      if (retryMatch) {
+        return t('dashboard.syncMessages.failedAfterRetries', { count: retryMatch[1] });
+      }
+    }
+    
+    // If no match found, return original message (it might already be translated or be a dynamic message)
+    return message;
+  };
 
   // CRÍTICO: Monitorar quando sincronização termina para garantir que onSyncStateChange(false) seja chamado
   useEffect(() => {
@@ -171,7 +261,51 @@ export function CompleteSyncDialog({
       eventSource.onmessage = (event) => {
         try {
           console.log('📨 [SSE] Mensagem recebida:', event.data);
-          const status: CompleteSyncStatus = JSON.parse(event.data);
+          let status: CompleteSyncStatus = JSON.parse(event.data);
+          
+          // ADAPTADOR: Converter novo formato (platformProgress) para formato antigo (shopifyProgress/stagingProgress)
+          if ((status as any).platformProgress && !(status as any).shopifyProgress) {
+            const platform = (status as any).platformProgress || {};
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: platform.processedOrders || 0,
+                totalOrders: platform.totalOrders || 0,
+                newOrders: platform.newOrders || 0,
+                updatedOrders: platform.updatedOrders || 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: platform.percentage || 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            } as any;
+          } else if (!(status as any).shopifyProgress) {
+            // Se não tem nenhum dos dois, criar estrutura padrão
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: 0,
+                totalOrders: 0,
+                newOrders: 0,
+                updatedOrders: 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            } as any;
+          }
+          
           const incomingRunId = (status as any)?.runId || null;
           if (expectedRunIdRef.current && incomingRunId && incomingRunId !== expectedRunIdRef.current) {
             console.log('⏭️ [SSE] Ignorando update de outra execução', { expected: expectedRunIdRef.current, incomingRunId });
@@ -182,17 +316,11 @@ export function CompleteSyncDialog({
             isRunning: status.isRunning,
             overallProgress: status.overallProgress,
             currentStep: status.currentStep,
-            shopify: {
-              processed: status.shopifyProgress?.processedOrders,
-              total: status.shopifyProgress?.totalOrders,
-              new: status.shopifyProgress?.newOrders,
-              updated: status.shopifyProgress?.updatedOrders
-            },
-            staging: {
-              processed: status.stagingProgress?.processedLeads,
-              total: status.stagingProgress?.totalLeads,
-              new: status.stagingProgress?.newLeads,
-              updated: status.stagingProgress?.updatedLeads
+            platform: {
+              processed: status.platformProgress?.processedOrders,
+              total: status.platformProgress?.totalOrders,
+              new: status.platformProgress?.newOrders,
+              updated: status.platformProgress?.updatedOrders
             }
           });
           
@@ -235,8 +363,7 @@ export function CompleteSyncDialog({
           // CRÍTICO: Criar uma cópia profunda para garantir que React detecta a mudança
           const newStatus = {
             ...status,
-            shopifyProgress: { ...status.shopifyProgress },
-            stagingProgress: { ...status.stagingProgress }
+            platformProgress: { ...status.platformProgress }
           };
           
           setSyncStatus(newStatus);
@@ -247,10 +374,8 @@ export function CompleteSyncDialog({
             isRunning: newStatus.isRunning,
             overallProgress: newStatus.overallProgress,
             currentStep: newStatus.currentStep,
-            shopifyProcessed: newStatus.shopifyProgress?.processedOrders,
-            shopifyTotal: newStatus.shopifyProgress?.totalOrders,
-            stagingProcessed: newStatus.stagingProgress?.processedLeads,
-            stagingTotal: newStatus.stagingProgress?.totalLeads
+            platformProcessed: newStatus.platformProgress?.processedOrders,
+            platformTotal: newStatus.platformProgress?.totalOrders
           });
     onSyncStateChange?.(status.isRunning);
 
@@ -318,8 +443,62 @@ export function CompleteSyncDialog({
         
         const response = await apiRequest(url, 'GET');
         
+        // Se a rota não existe (404), parar o polling silenciosamente
+        if (response.status === 404) {
+          console.log('ℹ️ [POLLING] Rota /api/sync/complete-status não existe mais. Parando polling.');
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          return;
+        }
+        
         if (response.ok) {
-          const status = await response.json();
+          let status = await response.json();
+          
+          // ADAPTADOR: Converter novo formato (platformProgress) para formato antigo (shopifyProgress/stagingProgress)
+          if ((status as any).platformProgress && !(status as any).shopifyProgress) {
+            const platform = (status as any).platformProgress || {};
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: platform.processedOrders || 0,
+                totalOrders: platform.totalOrders || 0,
+                newOrders: platform.newOrders || 0,
+                updatedOrders: platform.updatedOrders || 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: platform.percentage || 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            };
+          } else if (!(status as any).shopifyProgress) {
+            // Se não tem nenhum dos dois, criar estrutura padrão
+            status = {
+              ...status,
+              shopifyProgress: {
+                processedOrders: 0,
+                totalOrders: 0,
+                newOrders: 0,
+                updatedOrders: 0,
+                currentPage: 0,
+                totalPages: 0,
+                percentage: 0
+              },
+              stagingProgress: {
+                processedLeads: 0,
+                totalLeads: 0,
+                newLeads: 0,
+                updatedLeads: 0
+              }
+            };
+          }
+          
           const incomingRunId = (status as any)?.runId || null;
           if (expectedRunIdRef.current && incomingRunId && incomingRunId !== expectedRunIdRef.current) {
             console.log('⏭️ [POLLING] Ignorando update de outra execução', { expected: expectedRunIdRef.current, incomingRunId });
@@ -566,13 +745,21 @@ export function CompleteSyncDialog({
 
     // Initialize dialog state
     const initDialog = async () => {
+      console.log('🟣 [DEBUG] initDialog - Inicializando dialog...');
       try {
+        console.log('🟣 [DEBUG] initDialog - Limpando error...');
         setError(null);
         
         // IMPORTANTE: Primeiro buscar o status atual para evitar barra ir e voltar
         // Se já há uma sincronização em andamento, mostrar o status atual imediatamente
         try {
+          console.log('🟣 [DEBUG] initDialog - Buscando status atual...');
           const currentStatusResponse = await apiRequest('/api/sync/complete-status', 'GET');
+          // Se a rota não existe (404), continuar normalmente sem status inicial
+          if (currentStatusResponse.status === 404) {
+            console.log('ℹ️ [INIT] Rota /api/sync/complete-status não existe. Continuando sem status inicial.');
+            return;
+          }
           if (currentStatusResponse.ok) {
             const currentStatus = await currentStatusResponse.json();
             
@@ -791,6 +978,10 @@ export function CompleteSyncDialog({
               // Verificar status uma última vez após desmontar
               apiRequest('/api/sync/complete-status', 'GET')
                 .then(response => {
+                  // Se a rota não existe, ignorar silenciosamente
+                  if (response.status === 404) {
+                    return null;
+                  }
                   if (response.ok) {
                     return response.json();
                   }
@@ -962,7 +1153,7 @@ export function CompleteSyncDialog({
   const defaultStatus: CompleteSyncStatus = {
     isRunning: isStarting,
     phase: isStarting ? 'preparing' : 'preparing',
-    message: isStarting ? 'Iniciando sincronização...' : 'Preparando...',
+    message: isStarting ? t('dashboard.completeSync.starting') : t('dashboard.completeSync.preparing'),
     currentStep: null,
     overallProgress: 0,
     shopifyProgress: {
@@ -1106,20 +1297,20 @@ export function CompleteSyncDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <XCircle className="h-6 w-6 text-red-500" />
-              Erro ao Inicializar
+              {t('dashboard.completeSync.initializationError')}
             </DialogTitle>
           </DialogHeader>
           <div className="p-4 space-y-4">
             <p className="text-sm text-muted-foreground">{error}</p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={handleClose}>
-                Fechar
+                {t('dashboard.completeSync.close')}
               </Button>
               <Button onClick={() => {
                 setError(null);
                 window.location.reload(); // Simple reload as fallback
               }}>
-                Tentar Novamente
+                {t('dashboard.completeSync.retry')}
               </Button>
             </div>
           </div>
@@ -1144,7 +1335,7 @@ export function CompleteSyncDialog({
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
                   <CheckCircle className="h-6 w-6 text-green-500" />
-                  Sincronização Completa
+                  {t('dashboard.completeSync.completedTitle')}
                 </DialogTitle>
               </DialogHeader>
 
@@ -1171,14 +1362,14 @@ export function CompleteSyncDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             {getPhaseIcon()}
-            Sincronização Completa
+            {t('dashboard.completeSync.title')}
           </DialogTitle>
         </DialogHeader>
 
               {/* Status message */}
           <div className="text-center">
             <p className="text-sm text-muted-foreground" data-testid="sync-message">
-                  {displayStatus?.message || "Preparando..."}
+                  {translateSyncMessage(displayStatus?.message)}
             </p>
           </div>
 
@@ -1187,7 +1378,7 @@ export function CompleteSyncDialog({
             <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-foreground">
-                      Progresso Geral
+                      {t('dashboard.completeSync.overallProgress')}
                 </span>
                     <span className="text-sm font-bold text-foreground">
                       {isNaN(animatedProgress) || !isFinite(animatedProgress) 
@@ -1224,7 +1415,7 @@ export function CompleteSyncDialog({
                     onClick={handleClose}
                     data-testid="button-close-running"
                   >
-                    Fechar (continua em background)
+                    {t('dashboard.completeSync.closeBackground')}
               </Button>
             )}
             
@@ -1235,7 +1426,7 @@ export function CompleteSyncDialog({
                   onClick={handleClose}
                   data-testid="button-cancel"
                 >
-                  Cancelar
+                  {t('dashboard.completeSync.cancel')}
                 </Button>
                 <Button 
                   onClick={startCompleteSync}
@@ -1243,7 +1434,7 @@ export function CompleteSyncDialog({
                   data-testid="button-retry"
                 >
                   {isStarting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Tentar Novamente
+                  {t('dashboard.completeSync.retry')}
                 </Button>
               </>
             )}

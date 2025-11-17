@@ -1,5 +1,10 @@
-// 🛒 Digistore24 Sync Worker - Polling inteligente para novos pedidos
+// 🛒 Digistore24 Sync Worker - DESABILITADO
+// Pedidos devem ser criados/atualizados via webhooks se disponíveis
+// Digistore24 pode não suportar webhooks nativamente - verificar documentação da API
+// Este worker foi desabilitado para melhor performance e menos erros
+//
 // Polling adaptativo: 5 minutos (horário comercial 8h-20h UTC), 15 minutos (fora do horário)
+// Para reativar, descomente as linhas em server/index.ts
 
 import { db } from '../db';
 import { digistoreIntegrations, operations, orders } from '@shared/schema';
@@ -81,8 +86,12 @@ async function pollNewOrders() {
         if (tracking.lastSyncAt) {
           const fromDate = new Date(tracking.lastSyncAt);
           params.from = fromDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        } else if (integration.integrationStartedAt) {
+          // Se não temos tracking mas temos integrationStartedAt, usar como filtro inicial
+          // Garantir que só buscamos entregas criadas a partir da data de integração
+          params.from = integration.integrationStartedAt.toISOString().split('T')[0]; // YYYY-MM-DD
         } else {
-          // Se não temos tracking, buscar últimos 7 dias
+          // Se não temos tracking nem integrationStartedAt, buscar últimos 7 dias (fallback)
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
           params.from = sevenDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -137,13 +146,23 @@ async function pollNewOrders() {
             const deliveryAddress = delivery.delivery_address || {};
             const recipientName = `${deliveryAddress.first_name || ''} ${deliveryAddress.last_name || ''}`.trim();
 
+            // Calcular custos de produto e envio (Digistore24 pode não ter produtos na API)
+            const { calculateOrderCosts } = await import('../utils/order-cost-calculator');
+            const orderStatus = mapDigistoreStatus(delivery.delivery_type);
+            // Digistore24 não retorna produtos/itens na API de listDeliveries, usar array vazio
+            // Se produtos estiverem disponíveis no futuro, adicionar aqui
+            const deliveryProducts = delivery.items || delivery.products || [];
+            const costs = await calculateOrderCosts(orderStatus, deliveryProducts, operation.storeId);
+
             if (existingOrder) {
               // Atualizar pedido existente
               await db.update(orders)
                 .set({
-                  status: mapDigistoreStatus(delivery.delivery_type),
+                  status: orderStatus,
                   trackingNumber: delivery.tracking?.[0]?.tracking_id || null,
                   providerData: delivery,
+                  productCost: costs.productCost.toFixed(2),
+                  shippingCost: costs.shippingCost.toFixed(2),
                   updatedAt: new Date()
                 })
                 .where(eq(orders.id, existingOrder.id));
@@ -171,12 +190,16 @@ async function pollNewOrders() {
                 customerZip: deliveryAddress.zipcode || '',
                 
                 // Status
-                status: mapDigistoreStatus(delivery.delivery_type),
+                status: orderStatus,
                 paymentStatus: 'paid', // Digistore24 só envia pedidos pagos
                 
                 // Financeiro
                 total: '0', // Digistore24 não retorna valor em listDeliveries
                 currency: 'EUR',
+                
+                // Custos calculados
+                productCost: costs.productCost.toFixed(2),
+                shippingCost: costs.shippingCost.toFixed(2),
                 
                 // Provider
                 provider: 'digistore24',

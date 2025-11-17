@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useTranslation } from "@/hooks/use-translation";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
 import cartpandaIcon from "@assets/carticon_1758210690464.avif";
 
@@ -44,9 +45,9 @@ const DigistoreIcon = ({ className, size }: { className?: string; size?: number 
   <img
     src="/digistore-logo.png"
     alt="Digistore24"
-    width={size || 30}
-    height={size || 30}
-    className={`${className ? className + ' ' : ''}rounded`}
+    width="30"
+    height="30"
+    className={`text-blue-400 rounded ${className || ''}`}
     decoding="async"
     onError={(e) => {
       e.currentTarget.style.display = 'none';
@@ -55,6 +56,7 @@ const DigistoreIcon = ({ className, size }: { className?: string; size?: number 
 );
 
 export default function Integrations() {
+  const { t } = useTranslation();
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const { selectedOperation } = useCurrentOperation();
   const [shopifyData, setShopifyData] = useState(null);
@@ -149,15 +151,15 @@ export default function Integrations() {
   const getStatusInfo = (status: string) => {
     switch (status) {
       case "active":
-        return { text: "Ativo", color: "text-green-400", bgColor: "bg-green-500/20" };
+        return { text: t('integrations.statusActive'), color: "text-green-400", bgColor: "bg-green-500/20" };
       case "connected":
-        return { text: "Conectado", color: "text-green-400", bgColor: "bg-green-500/20" };
+        return { text: t('integrations.statusConnected'), color: "text-green-400", bgColor: "bg-green-500/20" };
       case "coming-soon":
-        return { text: "Em breve", color: "text-blue-400", bgColor: "bg-blue-500/20" };
+        return { text: t('integrations.statusComingSoon'), color: "text-blue-400", bgColor: "bg-blue-500/20" };
       case "pending":
-        return { text: "Pendente", color: "text-yellow-400", bgColor: "bg-yellow-500/20" };
+        return { text: t('integrations.statusPending'), color: "text-yellow-400", bgColor: "bg-yellow-500/20" };
       default:
-        return { text: "Inativo", color: "text-gray-400", bgColor: "bg-gray-500/20" };
+        return { text: t('integrations.statusInactive'), color: "text-gray-400", bgColor: "bg-gray-500/20" };
     }
   };
 
@@ -179,7 +181,7 @@ export default function Integrations() {
       id: "shopify",
       name: "Shopify",
       status: getShopifyStatus(),
-      description: "Integração com a Shopify para gestão de pedidos",
+      description: t('integrations.shopifyDescription'),
       icon: ShopifyIcon,
       color: "green",
       hasPanel: true,
@@ -188,7 +190,7 @@ export default function Integrations() {
       id: "cartpanda",
       name: "CartPanda",
       status: getCartPandaStatus(),
-      description: "Integração com a CartPanda para gestão de pedidos",
+      description: t('integrations.cartpandaDescription'),
       icon: CartPandaIcon,
       color: "orange",
       hasPanel: true,
@@ -197,7 +199,7 @@ export default function Integrations() {
       id: "digistore",
       name: "Digistore24",
       status: getDigistoreStatus(),
-      description: "Integração com Digistore24 para gestão de pedidos",
+      description: t('integrations.digistoreDescription'),
       icon: DigistoreIcon,
       color: "blue",
       hasPanel: true,
@@ -208,8 +210,8 @@ export default function Integrations() {
     <div className="space-y-6">
       {/* Título da Página */}
       <div className="px-6 pt-6">
-        <h1 className="text-white font-semibold mb-2" style={{ fontSize: '22px' }}>Integrações</h1>
-        <p className="text-gray-400 text-sm">Configure e gerencie as integrações com plataformas e serviços</p>
+        <h1 className="text-white font-semibold mb-2" style={{ fontSize: '22px' }}>{t('integrations.title')}</h1>
+        <p className="text-gray-400 text-sm">{t('integrations.subtitle')}</p>
       </div>
       
       {/* Integrações de E-commerce */}
@@ -217,7 +219,7 @@ export default function Integrations() {
         {/* Título da Seção */}
         <div className="flex items-center space-x-3 mb-6">
           <Store className="text-blue-400" size={20} />
-          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Plataformas</h2>
+          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>{t('integrations.platforms')}</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -228,9 +230,9 @@ export default function Integrations() {
               <div key={integration.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`integration-${integration.id}`}>
                 <div className="flex items-center space-x-3 mb-4">
                   <IconComponent className={`text-${integration.color}-400`} size={30} />
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h4 className="text-white font-medium">{integration.name}</h4>
-                    <p className="text-gray-400 text-sm">{integration.description}</p>
+                    <p className="text-gray-400 text-sm whitespace-nowrap truncate">{integration.description}</p>
                   </div>
                 </div>
                 
@@ -243,7 +245,7 @@ export default function Integrations() {
                       data-testid={`button-configure-${integration.id}`}
                     >
                       <Settings size={16} className="mr-2" />
-                      Configurar
+                      {t('integrations.configure')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -269,7 +271,7 @@ export default function Integrations() {
         {/* Título da Seção */}
         <div className="flex items-center space-x-3 mb-6">
           <Webhook className="text-purple-400" size={20} />
-          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Aplicativos da Operação</h2>
+          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>{t('integrations.operationalApps')}</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -277,8 +279,8 @@ export default function Integrations() {
             <div className="flex items-center space-x-3 mb-4">
               <Webhook className="text-purple-400" size={30} />
               <div>
-                <h4 className="text-white font-medium">Webhooks</h4>
-                <p className="text-gray-400 text-sm">Envie dados de pedidos para seus aplicativos</p>
+                <h4 className="text-white font-medium">{t('integrations.webhooks')}</h4>
+                <p className="text-gray-400 text-sm">{t('integrations.webhooksDescription')}</p>
               </div>
             </div>
             
@@ -291,14 +293,14 @@ export default function Integrations() {
                   data-testid="button-configure-operational-app"
                 >
                   <Settings size={16} className="mr-2" />
-                  Configurar
+                  {t('integrations.configure')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-white flex items-center space-x-2">
                     <Webhook className="text-purple-400" size={30} />
-                    <span>Aplicativos da Operação</span>
+                    <span>{t('integrations.operationalApps')}</span>
                   </DialogTitle>
                 </DialogHeader>
                 <OperationalAppIntegration />

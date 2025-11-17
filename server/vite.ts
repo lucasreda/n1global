@@ -44,13 +44,9 @@ export async function setupVite(app: Express, server: Server) {
   app.use((req, res, next) => {
     // Skip API routes - let them be handled by Express API routes
     if (req.originalUrl?.startsWith("/api")) {
-      console.log("🚫 [VITE] PULANDO rota API:", req.originalUrl);
-      console.log("🚫 [VITE] Path:", req.path);
-      console.log("🚫 [VITE] Chamando next() para passar para Express");
       return next();
     }
     // Use vite middleware for all other routes
-    console.log("✅ [VITE] Processando rota:", req.originalUrl);
     vite.middlewares(req, res, next);
   });
   
@@ -86,7 +82,10 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // In production, after esbuild bundling, import.meta.dirname will be the dist/ directory
+  // The Vite build outputs files to dist/public/, so we need to use process.cwd() 
+  // to get the project root, then resolve to dist/public/
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
@@ -94,7 +93,22 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  console.log(`📁 Serving static files from: ${distPath}`);
+
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      // Set proper Content-Type for CSS files
+      if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      }
+      // Set proper Content-Type for JS files
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      }
+      // Enable CORS for all static files
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+  }));
 
   // fall through to index.html if the file doesn't exist
   // but skip API routes
@@ -103,6 +117,32 @@ export function serveStatic(app: Express) {
     if (req.originalUrl.startsWith("/api")) {
       return next();
     }
+    
+    // Skip static asset requests - they should already be handled by express.static above
+    if (req.originalUrl.startsWith("/assets/") || 
+        req.originalUrl.endsWith(".css") || 
+        req.originalUrl.endsWith(".js")) {
+      return next();
+    }
+    
+    // Verificar se HTML tem crossorigin antes de servir (apenas no primeiro acesso)
+    try {
+      const htmlPath = path.resolve(distPath, "index.html");
+      const htmlContent = fs.readFileSync(htmlPath, "utf-8");
+      const hasCrossorigin = /crossorigin/i.test(htmlContent);
+      if (hasCrossorigin) {
+        console.warn(`⚠️ [SERVE] HTML ainda contém crossorigin! Links CSS/Script podem não carregar corretamente.`);
+        // Tentar remover em runtime como fallback
+        const cleanedHtml = htmlContent
+          .replace(/<link([^>]*rel=["']stylesheet["'][^>]*)crossorigin(?:=["'][^"']*["'])?([^>]*)>/gi, '<link$1$2>')
+          .replace(/<script([^>]*type=["']module["'][^>]*)crossorigin(?:=["'][^"']*["'])?([^>]*)>/gi, '<script$1$2>')
+          .replace(/\s+crossorigin(?:=["'][^"']*["'])?/gi, '');
+        return res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).send(cleanedHtml);
+      }
+    } catch (error) {
+      console.warn(`⚠️ [SERVE] Erro ao verificar HTML:`, error);
+    }
+    
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

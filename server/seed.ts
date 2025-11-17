@@ -75,7 +75,7 @@ export async function seedDatabase() {
           ownerId: storeOwner.id,
           settings: {},
         })
-        .returning();
+        .returning() as any[];
       
       defaultStore = storeResult[0];
       console.log("✅ Default store created:", defaultStore.name);
@@ -160,58 +160,9 @@ export async function seedDatabase() {
     // Sample products removed - no longer creating automatic demo products
     console.log("ℹ️  Skipped sample products creation (disabled)");
 
-    // Create Warehouse Providers Catalog (for user-level warehouse configuration)
-    console.log("📦 Setting up warehouse providers catalog...");
-    
-    const warehouseProvidersCatalog = [
-      {
-        key: 'fhb',
-        name: 'FHB Fulfillment Hub',
-        description: 'FHB Fulfillment Hub - European warehouse and shipping service',
-        requiredFields: [
-          { fieldName: 'username', fieldType: 'text', label: 'Usuário', placeholder: 'seu_usuario', required: true },
-          { fieldName: 'password', fieldType: 'password', label: 'Senha', placeholder: '********', required: true }
-        ],
-        isActive: true
-      },
-      {
-        key: 'european_fulfillment',
-        name: 'European Fulfillment',
-        description: 'European Fulfillment Center - Complete logistics solution',
-        requiredFields: [
-          { fieldName: 'username', fieldType: 'text', label: 'Usuário', placeholder: 'seu_usuario', required: true },
-          { fieldName: 'password', fieldType: 'password', label: 'Senha', placeholder: '********', required: true }
-        ],
-        isActive: true
-      },
-      {
-        key: 'elogy',
-        name: 'eLogy Logistics',
-        description: 'eLogy - Smart logistics and fulfillment platform',
-        requiredFields: [
-          { fieldName: 'username', fieldType: 'text', label: 'Usuário', placeholder: 'seu_usuario', required: true },
-          { fieldName: 'password', fieldType: 'password', label: 'Senha', placeholder: '********', required: true }
-        ],
-        isActive: true
-      }
-    ];
-
-    for (const providerData of warehouseProvidersCatalog) {
-      const [existingProvider] = await db
-        .select()
-        .from(warehouseProviders)
-        .where(eq(warehouseProviders.key, providerData.key))
-        .limit(1);
-
-      if (!existingProvider) {
-        await db.insert(warehouseProviders).values(providerData);
-        console.log(`✅ Warehouse provider created: ${providerData.name}`);
-      } else {
-        console.log(`ℹ️  Warehouse provider ${providerData.name} already exists`);
-      }
-    }
-
-    console.log("📦 Warehouse providers catalog setup completed!");
+    // Warehouse Providers Catalog is now handled by ensureWarehouseProvidersCatalog()
+    // which is called before seedDatabase() in server/index.ts
+    console.log("ℹ️  Warehouse providers catalog is managed by ensureWarehouseProvidersCatalog()");
 
     // Check if fresh user already exists
     const [existingFreshUser] = await db
@@ -395,14 +346,20 @@ export async function seedDatabase() {
         console.log(`✅ Granted fresh user access to operation: ${operation.name}`);
       }
       
-      // Verify final state
+      // Verify final state (only select columns that exist)
       const finalAccess = await db
-        .select()
+        .select({
+          id: userOperationAccess.id,
+          userId: userOperationAccess.userId,
+          operationId: userOperationAccess.operationId,
+          role: userOperationAccess.role,
+          operationName: operations.name,
+        })
         .from(userOperationAccess)
         .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
         .where(eq(userOperationAccess.userId, freshUser.id));
       
-      console.log("🔍 Final fresh user operations:", finalAccess.map(item => item.operations.name));
+      console.log("🔍 Final fresh user operations:", finalAccess.map(item => item.operationName));
       
       // PRODUCTION DEBUG: Extra verification
       const verifyAccess = await db
@@ -677,8 +634,9 @@ Equipe de Suporte N1`,
     console.log("📧 Support system setup completed!");
 
     console.log("🌱 Database seeding completed!");
-  } catch (error) {
-    console.error("❌ Database seeding failed:", error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ Database seeding failed:", error.message || error);
+    // Don't throw - allow server to start even if seeding fails
+    console.log("⚠️ Server will continue to start despite seeding error");
   }
 }

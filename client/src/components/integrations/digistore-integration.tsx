@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useTourContext } from "@/contexts/tour-context";
 import { useLocation } from "wouter";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface DigistoreIntegration {
   id: string;
@@ -28,6 +29,7 @@ interface DigistoreIntegration {
 }
 
 export function DigistoreIntegration() {
+  const { t } = useTranslation();
   const [apiKey, setApiKey] = useState("");
   const [testOrderId, setTestOrderId] = useState("");
   const { toast } = useToast();
@@ -74,14 +76,14 @@ export function DigistoreIntegration() {
       await queryClient.invalidateQueries({ queryKey: ["/api/integrations/digistore", operationId] });
       await queryClient.invalidateQueries({ queryKey: ["/api/onboarding/integrations-status"] });
       toast({
-        title: "Sucesso",
-        description: "Integração Digistore24 configurada com sucesso!",
+        title: t('integrations.digistore.success'),
+        description: t('integrations.digistore.configuredSuccessfully'),
       });
 
       // Redirecionar para orders e iniciar tour
       toast({
-        title: "Pronto para Sincronizar!",
-        description: "Agora você pode importar seus pedidos.",
+        title: t('integrations.digistore.readyToSync'),
+        description: t('integrations.digistore.readyToSyncDescription'),
       });
       setTimeout(() => {
         setLocation('/orders');
@@ -92,8 +94,8 @@ export function DigistoreIntegration() {
     },
     onError: (error: any) => {
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao configurar integração Digistore24",
+        title: t('integrations.digistore.error'),
+        description: error.message || t('integrations.digistore.errorConfiguring'),
         variant: "destructive",
       });
     },
@@ -109,14 +111,14 @@ export function DigistoreIntegration() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Conexão válida",
-        description: `Conectado com sucesso ao Digistore24`,
+        title: t('integrations.digistore.validConnection'),
+        description: t('integrations.digistore.connectedSuccessfully'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro na conexão",
-        description: error.message || "Erro ao conectar com o Digistore24",
+        title: t('integrations.digistore.connectionError'),
+        description: error.message || t('integrations.digistore.errorConnecting'),
         variant: "destructive",
       });
     },
@@ -131,14 +133,14 @@ export function DigistoreIntegration() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/digistore", operationId] });
       toast({
-        title: "Sincronização concluída",
+        title: t('integrations.digistore.syncCompleted'),
         description: data.message,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro na sincronização",
-        description: error.message || "Erro ao sincronizar dados",
+        title: t('integrations.digistore.syncError'),
+        description: error.message || t('integrations.digistore.errorSyncing'),
         variant: "destructive",
       });
     },
@@ -148,7 +150,7 @@ export function DigistoreIntegration() {
   const testWebhookMutation = useMutation({
     mutationFn: async () => {
       if (!operationId) {
-        throw new Error("Selecione uma operação antes de testar o webhook");
+        throw new Error(t('integrations.digistore.selectOperationBeforeTest'));
       }
 
       const params = new URLSearchParams();
@@ -163,15 +165,15 @@ export function DigistoreIntegration() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Webhook de teste processado!",
-        description: `Order ID: ${data.orderId}`,
+        title: t('integrations.digistore.webhookTestProcessed'),
+        description: t('integrations.digistore.orderId', { orderId: data.orderId }),
       });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao testar webhook",
-        description: error.message || "Erro desconhecido",
+        title: t('integrations.digistore.errorTestingWebhook'),
+        description: error.message || t('common.error'),
         variant: "destructive",
       });
     },
@@ -180,8 +182,8 @@ export function DigistoreIntegration() {
   const handleConfigure = () => {
     if (!apiKey.trim()) {
       toast({
-        title: "Campo obrigatório",
-        description: "Por favor, preencha a API Key",
+        title: t('integrations.digistore.requiredField'),
+        description: t('integrations.digistore.fillApiKey'),
         variant: "destructive",
       });
       return;
@@ -192,8 +194,8 @@ export function DigistoreIntegration() {
   const handleTest = () => {
     if (!apiKey.trim()) {
       toast({
-        title: "Campo obrigatório",
-        description: "Por favor, preencha a API Key para testar",
+        title: t('integrations.digistore.requiredField'),
+        description: t('integrations.digistore.fillApiKeyToTest'),
         variant: "destructive",
       });
       return;
@@ -202,17 +204,17 @@ export function DigistoreIntegration() {
   };
 
   const getStatusBadge = () => {
-    if (!integration) return <Badge variant="secondary">Não configurado</Badge>;
+    if (!integration) return <Badge variant="secondary">{t('integrations.statusNotConfigured')}</Badge>;
     
     switch (integration.status) {
       case "active":
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Ativo</Badge>;
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{t('integrations.statusActive')}</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Pendente</Badge>;
+        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">{t('integrations.statusPending')}</Badge>;
       case "error":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Erro</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{t('integrations.statusError')}</Badge>;
       default:
-        return <Badge variant="secondary">Desconhecido</Badge>;
+        return <Badge variant="secondary">{t('integrations.statusUnknown')}</Badge>;
     }
   };
 
@@ -231,7 +233,7 @@ export function DigistoreIntegration() {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
             <Store className="text-blue-400" size={20} />
-            Status da Integração
+            {t('integrations.digistore.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -240,23 +242,23 @@ export function DigistoreIntegration() {
               {integration ? (
                 <div className="space-y-2">
                   <p className="text-gray-300">
-                    <strong>Integração:</strong> Digistore24
+                    <strong>{t('integrations.digistore.integration')}:</strong> Digistore24
                   </p>
                   <p className="text-gray-300">
-                    <strong>Última sincronização:</strong>{" "}
+                    <strong>{t('integrations.digistore.lastSync')}:</strong>{" "}
                     {integration.lastSyncAt 
                       ? new Date(integration.lastSyncAt).toLocaleString("pt-BR")
-                      : "Nunca"
+                      : t('integrations.shopify.never')
                     }
                   </p>
                   {integration.syncErrors && (
                     <p className="text-red-400 text-sm">
-                      <strong>Erros:</strong> {integration.syncErrors}
+                      <strong>{t('integrations.digistore.errors')}:</strong> {integration.syncErrors}
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-gray-400">Nenhuma integração configurada</p>
+                <p className="text-gray-400">{t('integrations.digistore.noIntegration')}</p>
               )}
             </div>
             {getStatusBadge()}
@@ -268,28 +270,28 @@ export function DigistoreIntegration() {
       <Card className="bg-black/20 border-white/10">
         <CardHeader>
           <CardTitle className="text-white" style={{ fontSize: '20px' }}>
-            {integration ? "Atualizar" : "Configurar"} Integração Digistore24
+            {integration ? t('integrations.digistore.updateTitle') : t('integrations.digistore.configureTitle')}
           </CardTitle>
           <CardDescription className="text-gray-400">
-            Configure sua integração com Digistore24 para importar pedidos e gerenciar fulfillment
+            {t('integrations.digistore.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="apiKey" className="text-gray-300">
-              API Key <span className="text-red-400">*</span>
+              {t('integrations.digistore.apiKey')} <span className="text-red-400">*</span>
             </Label>
             <Input
               id="apiKey"
               type="password"
-              placeholder="Sua API Key do Digistore24"
+              placeholder={t('integrations.digistore.apiKeyPlaceholder')}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               className="bg-black/40 border-white/20 text-white placeholder:text-gray-500"
               data-testid="input-api-key"
             />
             <p className="text-sm text-gray-500">
-              API Key disponível no painel do Digistore24 em Configurações {'>'} Acesso à conta {'>'} Chaves de API
+              {t('integrations.digistore.apiKeyHint')}
             </p>
           </div>
 
@@ -306,7 +308,7 @@ export function DigistoreIntegration() {
               ) : (
                 <CheckCircle className="h-4 w-4 mr-2" />
               )}
-              Testar Conexão
+              {t('integrations.digistore.testConnection')}
             </Button>
 
             <Button
@@ -320,7 +322,7 @@ export function DigistoreIntegration() {
               ) : (
                 <Store className="h-4 w-4 mr-2" />
               )}
-              {integration ? "Atualizar" : "Configurar"}
+              {integration ? t('integrations.digistore.update') : t('integrations.digistore.configure')}
             </Button>
           </div>
         </CardContent>
@@ -332,19 +334,19 @@ export function DigistoreIntegration() {
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
               <RefreshCw className="text-blue-400" size={20} />
-              Sincronização Automática via Webhook
+              {t('integrations.digistore.syncTitle')}
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Os pedidos são recebidos automaticamente via webhook IPN
+              {t('integrations.digistore.syncDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <p className="text-sm text-gray-300">
-                ℹ️ A Digistore24 envia pedidos automaticamente via webhook IPN. Você também pode sincronizar manualmente para buscar entregas pendentes.
+                ℹ️ {t('integrations.digistore.webhookInfo')}
               </p>
               <p className="text-sm text-gray-300 mt-2">
-                <strong>URL do Webhook:</strong><br />
+                <strong>{t('integrations.digistore.webhookUrl')}:</strong><br />
                 <code className="text-xs bg-black/30 px-2 py-1 rounded">
                   https://www.n1global.app/api/integrations/digistore/webhook
                 </code>
@@ -352,17 +354,17 @@ export function DigistoreIntegration() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custom-order-id" className="text-sm text-gray-200">
-                ID personalizado para teste (opcional)
+                {t('integrations.digistore.customOrderId')}
               </Label>
               <Input
                 id="custom-order-id"
-                placeholder="Ex: DTA7ZZN9"
+                placeholder={t('integrations.digistore.customOrderIdPlaceholder')}
                 value={testOrderId}
                 onChange={(e) => setTestOrderId(e.target.value)}
                 className="bg-black/40 border-white/10 text-white"
               />
               <p className="text-xs text-gray-400">
-                Se preenchido, o webhook de teste usará este ID exatamente como fornecido. Deixe vazio para gerar um ID automático.
+                {t('integrations.digistore.customOrderIdHint')}
               </p>
             </div>
             <div className="flex gap-3">
@@ -377,7 +379,7 @@ export function DigistoreIntegration() {
                 ) : (
                   <RefreshCw className="h-4 w-4 mr-2" />
                 )}
-                Sincronizar Entregas Pendentes
+                {t('integrations.digistore.syncPendingDeliveries')}
               </Button>
               
               <Button
@@ -392,7 +394,7 @@ export function DigistoreIntegration() {
                 ) : (
                   <Zap className="h-4 w-4 mr-2" />
                 )}
-                🧪 Testar Webhook
+                {t('integrations.digistore.testWebhook')}
               </Button>
             </div>
           </CardContent>

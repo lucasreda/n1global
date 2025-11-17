@@ -1,14 +1,8 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, Play, Database, Activity, CheckCircle2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { RefreshCw, Database, Activity, CheckCircle2 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
 
 export function SyncStatus() {
-  const [isManualSyncing, setIsManualSyncing] = useState(false);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Fetch sync stats
   const operationId = localStorage.getItem("current_operation_id");
@@ -23,40 +17,6 @@ export function SyncStatus() {
     },
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
-
-  // Manual sync mutation
-  const syncMutation = useMutation({
-    mutationFn: async (options: { maxPages?: number; syncType?: string }) => {
-      const response = await authenticatedApiRequest("POST", "/api/sync/start", {
-        body: JSON.stringify(options),
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Sincronização iniciada",
-        description: data.message || "Sincronização executada com sucesso",
-      });
-      // Refresh sync stats and dashboard data
-      queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro na sincronização",
-        description: error.message || "Erro ao executar sincronização",
-        variant: "destructive",
-      });
-    },
-    onSettled: () => {
-      setIsManualSyncing(false);
-    },
-  });
-
-  const handleManualSync = (syncType: string = "incremental", maxPages: number = 3) => {
-    setIsManualSyncing(true);
-    syncMutation.mutate({ maxPages, syncType });
-  };
 
   const formatLastSync = (date: string | null) => {
     if (!date) return "Nunca";
@@ -161,7 +121,7 @@ export function SyncStatus() {
       <div className="h-px bg-gray-600 mb-4"></div>
 
       {/* Last Sync Info */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <RefreshCw className="h-4 w-4 text-gray-400" />
           <span className="text-sm text-gray-400">Última sincronização:</span>
@@ -171,44 +131,11 @@ export function SyncStatus() {
         </span>
       </div>
 
-      {/* Manual Sync Controls */}
-      <div className="space-y-3">
+      {/* Description */}
+      <div className="mt-4">
         <p className="text-sm text-gray-400">
           Sincronização inteligente automática a cada 5 minutos - adapta baseado no volume de atividade
         </p>
-        
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleManualSync("intelligent")}
-            disabled={isManualSyncing || syncStats?.isRunning}
-            className="glassmorphism-light text-gray-200 border-blue-600 hover:bg-blue-500/10 flex-1"
-            data-testid="button-intelligent-sync"
-          >
-            {isManualSyncing ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Activity className="h-4 w-4 mr-2" />
-            )}
-            Sync Inteligente
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleManualSync("incremental", 2)}
-            disabled={isManualSyncing || syncStats?.isRunning}
-            className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
-            data-testid="button-quick-sync"
-          >
-            {isManualSyncing ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4 mr-2" />
-            )}
-            Sync Rápido
-          </Button>
-        </div>
       </div>
     </div>
   );

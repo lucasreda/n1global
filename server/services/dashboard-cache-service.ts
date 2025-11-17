@@ -10,10 +10,23 @@ const lastUpdateCache = new Map<string, Date>();
 
 /**
  * Invalida cache do dashboard para uma operação específica
+ * Remove tanto o cache em memória quanto o cache no banco de dados (dashboard_metrics)
  */
-export function invalidateDashboardCache(operationId: string): void {
+export async function invalidateDashboardCache(operationId: string): Promise<void> {
   console.log(`🔄 Invalidando cache do dashboard para operação ${operationId}`);
   lastUpdateCache.delete(operationId);
+  
+  // Também invalidar cache no banco de dados (dashboard_metrics)
+  try {
+    const { dashboardMetrics } = await import('@shared/schema');
+    await db
+      .delete(dashboardMetrics)
+      .where(eq(dashboardMetrics.operationId, operationId));
+    console.log(`✅ Cache do banco de dados invalidado para operação ${operationId}`);
+  } catch (error) {
+    console.error(`⚠️ Erro ao invalidar cache do banco de dados para operação ${operationId}:`, error);
+    // Não falha a operação se não conseguir invalidar o cache do banco
+  }
 }
 
 /**

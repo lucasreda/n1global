@@ -3,8 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useToast } from './use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useTranslation } from './use-translation';
 
 export function useTour() {
+  const { t } = useTranslation();
   const [isTourRunning, setIsTourRunning] = useState(false);
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'integrations' | 'ads' | 'sync-orders'>('dashboard');
   const [tourWasCompletedOrSkipped, setTourWasCompletedOrSkipped] = useState(false);
@@ -32,8 +34,8 @@ export function useTour() {
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       
       toast({
-        title: 'Tour Concluído!',
-        description: 'Você pode refazer o tour a qualquer momento nas configurações.',
+        title: t('tour.toast.completed'),
+        description: t('tour.toast.completedDescription'),
       });
       
       // Redirecionar para a página inicial
@@ -43,8 +45,8 @@ export function useTour() {
     },
     onError: () => {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível salvar o progresso do tour.',
+        title: t('tour.toast.error'),
+        description: t('tour.toast.errorSaving'),
         variant: 'destructive',
       });
     },
@@ -58,16 +60,16 @@ export function useTour() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       toast({
-        title: 'Tour Reiniciado',
-        description: 'O tour será iniciado automaticamente.',
+        title: t('tour.toast.restarted'),
+        description: t('tour.toast.restartedDescription'),
       });
       setIsTourRunning(true);
       setCurrentPage('dashboard');
     },
     onError: () => {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível reiniciar o tour.',
+        title: t('tour.toast.error'),
+        description: t('tour.toast.errorRestarting'),
         variant: 'destructive',
       });
     },

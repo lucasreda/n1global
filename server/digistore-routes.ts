@@ -158,6 +158,11 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
       .where(eq(digistoreIntegrations.operationId, operationId))
       .limit(1);
 
+    // Determinar se deve definir integrationStartedAt
+    const shouldSetIntegrationStartedAt = 
+      !existingIntegration || // Nova integração
+      (existingIntegration.status !== "active" && existingIntegration.integrationStartedAt === null); // Ativando pela primeira vez
+
     let integration;
 
     if (existingIntegration) {
@@ -169,6 +174,7 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
         .set({
           apiKey: apiKey.trim(),
           status: "active",
+          ...(shouldSetIntegrationStartedAt && { integrationStartedAt: new Date() }),
           updatedAt: new Date(),
         })
         .where(eq(digistoreIntegrations.id, existingIntegration.id))
@@ -185,6 +191,7 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
           operationId,
           apiKey: apiKey.trim(),
           status: "active",
+          integrationStartedAt: new Date(), // Nova integração sempre define integrationStartedAt
         })
         .returning();
 
@@ -213,9 +220,17 @@ router.post("/digistore", authenticateToken, validateOperationAccess, async (req
 });
 
 /**
- * Sincronizar pedidos manualmente
+ * Sincronizar pedidos manualmente - REMOVED: Manual sync removed
+ * Sync now happens automatically via webhooks only
  */
 router.post("/digistore/sync", authenticateToken, validateOperationAccess, async (req, res) => {
+  // Manual sync removed - orders now come via webhooks only
+  return res.status(403).json({
+    error: "Sincronização manual removida",
+    message: "Os pedidos agora são importados apenas via webhooks configurados"
+  });
+  
+  /* REMOVED - Manual sync code
   try {
     const { operationId } = req.query;
 
@@ -238,6 +253,9 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
     const transactionId =
       customOrderId.length > 0 ? `${orderSlug}-${timestamp}` : `${timestamp}`;
 
+    // ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+    // Em produção, pedidos devem ser criados/atualizados via webhooks (se disponível) para melhor performance
+    // Digistore24 pode não suportar webhooks nativamente - verificar documentação da API
     console.log(`🔄 Iniciando sincronização manual Digistore24 para operação: ${operationId}`);
 
     // Buscar integração
@@ -261,12 +279,19 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
     // Criar serviço e buscar entregas pendentes
     const digistoreService = new DigistoreService({ apiKey: integration.apiKey });
     
-    // Buscar entregas dos últimos 30 dias
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Determinar data inicial: usar integrationStartedAt se existir, senão últimos 30 dias
+    let fromDate: Date;
+    if (integration.integrationStartedAt) {
+      fromDate = integration.integrationStartedAt;
+      console.log(`📅 Filtrando entregas a partir da data de integração: ${fromDate.toISOString().split('T')[0]}`);
+    } else {
+      fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 30);
+      console.log(`📅 Filtrando entregas dos últimos 30 dias: ${fromDate.toISOString().split('T')[0]}`);
+    }
     
     const deliveries = await digistoreService.listOrders({
-      from: thirtyDaysAgo.toISOString().split('T')[0], // YYYY-MM-DD
+      from: fromDate.toISOString().split('T')[0], // YYYY-MM-DD
       type: 'request,in_progress' // Apenas entregas pendentes
     });
 
@@ -382,6 +407,7 @@ router.post("/digistore/sync", authenticateToken, validateOperationAccess, async
       details: error instanceof Error ? error.message : "Erro desconhecido"
     });
   }
+  */
 });
 
 /**

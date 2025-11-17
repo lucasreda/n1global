@@ -5,7 +5,8 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations } from "@shared/schema";
+import crypto from "crypto";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess, shopifyIntegrations, cartpandaIntegrations, digistoreIntegrations, syncSessions, pollingExecutions, operationInvitations } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -16,6 +17,8 @@ import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 import { validateOperationAccess as operationAccess } from "./middleware/operation-access";
+import { requireTeamManagementPermission, hasPermission, getDefaultPermissions, requirePermission } from "./middleware/team-permissions";
+import { teamInvitationEmailService } from "./services/team-invitation-email-service";
 import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
@@ -38,12 +41,14 @@ import { registerFhbAdminRoutes } from "./routes/fhb-admin-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
+import { BigArenaService } from "./services/big-arena-service";
 import { EnterpriseAIPageOrchestrator } from "./ai/EnterpriseAIPageOrchestrator.js";
 import { FHBSyncService } from "./services/fhb-sync-service";
 import { EuropeanFulfillmentSyncService } from "./services/european-fulfillment-sync-service";
 import EventEmitter from "events";
 import { shopifyWebhookService } from "./services/shopify-webhook-service";
 import { cartpandaWebhookService } from "./services/cartpanda-webhook-service";
+import { syncBigArenaAccount } from "./workers/big-arena-sync-worker";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -145,6 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: users.name,
           phone: users.phone,
           avatarUrl: users.avatarUrl,
+          preferredLanguage: users.preferredLanguage,
         })
         .from(users)
         .where(eq(users.id, req.user.id))
@@ -161,7 +167,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email, 
         name: user.name, 
         phone: user.phone || null, 
-        avatarUrl: user.avatarUrl || null 
+        avatarUrl: user.avatarUrl || null,
+        preferredLanguage: user.preferredLanguage || null
       });
       
       const profileData = {
@@ -170,6 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: user.name,
         phone: user.phone || null,
         avatarUrl: user.avatarUrl || null,
+        preferredLanguage: user.preferredLanguage || null,
       };
       
       console.log("📤 Enviando dados do perfil:", profileData);
@@ -386,6 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         role: user.role,
         permissions: user.permissions || [],
+        preferredLanguage: (user as any).preferredLanguage || null,
       });
     } catch (error) {
       res.status(500).json({ message: "Erro interno do servidor" });
@@ -466,45 +475,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Smart Sync routes - for intelligent incremental synchronization
-  app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
-    try {
-      // CRITICAL: Get user's operation for data isolation
-      const userOperations = await storage.getUserOperations(req.user.id);
-      const currentOperation = userOperations[0];
-      
-      if (!currentOperation) {
-        return res.status(400).json({ 
-          success: false,
-          message: "Nenhuma operação encontrada. Complete o onboarding primeiro." 
-        });
-      }
-
-      const { syncType = "intelligent", maxPages = 3 } = req.body;
-      const { smartSyncService } = await import("./smart-sync-service");
-      
-      const userContext = {
-        userId: req.user.id,
-        operationId: currentOperation.id,
-        storeId: req.user.storeId
-      };
-      
-      let result;
-      if (syncType === "full") {
-        result = await smartSyncService.startFullInitialSync(userContext);
-      } else if (syncType === "incremental") {
-        result = await smartSyncService.startIncrementalSync({ maxPages }, userContext);
-      } else {
-        // Default: intelligent sync
-        result = await smartSyncService.startIntelligentSync(userContext);
-      }
-      
-      res.json(result);
-    } catch (error) {
-      console.error("Smart sync error:", error);
-      res.status(500).json({ message: "Failed to start smart sync" });
-    }
-  });
+  // Smart Sync routes - REMOVED: Manual sync endpoint removed
+  // Sync now happens automatically via webhooks and scheduled workers only
 
   // 🚀 CACHE: Cache para sync stats com TTL de 1 minuto
   const syncStatsCache = new Map<string, { data: any; expiry: number }>();
@@ -539,7 +511,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Shopify-first sync endpoint
+  // ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+  // Em produção, pedidos Shopify são criados/atualizados APENAS via webhooks para melhor performance
   app.post("/api/sync/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { ShopifySyncService } = await import("./shopify-sync-service");
@@ -641,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shopifyProgress = ShopifySyncService.getOperationProgress(operationId);
       
       // Se o Shopify sync está rodando, dar prioridade a ele
-      if (shopifyProgress.isRunning) {
+      if (shopifyProgress && shopifyProgress.isRunning) {
         return res.json({
           ...shopifyProgress,
           estimatedTimeRemaining: "",
@@ -710,7 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes - using real database data
-  app.get("/api/dashboard/metrics", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/metrics", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = req.query.period as string;
       const dateFrom = req.query.dateFrom as string;
@@ -724,6 +697,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { dashboardService } = await import("./dashboard-service");
       const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req, operationId, dateFrom, dateTo, productId);
 
+      // Debug: verificar valores de custos retornados
+      console.log(`🔍 Debug - Métricas retornadas para o frontend:`, {
+        totalProductCosts: metrics.totalProductCosts,
+        totalShippingCosts: metrics.totalShippingCosts,
+        totalProductCostsBRL: metrics.totalProductCostsBRL,
+        totalShippingCostsBRL: metrics.totalShippingCostsBRL,
+        deliveredOrders: metrics.deliveredOrders,
+        operationId: operationId || 'auto'
+      });
+
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
@@ -731,7 +714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = req.query.period as string;
       const dateFrom = req.query.dateFrom as string;
@@ -775,7 +758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, requirePermission('dashboard', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;
@@ -1374,6 +1357,878 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // TEAM MANAGEMENT ROUTES
+  // ============================================================================
+
+  // Get team members and pending invitations
+  app.get("/api/operations/:operationId/team", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      console.log(`[Team API] Fetching team for operation: ${operationId}`);
+
+      // Get operation ownerId
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      const ownerId = operation?.ownerId || null;
+      console.log(`[Team API] Operation ownerId: ${ownerId}`);
+
+      // Get all team members - handle case where invitedAt/invitedBy might not exist
+      let members;
+      try {
+        members = await db
+          .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            avatarUrl: users.avatarUrl,
+            role: userOperationAccess.role,
+            permissions: userOperationAccess.permissions,
+            invitedAt: userOperationAccess.invitedAt,
+            invitedBy: userOperationAccess.invitedBy,
+          })
+          .from(userOperationAccess)
+          .innerJoin(users, eq(userOperationAccess.userId, users.id))
+          .where(eq(userOperationAccess.operationId, operationId));
+        console.log(`[Team API] Found ${members.length} members`);
+      } catch (memberError: any) {
+        console.error("[Team API] Error fetching members:", memberError);
+        // If columns don't exist, try without them
+        if (memberError.message?.includes('column') && memberError.message?.includes('invited')) {
+          console.log("[Team API] Retrying without invitedAt/invitedBy columns");
+          members = await db
+            .select({
+              id: users.id,
+              name: users.name,
+              email: users.email,
+              avatarUrl: users.avatarUrl,
+              role: userOperationAccess.role,
+              permissions: userOperationAccess.permissions,
+            })
+            .from(userOperationAccess)
+            .innerJoin(users, eq(userOperationAccess.userId, users.id))
+            .where(eq(userOperationAccess.operationId, operationId));
+          // Add null values for missing columns
+          members = members.map(m => ({ ...m, invitedAt: null, invitedBy: null }));
+        } else {
+          throw memberError;
+        }
+      }
+
+      // Add isOwner field to each member
+      const membersWithOwnerFlag = members.map(member => {
+        const isOwner = ownerId !== null && member.id === ownerId;
+        console.log(`[Team API] Member ${member.id} (${member.email}): ownerId=${ownerId}, member.id=${member.id}, isOwner=${isOwner}`);
+        return {
+          ...member,
+          isOwner,
+        };
+      });
+
+      // Get pending invitations - handle case where table might not exist
+      let invitations: Array<{
+        id: string;
+        email: string;
+        role: string;
+        permissions: any;
+        status: string;
+        expiresAt: string;
+        createdAt: string;
+        invitedBy?: string | null;
+      }> = [];
+      try {
+        const invitationsResult = await db
+          .select({
+            id: operationInvitations.id,
+            email: operationInvitations.email,
+            role: operationInvitations.role,
+            permissions: operationInvitations.permissions,
+            status: operationInvitations.status,
+            expiresAt: operationInvitations.expiresAt,
+            createdAt: operationInvitations.createdAt,
+            invitedBy: operationInvitations.invitedBy,
+          })
+          .from(operationInvitations)
+          .where(
+            and(
+              eq(operationInvitations.operationId, operationId),
+              eq(operationInvitations.status, 'pending')
+            )
+          );
+        
+        invitations = invitationsResult.map(inv => ({
+          ...inv,
+          expiresAt: inv.expiresAt?.toISOString() || '',
+          createdAt: inv.createdAt?.toISOString() || '',
+        }));
+        console.log(`[Team API] Found ${invitations.length} pending invitations`);
+      } catch (invitationError: any) {
+        console.error("[Team API] Error fetching invitations:", invitationError);
+        // If table doesn't exist, return empty array
+        if (invitationError.message?.includes('does not exist') || invitationError.message?.includes('relation')) {
+          console.log("[Team API] operation_invitations table doesn't exist, returning empty array");
+          invitations = [] as typeof invitations;
+        } else {
+          throw invitationError;
+        }
+      }
+
+      res.json({
+        ownerId,
+        members: membersWithOwnerFlag,
+        invitations,
+      });
+    } catch (error: any) {
+      console.error("Get team error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        message: "Erro ao buscar membros da equipe",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Send invitation
+  app.post("/api/operations/:operationId/team/invite", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { email, role, permissions, userExists } = req.body;
+
+      console.log(`[Team Invite] Received request:`, {
+        operationId,
+        email,
+        role,
+        hasPermissions: !!permissions,
+        userExists,
+        userId: req.user?.id
+      });
+
+      if (!email || !role) {
+        return res.status(400).json({ message: "Email e role são obrigatórios" });
+      }
+
+      // Validate role
+      if (!['owner', 'admin', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Role inválido" });
+      }
+
+      // Check if user already has access
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingUser) {
+        const [existingAccess] = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.userId, existingUser.id),
+              eq(userOperationAccess.operationId, operationId)
+            )
+          )
+          .limit(1);
+
+        if (existingAccess) {
+          return res.status(400).json({ message: "Usuário já faz parte desta operação" });
+        }
+      }
+
+      // Check for existing pending invitation
+      const [existingInvitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(
+          and(
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.email, email),
+            eq(operationInvitations.status, 'pending')
+          )
+        )
+        .limit(1);
+
+      if (existingInvitation) {
+        return res.status(400).json({ message: "Já existe um convite pendente para este email" });
+      }
+
+      // Generate token - usando import crypto (não require)
+      console.log('[Team Invite] Generating token using crypto module...');
+      const token = crypto.randomBytes(32).toString('hex');
+      console.log('[Team Invite] Token generated successfully, length:', token.length);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+      // Use default permissions if not provided
+      let finalPermissions;
+      try {
+        finalPermissions = permissions || getDefaultPermissions(role);
+        console.log(`[Team Invite] Permissions for role ${role}:`, JSON.stringify(finalPermissions));
+      } catch (permError: any) {
+        console.error("[Team Invite] Error getting default permissions:", permError);
+        // Fallback to basic permissions
+        finalPermissions = {
+          dashboard: { view: true },
+          orders: { view: true },
+          products: { view: true },
+          ads: { view: true },
+          integrations: { view: true },
+          settings: { view: true },
+          team: { view: true }
+        };
+      }
+
+      console.log(`[Team Invite] Creating invitation for ${email} in operation ${operationId}`);
+
+      // Create invitation
+      let invitation;
+      try {
+        const invitationData: any = {
+          operationId,
+          email,
+          invitedBy: req.user.id,
+          role,
+          permissions: finalPermissions,
+          token,
+          status: 'pending',
+          expiresAt,
+        };
+        
+        console.log(`[Team Invite] Inserting invitation with data:`, {
+          operationId: invitationData.operationId,
+          email: invitationData.email,
+          invitedBy: invitationData.invitedBy,
+          role: invitationData.role,
+          token: invitationData.token.substring(0, 10) + '...',
+          status: invitationData.status,
+          expiresAt: invitationData.expiresAt.toISOString(),
+          hasPermissions: !!invitationData.permissions
+        });
+
+        [invitation] = await db
+          .insert(operationInvitations)
+          .values(invitationData)
+          .returning();
+        
+        if (!invitation) {
+          throw new Error("Failed to create invitation - no data returned");
+        }
+        
+        console.log(`[Team Invite] Invitation created successfully:`, invitation.id);
+      } catch (insertError: any) {
+        console.error("[Team Invite] Error inserting invitation:", insertError);
+        console.error("[Team Invite] Insert error details:", {
+          message: insertError.message,
+          code: insertError.code,
+          constraint: insertError.constraint,
+          detail: insertError.detail,
+          name: insertError.name,
+          stack: insertError.stack?.substring(0, 500)
+        });
+        
+        // Se for erro de constraint ou campo não encontrado, fornecer mensagem mais útil
+        if (insertError.code === '23503') {
+          return res.status(400).json({ 
+            message: "Erro ao criar convite: operação ou usuário inválido",
+            error: process.env.NODE_ENV === 'development' ? insertError.detail : undefined
+          });
+        }
+        
+        if (insertError.code === '23505') {
+          return res.status(400).json({ 
+            message: "Já existe um convite com este token (erro interno)",
+            error: process.env.NODE_ENV === 'development' ? insertError.detail : undefined
+          });
+        }
+        
+        throw insertError;
+      }
+
+      // Get operation details for email (não bloquear se falhar)
+      let operation = null;
+      let inviter = null;
+      
+      try {
+        [operation] = await db
+          .select({ name: operations.name, language: operations.language })
+          .from(operations)
+          .where(eq(operations.id, operationId))
+          .limit(1);
+        
+        if (!operation) {
+          console.warn(`[Team Invite] Operation ${operationId} not found for email`);
+        }
+      } catch (opError: any) {
+        console.error("[Team Invite] Error fetching operation:", opError);
+      }
+
+      try {
+        [inviter] = await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, req.user.id))
+          .limit(1);
+        
+        if (!inviter) {
+          console.warn(`[Team Invite] Inviter user ${req.user.id} not found`);
+        }
+      } catch (inviterError: any) {
+        console.error("[Team Invite] Error fetching inviter:", inviterError);
+      }
+
+      // Send invitation email (não bloquear se falhar)
+      if (operation && inviter) {
+        try {
+          console.log(`[Team Invite] Tentando enviar email para ${email}...`);
+          await teamInvitationEmailService.sendInvitationEmail({
+            email,
+            operationName: operation.name,
+            inviterName: inviter.name,
+            role,
+            invitationToken: token,
+            language: operation.language || 'pt',
+          });
+          console.log(`✅ [Team Invite] Email de convite enviado com sucesso para ${email}`);
+        } catch (emailError: any) {
+          console.error("⚠️ [Team Invite] Erro ao enviar email de convite (mas convite foi criado):", {
+            error: emailError.message,
+            email,
+            operationName: operation.name,
+            hasMailgunApiKey: !!process.env.MAILGUN_API_KEY,
+            hasMailgunDomain: !!process.env.MAILGUN_DOMAIN
+          });
+          // Não bloquear a resposta se o email falhar - o convite já foi criado
+          // Mas logar o erro para debug
+        }
+      } else {
+        console.warn("⚠️ [Team Invite] Operação ou inviter não encontrado, email não enviado");
+        console.warn(`[Team Invite] Operation found: ${!!operation}, Inviter found: ${!!inviter}`);
+        if (!operation) {
+          console.warn(`[Team Invite] Operation ${operationId} não encontrada no banco de dados`);
+        }
+        if (!inviter) {
+          console.warn(`[Team Invite] Inviter user ${req.user.id} não encontrado no banco de dados`);
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        invitation,
+        message: "Convite enviado com sucesso",
+      });
+    } catch (error: any) {
+      console.error("Send invitation error:", error);
+      console.error("Error stack:", error.stack);
+      console.error("Error details:", {
+        operationId: req.params.operationId,
+        email: req.body.email,
+        role: req.body.role,
+        userId: req.user?.id
+      });
+      res.status(500).json({ 
+        message: "Erro ao enviar convite",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Update team member role and permissions
+  app.patch("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requirePermission('team', 'manage'), requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, userId } = req.params;
+      const { role, permissions } = req.body;
+      const currentUserId = req.user?.id;
+
+      // Check if user is trying to edit themselves
+      if (userId === currentUserId) {
+        // Check if user has permission to manage team
+        const hasManagePermission = await hasPermission(currentUserId!, operationId, 'team', 'manage');
+        if (!hasManagePermission) {
+          console.log(`[Team API] Usuário ${currentUserId} tentou editar a si mesmo sem permissão team.manage`);
+          return res.status(403).json({ 
+            message: "Você não tem permissão para editar seu próprio acesso. Contate um administrador." 
+          });
+        }
+      }
+
+      // Check if user is the operation creator (ownerId)
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      if (operation?.ownerId === userId) {
+        console.log(`[Team API] Tentativa de editar proprietário criador da operação bloqueada: userId=${userId}, operationId=${operationId}`);
+        return res.status(403).json({ 
+          message: "Não é possível editar o proprietário criador da operação" 
+        });
+      }
+
+      // Validate role
+      if (role && !['owner', 'admin', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Role inválido" });
+      }
+
+      // Check if user is the last owner
+      if (role && role !== 'owner') {
+        const owners = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.operationId, operationId),
+              eq(userOperationAccess.role, 'owner')
+            )
+          );
+
+        const [currentAccess] = await db
+          .select({ role: userOperationAccess.role })
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.userId, userId),
+              eq(userOperationAccess.operationId, operationId)
+            )
+          )
+          .limit(1);
+
+        if (currentAccess?.role === 'owner' && owners.length === 1) {
+          return res.status(400).json({ message: "Não é possível remover o último owner da operação" });
+        }
+      }
+
+      // Build update object
+      const updates: any = {};
+      if (role) updates.role = role;
+      if (permissions !== undefined) updates.permissions = permissions;
+
+      await db
+        .update(userOperationAccess)
+        .set(updates)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Membro da equipe atualizado com sucesso",
+      });
+    } catch (error) {
+      console.error("Update team member error:", error);
+      res.status(500).json({ message: "Erro ao atualizar membro da equipe" });
+    }
+  });
+
+  // Remove team member
+  app.delete("/api/operations/:operationId/team/:userId", authenticateToken, operationAccess, requirePermission('team', 'manage'), requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, userId } = req.params;
+
+      // CRITICAL: Check if user is the operation creator (ownerId) - ABSOLUTE PROTECTION
+      const [operation] = await db
+        .select({ ownerId: operations.ownerId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      if (!operation) {
+        console.log(`[Team API] Operação não encontrada: operationId=${operationId}`);
+        return res.status(404).json({ 
+          message: "Operação não encontrada" 
+        });
+      }
+
+      // ABSOLUTE PROTECTION: Never allow removal of the operation creator
+      if (operation.ownerId && operation.ownerId === userId) {
+        console.log(`[Team API] BLOQUEADO: Tentativa de remover proprietário criador da operação - userId=${userId}, operationId=${operationId}, ownerId=${operation.ownerId}`);
+        return res.status(403).json({ 
+          message: "Não é possível remover o proprietário criador da operação. Esta ação é permanentemente bloqueada." 
+        });
+      }
+
+      // Check if user is the last owner
+      const [currentAccess] = await db
+        .select({ role: userOperationAccess.role })
+        .from(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        )
+        .limit(1);
+
+      if (currentAccess?.role === 'owner') {
+        const owners = await db
+          .select()
+          .from(userOperationAccess)
+          .where(
+            and(
+              eq(userOperationAccess.operationId, operationId),
+              eq(userOperationAccess.role, 'owner')
+            )
+          );
+
+        if (owners.length === 1) {
+          return res.status(400).json({ message: "Não é possível remover o último owner da operação" });
+        }
+      }
+
+      await db
+        .delete(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, operationId)
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Membro removido da equipe com sucesso",
+      });
+    } catch (error) {
+      console.error("Remove team member error:", error);
+      res.status(500).json({ message: "Erro ao remover membro da equipe" });
+    }
+  });
+
+  // Resend invitation
+  app.post("/api/operations/:operationId/team/invite/:invitationId/resend", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, invitationId } = req.params;
+
+      const [invitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(
+          and(
+            eq(operationInvitations.id, invitationId),
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.status, 'pending')
+          )
+        )
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado ou já aceito" });
+      }
+
+      // Check if expired
+      if (new Date(invitation.expiresAt) < new Date()) {
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitationId));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Get operation and inviter details
+      const [operation] = await db
+        .select({ name: operations.name, language: operations.language })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      const [inviter] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, invitation.invitedBy))
+        .limit(1);
+
+      if (operation && inviter) {
+        await teamInvitationEmailService.sendInvitationEmail({
+          email: invitation.email,
+          operationName: operation.name,
+          inviterName: inviter.name,
+          role: invitation.role,
+          invitationToken: invitation.token,
+          language: operation.language || 'pt',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Convite reenviado com sucesso",
+      });
+    } catch (error) {
+      console.error("Resend invitation error:", error);
+      res.status(500).json({ message: "Erro ao reenviar convite" });
+    }
+  });
+
+  // Cancel invitation
+  app.delete("/api/operations/:operationId/team/invite/:invitationId", authenticateToken, operationAccess, requireTeamManagementPermission, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, invitationId } = req.params;
+
+      await db
+        .update(operationInvitations)
+        .set({ status: 'cancelled' })
+        .where(
+          and(
+            eq(operationInvitations.id, invitationId),
+            eq(operationInvitations.operationId, operationId),
+            eq(operationInvitations.status, 'pending')
+          )
+        );
+
+      res.json({
+        success: true,
+        message: "Convite cancelado com sucesso",
+      });
+    } catch (error) {
+      console.error("Cancel invitation error:", error);
+      res.status(500).json({ message: "Erro ao cancelar convite" });
+    }
+  });
+
+  // ============================================================================
+  // INVITATION ACCEPTANCE ROUTES
+  // ============================================================================
+
+  // Get invitation details by token
+  app.get("/api/invitations/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      console.log(`[Get Invitation] Buscando convite com token: ${token?.substring(0, 20)}...`);
+
+      const [invitation] = await db
+        .select({
+          id: operationInvitations.id,
+          email: operationInvitations.email,
+          role: operationInvitations.role,
+          permissions: operationInvitations.permissions,
+          status: operationInvitations.status,
+          expiresAt: operationInvitations.expiresAt,
+          operationId: operationInvitations.operationId,
+        })
+        .from(operationInvitations)
+        .where(eq(operationInvitations.token, token))
+        .limit(1);
+
+      console.log(`[Get Invitation] Convite encontrado:`, invitation ? { id: invitation.id, email: invitation.email, status: invitation.status } : 'null');
+
+      if (!invitation) {
+        console.log(`[Get Invitation] Convite não encontrado para token`);
+        return res.status(404).json({ message: "Convite não encontrado" });
+      }
+
+      if (invitation.status !== 'pending') {
+        console.log(`[Get Invitation] Convite não está pendente, status: ${invitation.status}`);
+        return res.status(400).json({ 
+          message: `Convite já foi ${invitation.status === 'accepted' ? 'aceito' : invitation.status === 'expired' ? 'expirado' : 'cancelado'}` 
+        });
+      }
+
+      if (new Date(invitation.expiresAt) < new Date()) {
+        console.log(`[Get Invitation] Convite expirado`);
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitation.id));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Get operation name
+      const [operation] = await db
+        .select({ name: operations.name })
+        .from(operations)
+        .where(eq(operations.id, invitation.operationId))
+        .limit(1);
+
+      console.log(`[Get Invitation] Retornando convite com operação:`, operation?.name);
+
+      res.json({
+        invitation: {
+          ...invitation,
+          operationName: operation?.name,
+        },
+      });
+    } catch (error: any) {
+      console.error("[Get Invitation] Erro ao buscar convite:", error);
+      console.error("[Get Invitation] Stack:", error.stack);
+      res.status(500).json({ 
+        message: "Erro ao buscar convite",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Accept invitation
+  app.post("/api/invitations/:token/accept", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const { name, password } = req.body;
+
+      const [invitation] = await db
+        .select()
+        .from(operationInvitations)
+        .where(eq(operationInvitations.token, token))
+        .limit(1);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Convite não encontrado" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ 
+          message: `Convite já foi ${invitation.status === 'accepted' ? 'aceito' : invitation.status === 'expired' ? 'expirado' : 'cancelado'}` 
+        });
+      }
+
+      if (new Date(invitation.expiresAt) < new Date()) {
+        await db
+          .update(operationInvitations)
+          .set({ status: 'expired' })
+          .where(eq(operationInvitations.id, invitation.id));
+
+        return res.status(400).json({ message: "Convite expirado" });
+      }
+
+      // Check if user already exists
+      let [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, invitation.email))
+        .limit(1);
+
+      let userId: string;
+      let isNewUser = false;
+      let userToken: string | undefined;
+      let userData: any | undefined;
+
+      if (existingUser) {
+        userId = existingUser.id;
+        
+        // Se usuário já existe, verificar se email corresponde ao convite
+        if (existingUser.email !== invitation.email) {
+          return res.status(400).json({ 
+            message: "Este convite é para outro email. Faça logout para aceitar este convite." 
+          });
+        }
+      } else {
+        // Create new user - conta para membro de equipe (não cliente comum)
+        if (!name || !password) {
+          return res.status(400).json({ message: "Nome e senha são obrigatórios para criar conta" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Criar conta adequada para membro de equipe:
+        // - role: 'user' (padrão, mas sem storeId e sem características de cliente)
+        // - onboardingCompleted: true (pular onboarding de cliente)
+        // - sem storeId (não é cliente)
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            name,
+            email: invitation.email,
+            password: hashedPassword,
+            role: 'user', // Role padrão, mas sem storeId = membro de equipe
+            storeId: null, // Importante: não ter storeId = não é cliente comum
+            onboardingCompleted: true, // Pular onboarding de cliente
+            onboardingSteps: {
+              step1_operation: true,
+              step2_shopify: true,
+              step3_shipping: true,
+              step4_ads: true,
+              step5_sync: true
+            },
+          })
+          .returning();
+
+        userId = newUser.id;
+        isNewUser = true;
+
+        // Gerar token JWT para login automático
+        userToken = jwt.sign(
+          { id: newUser.id, email: newUser.email, role: newUser.role },
+          JWT_SECRET,
+          { expiresIn: "24h" }
+        );
+
+        // Preparar dados do usuário para retornar
+        userData = {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          permissions: newUser.permissions || [],
+        };
+      }
+
+      // Check if user already has access
+      const [existingAccess] = await db
+        .select()
+        .from(userOperationAccess)
+        .where(
+          and(
+            eq(userOperationAccess.userId, userId),
+            eq(userOperationAccess.operationId, invitation.operationId)
+          )
+        )
+        .limit(1);
+
+      if (existingAccess) {
+        return res.status(400).json({ message: "Você já faz parte desta operação" });
+      }
+
+      // Create user operation access
+      await db.insert(userOperationAccess).values({
+        userId,
+        operationId: invitation.operationId,
+        role: invitation.role,
+        permissions: invitation.permissions,
+        invitedAt: new Date(),
+        invitedBy: invitation.invitedBy,
+      });
+
+      // Update invitation status
+      await db
+        .update(operationInvitations)
+        .set({ 
+          status: 'accepted',
+          updatedAt: new Date(),
+        })
+        .where(eq(operationInvitations.id, invitation.id));
+
+      // Se for novo usuário, retornar token para login automático
+      if (isNewUser && userToken && userData) {
+        res.json({
+          success: true,
+          message: "Convite aceito com sucesso",
+          userId,
+          isNewUser: true,
+          token: userToken,
+          user: userData,
+        });
+      } else {
+        // Usuário existente - não retornar token (já está logado ou deve fazer login)
+        res.json({
+          success: true,
+          message: "Convite aceito com sucesso",
+          userId,
+          isNewUser: false,
+        });
+      }
+    } catch (error) {
+      console.error("Accept invitation error:", error);
+      res.status(500).json({ message: "Erro ao aceitar convite" });
+    }
+  });
+
   // Onboarding routes
   app.get("/api/user/onboarding-status", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
@@ -1817,6 +2672,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user preferred language
+  app.put("/api/user/preferred-language", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { preferredLanguage } = req.body;
+
+      // Validate input
+      const validLanguages = ['pt-BR', 'en', 'es'];
+      if (!preferredLanguage || !validLanguages.includes(preferredLanguage)) {
+        return res.status(400).json({ 
+          message: "Idioma inválido. Use: pt-BR, en ou es" 
+        });
+      }
+
+      // Update user preferred language
+      const updatedUser = await storage.updateUser(req.user.id, { 
+        preferredLanguage: preferredLanguage 
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      res.json({
+        message: "Idioma preferido atualizado com sucesso",
+        preferredLanguage: updatedUser.preferredLanguage,
+      });
+    } catch (error) {
+      console.error("Update preferred language error:", error);
+      res.status(500).json({ message: "Erro ao atualizar idioma preferido" });
+    }
+  });
+
   // Configure multer for avatar upload
   const avatarUpload = multer({
     storage: multer.memoryStorage(),
@@ -2074,6 +2961,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error_type: "validation_error"
           });
         }
+      } else if (providerKey === 'big_arena') {
+        if (!credentials.apiToken?.trim()) {
+          return res.status(400).json({
+            success: false,
+            message: "API Token é obrigatório para conectar à Big Arena.",
+            error_type: "missing_credentials"
+          });
+        }
+
+        if (credentials.domain !== undefined && typeof credentials.domain !== "string") {
+          return res.status(400).json({
+            success: false,
+            message: "Domínio inválido para Big Arena.",
+            error_type: "validation_error"
+          });
+        }
+
+        const sanitizedDomain =
+          typeof credentials.domain === 'string' && credentials.domain.trim().length > 0
+            ? credentials.domain.trim()
+            : undefined;
+
+        if (sanitizedDomain) {
+          try {
+            const bigArenaService = new BigArenaService({
+              apiToken: credentials.apiToken.trim(),
+              domain: sanitizedDomain,
+            });
+            const testResult = await bigArenaService.testConnection();
+            if (!testResult.success) {
+              return res.status(400).json({
+                success: false,
+                message: testResult.error || "Não foi possível validar as credenciais Big Arena.",
+                error_type: "validation_error",
+              });
+            }
+          } catch (error: any) {
+            console.error("❌ Erro ao validar credenciais Big Arena:", error);
+            return res.status(400).json({
+              success: false,
+              message: "Erro ao validar credenciais Big Arena",
+              details: error instanceof Error ? error.message : String(error),
+              error_type: "validation_error",
+            });
+          }
+        }
+
+        return res.json({
+          success: true,
+          message: "Token Big Arena validado!"
+        });
       } else {
         return res.status(400).json({ 
           success: false,
@@ -2137,6 +3075,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ 
             message: "Erro ao validar credenciais FHB: " + error.message,
             error_type: "validation_error"
+          });
+        }
+      } else if (providerKey === 'big_arena') {
+        if (!credentials.apiToken?.trim()) {
+          return res.status(400).json({ 
+            message: "API Token é obrigatório para conectar à Big Arena.",
+            error_type: "missing_credentials"
+          });
+        }
+
+        // Testar conexão com o domínio padrão (https://my.bigarena.net/api/v1/)
+        try {
+          const bigArenaService = new BigArenaService({
+            apiToken: credentials.apiToken.trim(),
+            domain: null, // Sempre usar domínio padrão hardcoded no BigArenaService
+          });
+          const testResult = await bigArenaService.testConnection();
+          if (!testResult.success) {
+            return res.status(400).json({
+              message: testResult.error || "Não foi possível validar as credenciais Big Arena.",
+              error_type: "validation_error",
+            });
+          }
+        } catch (error: any) {
+          console.error("❌ Erro ao validar credenciais Big Arena:", error);
+          return res.status(400).json({
+            message: "Erro ao validar credenciais Big Arena",
+            details: error instanceof Error ? error.message : String(error),
+            error_type: "validation_error",
           });
         }
       } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
@@ -2216,6 +3183,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         credentials,
         status: 'pending'
       });
+
+      let bigArenaAccountId: string | null = null;
+      if (providerKey === 'big_arena') {
+        // Sempre usar domínio padrão (https://my.bigarena.net/api/v1/) hardcoded no BigArenaService
+        const bigArenaRecord = await storage.createBigArenaWarehouseAccount({
+          accountId: account.id,
+          userId: targetUserId,
+          operationId: null,
+          apiToken: credentials.apiToken.trim(),
+          apiDomain: null, // Sempre null - domínio padrão é usado no BigArenaService
+          status: 'pending',
+          metadata: credentials.metadata ?? null,
+        });
+        bigArenaAccountId = bigArenaRecord.id;
+      }
+      
+      let validOperationIds: string[] = [];
       
       // Link account to operations if operationIds provided
       if (operationIds && Array.isArray(operationIds) && operationIds.length > 0) {
@@ -2223,7 +3207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Verify operations belong to target user
         const userOperations = await storage.getUserOperations(targetUserId);
-        const validOperationIds = operationIds.filter(opId => 
+        validOperationIds = operationIds.filter(opId => 
           userOperations.some(op => op.id === opId)
         );
         
@@ -2242,16 +3226,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
-        // Update account status to 'active' after linking operations
-        await storage.updateUserWarehouseAccount(account.id, { status: 'active' });
-        console.log(`✅ Account ${account.id} status updated to 'active'`);
+      }
+      
+      // Update account status to 'active' (always, not just when operationIds provided)
+      await storage.updateUserWarehouseAccount(account.id, { status: 'active' });
+      console.log(`✅ Account ${account.id} status updated to 'active'`);
+
+      // Update Big Arena account status to 'active' if applicable
+      if (providerKey === 'big_arena' && bigArenaAccountId) {
+        try {
+          await storage.updateBigArenaWarehouseAccount(bigArenaAccountId, {
+            operationId: validOperationIds[0] ?? null,
+            status: 'active'
+          });
+          console.log(`✅ Big Arena account ${bigArenaAccountId} status updated to 'active'`);
+        } catch (linkError: any) {
+          console.error(`⚠️ Erro ao atualizar metadados Big Arena para conta ${account.id}:`, linkError.message);
+        }
       }
       
       // Trigger automatic initial sync (3 months) in background
       // Don't await - let it run asynchronously
+      // IMPORTANT: This runs AFTER status is updated to 'active'
       (async () => {
         try {
+          // Small delay to ensure database transaction is committed
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           console.log(`🚀 Triggering initial sync for new warehouse account: ${account.id} (provider: ${providerKey})`);
           
           if (providerKey === 'fhb') {
@@ -2260,6 +3261,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (providerKey === 'european_fulfillment' || providerKey === 'elogy') {
             const europeanSyncService = new EuropeanFulfillmentSyncService();
             await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+          } else if (providerKey === 'big_arena') {
+            console.log(`🔄 Disparando sincronização inicial Big Arena para conta ${account.id}...`);
+            try {
+              await syncBigArenaAccount(account.id, { reason: "manual" });
+              console.log(`✅ Big Arena initial sync concluída para conta ${account.id}`);
+            } catch (bigArenaSyncError: any) {
+              console.error(`⚠️ Erro ao executar sync inicial Big Arena para conta ${account.id}:`, bigArenaSyncError.message);
+              // Não falhar a requisição - o worker tentará novamente automaticamente
+            }
           }
           
           console.log(`✅ Initial sync triggered successfully for account ${account.id}`);
@@ -2315,6 +3325,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updated = await storage.updateUserWarehouseAccount(req.params.id, updates);
+
+      if (account.providerKey === 'big_arena') {
+        const bigArenaRecord = await storage.getBigArenaWarehouseAccountByAccountId(account.id);
+        if (bigArenaRecord) {
+          const bigArenaUpdates: any = {};
+
+          if (credentials !== undefined) {
+            if (typeof credentials.apiToken === 'string' && credentials.apiToken.trim().length > 0) {
+              bigArenaUpdates.apiToken = credentials.apiToken.trim();
+            }
+            // apiDomain sempre é null - domínio padrão (https://my.bigarena.net/api/v1/) é usado no BigArenaService
+          }
+
+          if (status !== undefined) {
+            bigArenaUpdates.status = status;
+          }
+
+          if (Object.keys(bigArenaUpdates).length > 0) {
+            await storage.updateBigArenaWarehouseAccount(bigArenaRecord.id, bigArenaUpdates);
+          }
+        }
+      }
+
+      // Trigger automatic sync when status changes to 'active' or credentials are updated
+      const shouldTriggerSync = 
+        (status !== undefined && status === 'active' && account.status !== 'active') || // Status changed to active
+        (credentials !== undefined && updated.status === 'active'); // Credentials updated and account is active
+
+      if (shouldTriggerSync) {
+        // Trigger sync automatically in background
+        (async () => {
+          try {
+            // Small delay to ensure database transaction is committed
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log(`🚀 Triggering sync for updated warehouse account: ${updated.id} (provider: ${account.providerKey})`);
+            
+            if (account.providerKey === 'fhb') {
+              const { FHBSyncService } = await import('./services/fhb-sync-service');
+              const fhbSyncService = new FHBSyncService();
+              await fhbSyncService.triggerInitialSyncForAccount(updated.id, 90);
+            } else if (account.providerKey === 'european_fulfillment' || account.providerKey === 'elogy') {
+              const { EuropeanFulfillmentSyncService } = await import('./services/european-fulfillment-sync-service');
+              const europeanSyncService = new EuropeanFulfillmentSyncService();
+              await europeanSyncService.triggerInitialSyncForAccount(updated.id, 90);
+            } else if (account.providerKey === 'big_arena') {
+              console.log(`🔄 Disparando sincronização Big Arena para conta ${updated.id}...`);
+              try {
+                const { syncBigArenaAccount } = await import('./workers/big-arena-sync-worker');
+                await syncBigArenaAccount(updated.id, { reason: "manual" });
+                console.log(`✅ Big Arena sync concluída para conta ${updated.id}`);
+              } catch (bigArenaSyncError: any) {
+                console.error(`⚠️ Erro ao executar sync Big Arena para conta ${updated.id}:`, bigArenaSyncError.message);
+                // Não falhar a requisição - o worker tentará novamente automaticamente
+              }
+            }
+            
+            console.log(`✅ Sync triggered successfully for account ${updated.id}`);
+          } catch (syncError: any) {
+            console.error(`❌ Failed to trigger sync for account ${updated.id}:`, syncError.message);
+            // Don't fail the request - sync will be retried by worker
+          }
+        })();
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Update warehouse account error:", error);
@@ -2412,6 +3487,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (account.providerKey === 'elogy') {
         const europeanSyncService = new EuropeanFulfillmentSyncService();
         await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+      } else if (account.providerKey === 'big_arena') {
+        const { syncBigArenaAccount } = await import('./workers/big-arena-sync-worker');
+        const result = await syncBigArenaAccount(account.id, { reason: 'manual' });
+        return res.json({
+          success: true,
+          message: `Sync Big Arena executado para ${account.displayName}.`,
+          stats: result,
+        });
       } else {
         return res.status(400).json({ message: `Sync não suportado para provider: ${account.providerKey}` });
       }
@@ -2480,6 +3563,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accountId: req.params.id,
         operationId: operationId.trim()
       });
+      
+      // Trigger automatic sync when operation is linked to warehouse account
+      if (account.status === 'active') {
+        // Trigger sync automatically in background
+        (async () => {
+          try {
+            // Small delay to ensure database transaction is committed
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log(`🚀 Triggering sync for warehouse account linked to operation: ${account.id} (provider: ${account.providerKey})`);
+            
+            if (account.providerKey === 'fhb') {
+              const { FHBSyncService } = await import('./services/fhb-sync-service');
+              const fhbSyncService = new FHBSyncService();
+              await fhbSyncService.triggerInitialSyncForAccount(account.id, 90);
+            } else if (account.providerKey === 'european_fulfillment' || account.providerKey === 'elogy') {
+              const { EuropeanFulfillmentSyncService } = await import('./services/european-fulfillment-sync-service');
+              const europeanSyncService = new EuropeanFulfillmentSyncService();
+              await europeanSyncService.triggerInitialSyncForAccount(account.id, 90);
+            } else if (account.providerKey === 'big_arena') {
+              console.log(`🔄 Disparando sincronização Big Arena para conta ${account.id}...`);
+              try {
+                const { syncBigArenaAccount } = await import('./workers/big-arena-sync-worker');
+                await syncBigArenaAccount(account.id, { reason: "manual" });
+                console.log(`✅ Big Arena sync concluída para conta ${account.id}`);
+              } catch (bigArenaSyncError: any) {
+                console.error(`⚠️ Erro ao executar sync Big Arena para conta ${account.id}:`, bigArenaSyncError.message);
+                // Não falhar a requisição - o worker tentará novamente automaticamente
+              }
+            }
+            
+            console.log(`✅ Sync triggered successfully for account ${account.id}`);
+          } catch (syncError: any) {
+            console.error(`❌ Failed to trigger sync for account ${account.id}:`, syncError.message);
+            // Don't fail the request - sync will be retried by worker
+          }
+        })();
+      }
       
       res.status(201).json(link);
     } catch (error) {
@@ -3024,10 +4145,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Polling sempre está ativo através do worker
       const autoSyncActive = hasWebhooks || hasPolling;
 
-      // Última atualização automática (buscar do staging-sync-service ou workers)
-      // Por enquanto, vamos usar o lastCompleteSync como referência
-      // Em produção, isso deveria vir de uma tabela de logs ou tracking
-      const lastAutoSync = lastCompleteSync; // Pode ser ajustado para buscar de workers
+      // Última atualização automática - buscar da tabela polling_executions
+      let lastAutoSync: Date | null = null;
+      
+      if (operationId) {
+        // Buscar última execução de polling bem-sucedida para esta operação
+        const lastPollingExecution = await db
+          .select({ executedAt: pollingExecutions.executedAt })
+          .from(pollingExecutions)
+          .where(
+            and(
+              eq(pollingExecutions.operationId, operationId as string),
+              eq(pollingExecutions.provider, 'shopify'),
+              eq(pollingExecutions.success, true)
+            )
+          )
+          .orderBy(desc(pollingExecutions.executedAt))
+          .limit(1);
+
+        if (lastPollingExecution.length > 0 && lastPollingExecution[0].executedAt) {
+          lastAutoSync = new Date(lastPollingExecution[0].executedAt);
+        }
+      } else {
+        // Sem operationId, buscar de todas as operações do usuário
+        const userOperations = await db
+          .select({ id: operations.id })
+          .from(userOperationAccess)
+          .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
+          .where(eq(userOperationAccess.userId, userId));
+
+        const operationIds = userOperations.map(op => op.id);
+
+        if (operationIds.length > 0) {
+          const lastPollingExecution = await db
+            .select({ executedAt: pollingExecutions.executedAt })
+            .from(pollingExecutions)
+            .where(
+              and(
+                inArray(pollingExecutions.operationId, operationIds),
+                eq(pollingExecutions.provider, 'shopify'),
+                eq(pollingExecutions.success, true)
+              )
+            )
+            .orderBy(desc(pollingExecutions.executedAt))
+            .limit(1);
+
+          if (lastPollingExecution.length > 0 && lastPollingExecution[0].executedAt) {
+            lastAutoSync = new Date(lastPollingExecution[0].executedAt);
+          }
+        }
+      }
 
       res.json({
         isFirstSync,
@@ -3048,6 +4215,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para sincronização completa progressiva
   // MIGRATED TO STAGING TABLES: Sincroniza Shopify primeiro, depois staging tables
+  // REMOVED: Sync Completo endpoint - functionality removed per user request
+  // Workers now handle automatic synchronization from integration date
+  /*
   app.post('/api/sync/complete-progressive', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;
@@ -3055,43 +4225,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔄 [COMPLETE SYNC] Iniciando sincronização completa para user ${userId}, operation ${operationId || 'all'}`);
 
       // Importar funções de progresso
-        const { setCurrentStep, updateShopifyProgress, getUserSyncProgress, resetSyncProgress } = await import("./services/staging-sync-service");
+        const { setCurrentStep, updateShopifyProgress, updatePlatformProgress, getUserSyncProgress, resetSyncProgress } = await import("./services/staging-sync-service");
       const { ShopifySyncService } = await import("./shopify-sync-service");
+      
+      // Import saveSyncSession para salvar estado no banco
+      const { db } = await import('./db');
+      const { syncSessions } = await import('@shared/schema');
+      
+      const saveSyncSession = async (userId: string, progress: any) => {
+        if (!progress.runId) return;
+        await db.insert(syncSessions).values({
+          userId,
+          runId: progress.runId,
+          isRunning: progress.isRunning,
+          phase: progress.phase,
+          message: progress.message,
+          currentStep: progress.currentStep,
+          overallProgress: progress.overallProgress,
+          platformProgress: progress.platformProgress || progress.shopifyProgress,
+          errors: progress.errors,
+          startTime: progress.startTime || new Date(),
+          endTime: progress.endTime,
+          lastUpdatedAt: new Date()
+        }).onConflictDoUpdate({
+          target: syncSessions.runId,
+          set: {
+            isRunning: progress.isRunning,
+            phase: progress.phase,
+            message: progress.message,
+            currentStep: progress.currentStep,
+            overallProgress: progress.overallProgress,
+            platformProgress: progress.platformProgress || progress.shopifyProgress,
+            errors: progress.errors,
+            endTime: progress.endTime,
+            lastUpdatedAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+      };
 
       // CRÍTICO: Resetar progresso ANTES de fazer qualquer coisa
       // Limpar progresso do Shopify também
       if (operationId && typeof operationId === 'string') {
         ShopifySyncService.resetOperationProgress(operationId);
       }
-      resetSyncProgress(userId);
+      await resetSyncProgress(userId);
       
       // Pequeno delay para garantir que o reset foi processado
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Verificar que resetou corretamente
-      let progress = getUserSyncProgress(userId);
+      let progress = await getUserSyncProgress(userId);
       console.log(`🔍 [RESET VERIFICATION] Progresso após reset:`, {
         isRunning: progress.isRunning,
         phase: progress.phase,
         overallProgress: progress.overallProgress,
-        shopifyProcessed: progress.shopifyProgress.processedOrders,
-        shopifyTotal: progress.shopifyProgress.totalOrders,
-        shopifyPercentage: progress.shopifyProgress.percentage,
+        shopifyProcessed: progress.shopifyProgress?.processedOrders || progress.platformProgress?.processedOrders || 0,
+        shopifyTotal: progress.shopifyProgress?.totalOrders || progress.platformProgress?.totalOrders || 0,
+        shopifyPercentage: progress.shopifyProgress?.percentage || progress.platformProgress?.percentage || 0,
         currentStep: progress.currentStep
       });
       
-      if (progress.phase === 'completed' || progress.isRunning || progress.overallProgress > 0 || progress.shopifyProgress.processedOrders > 0 || progress.shopifyProgress.totalOrders > 0) {
+      if (progress.phase === 'completed' || progress.isRunning || progress.overallProgress > 0 || progress.shopifyProgress?.processedOrders > 0 || progress.shopifyProgress?.totalOrders > 0) {
         console.warn(`⚠️ [COMPLETE SYNC] Progresso ainda está em estado antigo após reset, forçando reset novamente...`);
-        resetSyncProgress(userId);
+        await resetSyncProgress(userId);
         await new Promise(resolve => setTimeout(resolve, 100));
-        progress = getUserSyncProgress(userId);
+        progress = await getUserSyncProgress(userId);
         console.log(`🔍 [RESET VERIFICATION #2] Progresso após segundo reset:`, {
           isRunning: progress.isRunning,
           phase: progress.phase,
           overallProgress: progress.overallProgress,
-          shopifyProcessed: progress.shopifyProgress.processedOrders,
-          shopifyTotal: progress.shopifyProgress.totalOrders,
-          shopifyPercentage: progress.shopifyProgress.percentage,
+          shopifyProcessed: progress.shopifyProgress?.processedOrders || progress.platformProgress?.processedOrders || 0,
+          shopifyTotal: progress.shopifyProgress?.totalOrders || progress.platformProgress?.totalOrders || 0,
+          shopifyPercentage: progress.shopifyProgress?.percentage || progress.platformProgress?.percentage || 0,
           currentStep: progress.currentStep
         });
       }
@@ -3126,6 +4332,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPages: 0,
         percentage: 0
       };
+      progress.platformProgress = {
+        processedOrders: 0,
+        totalOrders: 0,
+        newOrders: 0,
+        updatedOrders: 0,
+        percentage: 0
+      };
       progress.stagingProgress = {
         processedLeads: 0,
         totalLeads: 0,
@@ -3137,12 +4350,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Será recalculado automaticamente quando updateShopifyProgress for chamado
       progress.overallProgress = 0;
       (progress as any).version = 1;
+      (progress as any).errors = 0;
       
       console.log(`✅ [INIT] Progresso completamente zerado e inicializado:`, {
         overallProgress: progress.overallProgress,
-        shopifyProcessed: progress.shopifyProgress.processedOrders,
-        shopifyTotal: progress.shopifyProgress.totalOrders,
-        shopifyPercentage: progress.shopifyProgress.percentage,
+        shopifyProcessed: progress.shopifyProgress?.processedOrders || progress.platformProgress?.processedOrders || 0,
+        shopifyTotal: progress.shopifyProgress?.totalOrders || progress.platformProgress?.totalOrders || 0,
+        shopifyPercentage: progress.shopifyProgress?.percentage || progress.platformProgress?.percentage || 0,
         currentStep: progress.currentStep
       });
       
@@ -3155,6 +4369,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overallProgress: progress.overallProgress,
         runId: runId
       });
+
+      // CRÍTICO: SALVAR SESSÃO NO BANCO IMEDIATAMENTE após inicializar
+      await saveSyncSession(userId, progress);
+      console.log(`💾 [COMPLETE SYNC] Sessão salva no banco com runId: ${runId}`);
 
       // Executar sincronização completa de forma assíncrona
       (async () => {
@@ -3203,12 +4421,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // CRÍTICO: Definir etapa atual como shopify ANTES de iniciar
               // Garantir que o progresso geral começa em 0% e evolui gradualmente
-              const currentProgress = getUserSyncProgress(userId);
+              const currentProgress = await getUserSyncProgress(userId);
               currentProgress.currentStep = 'shopify'; // Forçar como 'shopify' durante todo o processo do Shopify
               currentProgress.phase = 'syncing';
               currentProgress.message = 'Importando pedidos do Shopify...';
               currentProgress.overallProgress = 0; // Garantir que começa em 0%
               currentProgress.version++;
+              await saveSyncSession(userId, currentProgress);
               
               console.log(`🔄 [SHOPIFY SYNC] Etapa definida como 'shopify', progresso geral resetado para 0%`);
             
@@ -3237,17 +4456,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let updateCount = 0;
             
             // CRÍTICO: Garantir que o runId é capturado DEPOIS do reset ser aplicado
-            const currentRunId = (getUserSyncProgress(userId) as any).runId;
+            const currentRunId = ((await getUserSyncProgress(userId)) as any).runId;
             
             console.log(`✅ [SHOPIFY SYNC] Progresso do Shopify resetado ANTES de iniciar importação, runId atual: ${currentRunId}`);
             
             // Monitor progresso do Shopify e atualizar progress compartilhado
             let firstUpdateReceived = false;
             
-            const progressInterval = setInterval(() => {
+            const progressInterval = setInterval(async () => {
               updateCount++;
               const shopifyProgress = ShopifySyncService.getOperationProgress(operationId);
-              const currentProgressRunId = (getUserSyncProgress(userId) as any).runId;
+              const currentProgressRunId = ((await getUserSyncProgress(userId)) as any).runId;
+              
+              // CRÍTICO: Verificar se shopifyProgress existe
+              if (!shopifyProgress) {
+                console.log(`⏭️ [SHOPIFY PROGRESS] Ignorando atualização #${updateCount}: shopifyProgress não existe ainda`);
+                return;
+              }
               
               // CRÍTICO PRIMEIRO: Se não está rodando E não recebemos primeira atualização,
               // QUALQUER valor não-zero é antigo e deve ser SEMPRE ignorado
@@ -3312,18 +4537,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 runId: currentProgressRunId
               });
               
-              updateShopifyProgress(userId, {
+              await updatePlatformProgress(userId, {
                 processedOrders: shopifyProgress.processedOrders,
                 totalOrders: shopifyProgress.totalOrders,
                 newOrders: shopifyProgress.newOrders,
                 updatedOrders: shopifyProgress.updatedOrders,
-                currentPage: shopifyProgress.currentPage,
-                totalPages: shopifyProgress.totalPages,
                 percentage: shopifyProgress.percentage
               });
               
               if (updateCount % 5 === 0 || !shopifyProgress.isRunning) {
-                const currentProgress = getUserSyncProgress(userId);
+                const currentProgress = await getUserSyncProgress(userId);
                 console.log(`📊 [SHOPIFY PROGRESS] Update #${updateCount} resumido: ${shopifyProgress.processedOrders}/${shopifyProgress.totalOrders} (${shopifyProgress.percentage}%) - Overall: ${currentProgress.overallProgress}% - Running: ${shopifyProgress.isRunning}`);
               }
               
@@ -3344,17 +4567,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await new Promise(resolve => setTimeout(resolve, 1000));
               
               const finalShopifyProgress = ShopifySyncService.getOperationProgress(operationId);
-              updateShopifyProgress(userId, {
-                processedOrders: finalShopifyProgress.processedOrders,
-                totalOrders: finalShopifyProgress.totalOrders,
-                newOrders: finalShopifyProgress.newOrders,
-                updatedOrders: finalShopifyProgress.updatedOrders,
-                currentPage: finalShopifyProgress.currentPage,
-                totalPages: finalShopifyProgress.totalPages,
-                percentage: finalShopifyProgress.percentage
-              });
+              if (finalShopifyProgress) {
+                await updatePlatformProgress(userId, {
+                  processedOrders: finalShopifyProgress.processedOrders || 0,
+                  totalOrders: finalShopifyProgress.totalOrders || 0,
+                  newOrders: finalShopifyProgress.newOrders || 0,
+                  updatedOrders: finalShopifyProgress.updatedOrders || 0,
+                  percentage: finalShopifyProgress.percentage || 0
+                });
+              }
               
-              console.log(`📊 [SHOPIFY PROGRESS] Progresso final sincronizado: ${finalShopifyProgress.processedOrders}/${finalShopifyProgress.totalOrders}`);
+              console.log(`📊 [SHOPIFY PROGRESS] Progresso final sincronizado: ${finalShopifyProgress?.processedOrders || 0}/${finalShopifyProgress?.totalOrders || 0}`);
               
               // Deixar intervalo rodando por mais alguns ciclos para garantir atualização
             } catch (error) {
@@ -3367,14 +4590,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // 1️⃣.5 Sincronizar Digistore24 (SE CONFIGURADO)
+          // ⚠️ SYNC MANUAL - USAR APENAS PARA ONBOARDING/TESTES
+          // Em produção, pedidos devem ser criados/atualizados via webhooks (se disponível)
           if (operationId && typeof operationId === 'string' && hasDigistore) {
             console.log(`📦 [DIGISTORE SYNC] Sincronizando Digistore24 para operação ${operationId}...`);
             
-            const currentProgress = getUserSyncProgress(userId);
+            const currentProgress = await getUserSyncProgress(userId);
             currentProgress.currentStep = 'digistore';
             currentProgress.phase = 'syncing';
             currentProgress.message = 'Importando entregas do Digistore24...';
             currentProgress.version++;
+            await saveSyncSession(userId, currentProgress);
             
             // Buscar integração e operação
             const [digistoreIntegration] = await db
@@ -3520,15 +4746,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // CRÍTICO: Verificar se o Shopify REALMENTE completou antes de mudar para staging
           // Se Shopify não está configurado, considerar como "completado"
-          const currentProgress = getUserSyncProgress(userId);
+          const currentProgress = await getUserSyncProgress(userId);
           const shopifyCompleted = !hasShopify || (
-            currentProgress.shopifyProgress.totalOrders > 0 &&
-            currentProgress.shopifyProgress.processedOrders >= currentProgress.shopifyProgress.totalOrders &&
-            currentProgress.shopifyProgress.percentage >= 100
+            currentProgress.shopifyProgress?.totalOrders > 0 &&
+            currentProgress.shopifyProgress?.processedOrders >= currentProgress.shopifyProgress?.totalOrders &&
+            currentProgress.shopifyProgress?.percentage >= 100
           );
           
           if (!shopifyCompleted && hasShopify) {
-            console.warn(`⚠️ [STAGING SYNC] Shopify ainda não completou! Processed: ${currentProgress.shopifyProgress.processedOrders}/${currentProgress.shopifyProgress.totalOrders}, Percentage: ${currentProgress.shopifyProgress.percentage}%`);
+            console.warn(`⚠️ [STAGING SYNC] Shopify ainda não completou! Processed: ${currentProgress.shopifyProgress?.processedOrders || 0}/${currentProgress.shopifyProgress?.totalOrders || 0}, Percentage: ${currentProgress.shopifyProgress?.percentage || 0}%`);
           } else if (!hasShopify) {
             console.log(`ℹ️ [STAGING SYNC] Shopify não configurado, pulando verificação`);
           }
@@ -3536,25 +4762,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // CRÍTICO: Só mudar para 'staging' quando o Shopify REALMENTE completou
           // Durante todo o processo do Shopify, currentStep deve ser 'shopify'
           // Isso garante que o progresso geral evolui de 0% a 40% gradualmente
-          setCurrentStep(userId, 'staging');
+          await setCurrentStep(userId, 'staging');
           currentProgress.isRunning = true;
           currentProgress.phase = 'syncing';
           currentProgress.message = 'Fazendo matching com transportadora...';
+          await saveSyncSession(userId, currentProgress);
           
           // CRÍTICO: Recalcular progresso geral agora que estamos em staging
-          // Deve ser 40% (Shopify 100% * 0.4) + 0% (Staging 0% * 0.6) = 40%
+          // Progresso agora é 100% baseado em plataformas (platformProgress)
           currentProgress.overallProgress = calculateOverallProgress(
-            currentProgress.shopifyProgress,
-            currentProgress.stagingProgress,
+            currentProgress.platformProgress || currentProgress.shopifyProgress,
             'staging'
           );
           
           currentProgress.version++;
           
           console.log(`🔄 [STAGING SYNC] Etapa mudou para 'staging', progresso geral: ${currentProgress.overallProgress}%`, {
-            shopifyPercent: currentProgress.shopifyProgress.percentage,
-            shopifyProcessed: currentProgress.shopifyProgress.processedOrders,
-            shopifyTotal: currentProgress.shopifyProgress.totalOrders,
+            shopifyPercent: currentProgress.shopifyProgress?.percentage || 0,
+            shopifyProcessed: currentProgress.shopifyProgress?.processedOrders || 0,
+            shopifyTotal: currentProgress.shopifyProgress?.totalOrders || 0,
             stagingPercent: 0,
             overallProgress: currentProgress.overallProgress
           });
@@ -3601,11 +4827,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (error) {
           console.error('❌ [COMPLETE SYNC] Erro na sincronização completa:', error);
-          const progress = getUserSyncProgress(userId);
+          const progress = await getUserSyncProgress(userId);
           progress.phase = 'error';
           progress.message = error instanceof Error ? error.message : 'Erro desconhecido';
           progress.isRunning = false;
           progress.endTime = new Date();
+          
+          // CRÍTICO: Salvar estado de erro no banco
+          await saveSyncSession(userId, progress);
         }
       })();
       
@@ -3614,7 +4843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // IMPORTANTE: Obter progresso FRESCO novamente para garantir que tem o runId
-      const freshProgress = getUserSyncProgress(userId);
+      const freshProgress = await getUserSyncProgress(userId);
       const responseRunId = (freshProgress as any).runId;
       
       console.log(`📤 [COMPLETE SYNC] Retornando resposta para user ${userId}:`, {
@@ -3623,9 +4852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phase: freshProgress.phase,
         version: (freshProgress as any).version,
         overallProgress: freshProgress.overallProgress,
-        shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
-        shopifyTotal: freshProgress.shopifyProgress.totalOrders,
-        shopifyPercentage: freshProgress.shopifyProgress.percentage,
+        shopifyProcessed: freshProgress.shopifyProgress?.processedOrders || freshProgress.platformProgress?.processedOrders || 0,
+        shopifyTotal: freshProgress.shopifyProgress?.totalOrders || freshProgress.platformProgress?.totalOrders || 0,
+        shopifyPercentage: freshProgress.shopifyProgress?.percentage || freshProgress.platformProgress?.percentage || 0,
         currentStep: freshProgress.currentStep
       });
       
@@ -3633,34 +4862,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se ainda há valores antigos, forçar reset novamente até garantir que está zerado
       let resetAttempts = 0;
       const maxResetAttempts = 3;
-      while ((freshProgress.shopifyProgress.processedOrders > 0 || 
-              freshProgress.shopifyProgress.totalOrders > 0 || 
+      while (((freshProgress.shopifyProgress?.processedOrders || 0) > 0 || 
+              (freshProgress.shopifyProgress?.totalOrders || 0) > 0 || 
               freshProgress.overallProgress > 0 ||
               freshProgress.phase === 'completed') && 
              resetAttempts < maxResetAttempts) {
         resetAttempts++;
         console.warn(`⚠️ [COMPLETE SYNC] ATENÇÃO: Progresso ainda tem valores antigos após reset (tentativa ${resetAttempts}/${maxResetAttempts})!`, {
-          shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
-          shopifyTotal: freshProgress.shopifyProgress.totalOrders,
+          shopifyProcessed: freshProgress.shopifyProgress?.processedOrders || 0,
+          shopifyTotal: freshProgress.shopifyProgress?.totalOrders || 0,
           overallProgress: freshProgress.overallProgress,
           phase: freshProgress.phase
         });
         
         // Forçar reset novamente
-        resetSyncProgress(userId);
+        await resetSyncProgress(userId);
         if (operationId && typeof operationId === 'string') {
           ShopifySyncService.resetOperationProgress(operationId);
         }
         await new Promise(resolve => setTimeout(resolve, 200));
         
         // Atualizar freshProgress após reset
-        Object.assign(freshProgress, getUserSyncProgress(userId));
+        Object.assign(freshProgress, await getUserSyncProgress(userId));
       }
       
       if (resetAttempts > 0) {
         console.log(`🔄 [COMPLETE SYNC] Progresso após reset(s):`, {
-          shopifyProcessed: freshProgress.shopifyProgress.processedOrders,
-          shopifyTotal: freshProgress.shopifyProgress.totalOrders,
+          shopifyProcessed: freshProgress.shopifyProgress?.processedOrders || 0,
+          shopifyTotal: freshProgress.shopifyProgress?.totalOrders || 0,
           overallProgress: freshProgress.overallProgress,
           phase: freshProgress.phase,
           attempts: resetAttempts
@@ -3688,9 +4917,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  */
 
-  // Rota para obter status da sincronização completa progressiva
-  // MIGRATED TO STAGING TABLES: Retorna status do staging-sync-service (per-user)
+  // REMOVED: Sync Completo endpoints - functionality removed per user request
+  // Workers now handle automatic synchronization from integration date
+  /*
   app.get('/api/sync/complete-status', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user.id;
@@ -3736,9 +4967,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rota SSE para streaming de status da sincronização completa
-  // Retorna progresso combinado (Shopify + Staging)
-  // Usa authenticateTokenOrQuery porque EventSource não envia headers customizados
+  app.get('/api/sync/active-session', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user.id;
+      
+      const [session] = await db
+        .select()
+        .from(syncSessions)
+        .where(and(
+          eq(syncSessions.userId, userId),
+          eq(syncSessions.isRunning, true)
+        ))
+        .orderBy(desc(syncSessions.startTime))
+        .limit(1);
+      
+      if (!session) {
+        return res.json({ isRunning: false });
+      }
+      
+      res.json({
+        isRunning: session.isRunning,
+        startTime: session.startTime.toISOString(),
+        phase: session.phase,
+        overallProgress: session.overallProgress,
+        runId: session.runId
+      });
+    } catch (error) {
+      console.error('Erro ao verificar sessão ativa:', error);
+      res.status(500).json({ error: 'Erro interno' });
+    }
+  });
+
   app.get('/api/sync/complete-status-stream', authenticateTokenOrQuery, async (req: AuthRequest, res: Response) => {
     // Configurar headers para SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -3861,6 +5120,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.end();
     }
   });
+  */
+  // REMOVED: Sync Completo endpoints - functionality removed per user request
+  // Workers now handle automatic synchronization from integration date
 
   // Rota para sincronização combinada Shopify + Transportadora
   app.post('/api/sync/shopify-carrier', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -3966,7 +5228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Orders routes - fetch from database with filters and pagination
-  app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/orders", authenticateToken, requirePermission('orders', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       // CRITICAL: Get user's operation for data isolation
       const userOperations = await storage.getUserOperations(req.user.id);
@@ -4113,7 +5375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/orders/:id", authenticateToken, requirePermission('orders', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) {
@@ -4125,7 +5387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/orders", authenticateToken, requirePermission('orders', 'create'), async (req: AuthRequest, res: Response) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
@@ -4141,7 +5403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/orders/:id", authenticateToken, requirePermission('orders', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const updates = updateOrderSchema.parse(req.body);
       const order = await storage.updateOrder(req.params.id, updates);
@@ -4154,7 +5416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.delete("/api/orders/:id", authenticateToken, requirePermission('orders', 'delete'), async (req: AuthRequest, res: Response) => {
     try {
       const deleted = await storage.deleteOrder(req.params.id);
       if (!deleted) {
@@ -4212,7 +5474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, apiUrl, operationId } = req.body;
       console.log("🔧 Iniciando salvamento de credenciais...", { email, operationId });
@@ -4289,7 +5551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get countries
-  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, operationAccess, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.validatedOperationId!;
       
@@ -4319,7 +5581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get stores
-  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.validatedOperationId!;
       
@@ -4349,7 +5611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create store
-  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { name, link } = req.body;
       const operationId = req.validatedOperationId!;
@@ -4586,7 +5848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/elogy/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/elogy/credentials", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, authHeader, warehouseId, apiUrl, operationId } = req.body;
       console.log("🔧 eLogy: Iniciando salvamento de credenciais...", { email, operationId });
@@ -4879,7 +6141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/fhb/:operationId/credentials", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/fhb/:operationId/credentials", authenticateToken, operationAccess, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { appId, secret, apiUrl } = req.body;
       const { operationId } = req.params;
@@ -5297,7 +6559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Products routes
-  app.get("/api/products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/products", authenticateToken, storeContext, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       // Get storeId from middleware context for data isolation
       const storeId = (req as any).storeId;
@@ -5309,7 +6571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get products by operation ID
-  app.get("/api/operations/:operationId/products", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/operations/:operationId/products", authenticateToken, operationAccess, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
       const products = await storage.getProductsByOperation(operationId);
@@ -5320,7 +6582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/products/:id", authenticateToken, requirePermission('products', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const product = await storage.getProduct(req.params.id);
       if (!product) {
@@ -5332,7 +6594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/products", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/products", authenticateToken, requirePermission('products', 'create'), async (req: AuthRequest, res: Response) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
@@ -5342,7 +6604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/products/:id", authenticateToken, requirePermission('products', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const updates = req.body;
       const product = await storage.updateProduct(req.params.id, updates);
@@ -5378,15 +6640,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "operationId é obrigatório para vincular produto à operação" });
       }
       
-      console.log(`Linking product ${linkData.sku} for user ${userId} to operation ${operationId}`);
+      console.log(`🔗 Vinculando produto ${linkData.sku} para usuário ${userId} na operação ${operationId}`);
+      
+      // Obter storeId da operação para usar no recálculo
+      const userOperations = await storage.getUserOperations(userId);
+      const operation = userOperations.find(op => op.id === operationId);
+      
+      if (!operation) {
+        return res.status(403).json({ message: "Operação não encontrada ou acesso negado" });
+      }
+      
       const userProduct = await storage.linkProductToUserByOperation(userId, operationId, linkData);
-      res.status(201).json(userProduct);
+      
+      // Recalcular custos de pedidos existentes com esse SKU
+      try {
+        const { recalculateOrderCostsForSku, recalculateAllOrderCostsForOperation } = await import('./services/order-cost-recalculation-service');
+        const { invalidateDashboardCache } = await import('./services/dashboard-cache-service');
+        
+        // recalculateOrderCostsForSku já normaliza o SKU internamente
+        console.log(`🔄 Recalculando custos de pedidos existentes com SKU "${linkData.sku}"...`);
+        const updatedOrdersCount = await recalculateOrderCostsForSku(
+          linkData.sku,
+          operation.storeId,
+          operationId
+        );
+        
+        // Se não encontrou nenhum pedido com esse SKU específico, recalcular TODOS os pedidos da operação
+        // Isso pode acontecer se os SKUs nos pedidos estiverem em formato diferente ou concatenado
+        if (updatedOrdersCount === 0) {
+          console.log(`⚠️ Nenhum pedido encontrado com SKU específico "${linkData.sku}" - recalculando TODOS os pedidos da operação...`);
+          const allUpdatedCount = await recalculateAllOrderCostsForOperation(
+            operation.storeId,
+            operationId
+          );
+          
+          if (allUpdatedCount > 0) {
+            console.log(`✅ ${allUpdatedCount} pedido(s) atualizado(s) ao recalcular todos os pedidos`);
+          }
+        }
+        
+        // Invalidar cache do dashboard para forçar recálculo das métricas
+        await invalidateDashboardCache(operationId);
+        console.log(`✅ Cache do dashboard invalidado para operação ${operationId}`);
+        
+        if (updatedOrdersCount > 0) {
+          console.log(`✅ ${updatedOrdersCount} pedido(s) atualizado(s) com novos custos`);
+        }
+        
+        res.status(201).json({
+          ...userProduct,
+          ordersUpdated: updatedOrdersCount,
+          message: updatedOrdersCount > 0 
+            ? `${updatedOrdersCount} pedido(s) atualizado(s) com novos custos` 
+            : 'Produto vinculado com sucesso'
+        });
+      } catch (recalcError) {
+        // Não falhar a vinculação se o recálculo der erro
+        console.error(`⚠️ Erro ao recalcular custos de pedidos (continuando mesmo assim):`, recalcError);
+        res.status(201).json({
+          ...userProduct,
+          ordersUpdated: 0,
+          warning: 'Produto vinculado, mas houve erro ao recalcular custos de pedidos existentes'
+        });
+      }
     } catch (error) {
       if (error instanceof Error) {
         res.status(400).json({ message: error.message });
       } else {
         res.status(400).json({ message: "Erro ao vincular produto" });
       }
+    }
+  });
+
+  // Endpoint para recalcular custos de TODOS os pedidos de uma operação
+  app.post('/api/operations/:operationId/recalculate-costs', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const userId = req.user.id;
+
+      // Verificar permissão
+      await requireOperationAccess(req, res, operationId, 'dashboard.view');
+
+      // Obter storeId da operação
+      const userOperations = await storage.getUserOperations(userId);
+      const operation = userOperations.find(op => op.id === operationId);
+
+      if (!operation) {
+        return res.status(403).json({ message: "Operação não encontrada ou acesso negado" });
+      }
+
+      // Recalcular custos de todos os pedidos
+      const { recalculateAllOrderCostsForOperation } = await import('./services/order-cost-recalculation-service');
+      const { invalidateDashboardCache } = await import('./services/dashboard-cache-service');
+
+      console.log(`🔄 [MANUAL RECALC] Recalculando custos de TODOS os pedidos da operação ${operationId}...`);
+      const updatedOrdersCount = await recalculateAllOrderCostsForOperation(
+        operation.storeId,
+        operationId
+      );
+
+      // Invalidar cache do dashboard
+      await invalidateDashboardCache(operationId);
+      console.log(`✅ [MANUAL RECALC] Cache do dashboard invalidado para operação ${operationId}`);
+
+      res.json({
+        success: true,
+        updatedOrdersCount,
+        message: `${updatedOrdersCount} pedido(s) atualizado(s) com novos custos`
+      });
+    } catch (error) {
+      console.error('❌ Erro ao recalcular custos de pedidos:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
     }
   });
 
@@ -6400,7 +7767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Shopify Integration Routes
   
   // Get Shopify integration for operation
-  app.get("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/shopify", authenticateToken, requirePermission('integrations', 'view'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;
       
@@ -6422,7 +7789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save/update Shopify integration
-  app.post("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/shopify", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
       const { operationId, shopName, accessToken } = req.body;
       
@@ -6451,9 +7818,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const webhookUrl = shopifyWebhookService.getWebhookUrl();
       const topics = shopifyWebhookService.getRequiredWebhookTopics();
 
+      // Sempre retornar informações de webhook, mesmo quando não há URL pública
       res.json({
-        webhookUrl,
-        topics,
+        webhookUrl: webhookUrl || null,
+        topics: topics || [],
         hasPublicUrl: !!baseUrl,
         instructions: baseUrl ? {
           title: "Configure Webhook na Shopify",
@@ -6469,8 +7837,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             "7. Clique em 'Save webhook'"
           ]
         } : {
-          title: "Webhook não disponível",
-          message: "Configure PUBLIC_URL ou REPLIT_DEV_DOMAIN para usar webhooks. O sistema usará polling inteligente como fallback."
+          title: "Configurar URL Pública para Webhooks",
+          message: "Para usar webhooks, configure PUBLIC_URL ou REPLIT_DEV_DOMAIN nas variáveis de ambiente. O sistema usará polling inteligente como fallback até que a URL pública seja configurada."
         }
       });
     } catch (error: any) {
@@ -6606,7 +7974,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sync Shopify data with new Shopify-first approach
+  // ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+  // Em produção, pedidos Shopify são criados/atualizados APENAS via webhooks para melhor performance
   app.post("/api/integrations/shopify/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;

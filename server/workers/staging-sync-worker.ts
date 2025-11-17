@@ -1,5 +1,10 @@
-// 🔄 Staging Sync Worker - Processa staging tables continuamente
-// Processa novos itens a cada 2-3 minutos para fazer matching automático
+// 🔄 Staging Sync Worker - ATIVO
+// Este worker é responsável por:
+// - Sincronizar dados das TRANSPORTADORAS (FHB, eLogy, European Fulfillment, Big Arena)
+// - Fazer matching de pedidos das transportadoras com pedidos existentes (Shopify, CartPanda, Digistore24)
+// - Atualizar APENAS status, tracking e informações de entrega (NÃO cria novos pedidos)
+// - Os pedidos são criados/atualizados via webhooks das plataformas de venda
+// Processa staging tables continuamente - novos itens a cada 2-3 minutos para fazer matching automático
 
 import { performStagingSync } from '../services/staging-sync-service';
 import { db } from '../db';

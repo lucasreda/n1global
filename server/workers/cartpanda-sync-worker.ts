@@ -1,5 +1,9 @@
-// 🛒 CartPanda Sync Worker - Polling inteligente para novos pedidos
+// 🛒 CartPanda Sync Worker - DESABILITADO
+// Pedidos são criados/atualizados APENAS via webhooks para melhor performance e menos erros
+// Este worker foi desabilitado em favor de webhooks em tempo real
+//
 // Polling adaptativo: 5 minutos (horário comercial 8h-20h UTC), 15 minutos (fora do horário)
+// Para reativar, descomente as linhas em server/index.ts
 
 import { db } from '../db';
 import { cartpandaIntegrations, operations } from '@shared/schema';
@@ -71,6 +75,10 @@ async function pollNewOrders() {
         } else if (tracking.lastSyncAt) {
           // Se não temos since_id mas temos lastSyncAt, usar updated_at_min
           params.updated_at_min = tracking.lastSyncAt.toISOString();
+        } else if (integration.integrationStartedAt) {
+          // Se não temos tracking mas temos integrationStartedAt, usar como filtro inicial
+          // Garantir que só buscamos pedidos criados a partir da data de integração
+          params.created_at_min = integration.integrationStartedAt.toISOString();
         }
 
         console.log(`🔍 [CARTPANDA POLLING] Buscando novos pedidos para operação ${integration.operationId}...`);

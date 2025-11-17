@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   phone: text("phone"), // Phone number for contact
   avatarUrl: text("avatar_url"), // URL for profile picture/avatar
+  preferredLanguage: text("preferred_language"), // User's preferred language: 'en', 'pt-BR', 'es'
   role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor', 'admin_investimento', 'affiliate'
   storeId: varchar("store_id"), // For product_seller role - links to parent store
   onboardingCompleted: boolean("onboarding_completed").default(false),
@@ -275,6 +276,26 @@ export const syncJobs = pgTable("sync_jobs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Polling Executions - track automatic polling executions
+export const pollingExecutions = pgTable("polling_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").references(() => operations.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(), // 'shopify', 'cartpanda', 'digistore24'
+  executedAt: timestamp("executed_at").notNull().defaultNow(),
+  ordersFound: integer("orders_found").default(0),
+  ordersProcessed: integer("orders_processed").default(0),
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Índice composto para buscar última execução por operação e provider
+  operationProviderIdx: index("polling_executions_operation_provider_idx").on(
+    table.operationId,
+    table.provider,
+    table.executedAt
+  ),
+}));
+
 // Facebook Ads integrations - per operation
 export const facebookAdsIntegrations = pgTable("facebook_ads_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -419,6 +440,7 @@ export const shopifyIntegrations = pgTable("shopify_integrations", {
   status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
   lastSyncAt: timestamp("last_sync_at"),
   syncErrors: text("sync_errors"), // Error messages from last sync
+  integrationStartedAt: timestamp("integration_started_at"), // Quando integração foi ativada pela primeira vez (para filtrar pedidos)
   
   // Store metadata
   metadata: jsonb("metadata").$type<{
@@ -444,6 +466,7 @@ export const cartpandaIntegrations = pgTable("cartpanda_integrations", {
   status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
   lastSyncAt: timestamp("last_sync_at"),
   syncErrors: text("sync_errors"), // Error messages from last sync
+  integrationStartedAt: timestamp("integration_started_at"), // Quando integração foi ativada pela primeira vez (para filtrar pedidos)
   
   // Store metadata
   metadata: jsonb("metadata").$type<{
@@ -467,6 +490,7 @@ export const digistoreIntegrations = pgTable("digistore_integrations", {
   status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
   lastSyncAt: timestamp("last_sync_at"),
   syncErrors: text("sync_errors"), // Error messages from last sync
+  integrationStartedAt: timestamp("integration_started_at"), // Quando integração foi ativada pela primeira vez (para filtrar pedidos)
   
   // Store metadata
   metadata: jsonb("metadata").$type<{
@@ -592,6 +616,192 @@ export const userWarehouseAccountOperations = pgTable("user_warehouse_account_op
   operationIdIdx: index("user_warehouse_account_operations_operation_id_idx").on(table.operationId),
 }));
 
+// Big Arena Warehouse Accounts - provider specific metadata & sync state
+export const bigArenaWarehouseAccounts = pgTable("big_arena_warehouse_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").notNull().references(() => userWarehouseAccounts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  operationId: varchar("operation_id").references(() => operations.id),
+  
+  apiToken: text("api_token").notNull(),
+  apiDomain: text("api_domain"),
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: text("last_sync_status").default("never"),
+  lastSyncCursor: text("last_sync_cursor"),
+  lastSyncError: text("last_sync_error"),
+  
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  accountUnique: unique().on(table.accountId),
+  userIdx: index("big_arena_accounts_user_idx").on(table.userId),
+  operationIdx: index("big_arena_accounts_operation_idx").on(table.operationId),
+  statusIdx: index("big_arena_accounts_status_idx").on(table.status),
+}));
+
+// Big Arena Warehouses catalog snapshot
+export const bigArenaWarehouses = pgTable("big_arena_warehouses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id").notNull(),
+  name: text("name"),
+  country: text("country"),
+  city: text("city"),
+  metadata: jsonb("metadata"),
+  rawData: jsonb("raw_data").notNull(),
+  syncedAt: timestamp("synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueWarehouse: unique().on(table.bigArenaAccountId, table.warehouseId),
+  accountIdx: index("big_arena_warehouses_account_idx").on(table.bigArenaAccountId),
+}));
+
+// Big Arena Orders staging table
+export const bigArenaOrders = pgTable("big_arena_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").references(() => userWarehouseAccounts.id, { onDelete: "set null" }),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  operationId: varchar("operation_id").references(() => operations.id),
+  orderId: text("order_id").notNull(),
+  externalId: text("external_id"),
+  status: text("status"),
+  total: decimal("total", { precision: 12, scale: 2 }),
+  currency: text("currency"),
+  trackingCode: text("tracking_code"),
+  trackingUrl: text("tracking_url"),
+  customerName: text("customer_name"),
+  customerPhone: text("customer_phone"),
+  customerEmail: text("customer_email"),
+  shippingAddress: jsonb("shipping_address"),
+  billingAddress: jsonb("billing_address"),
+  items: jsonb("items"),
+  rawData: jsonb("raw_data").notNull(),
+  processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  linkedOrderId: text("linked_order_id"),
+  processedAt: timestamp("processed_at"),
+  orderDate: timestamp("order_date"),
+  updatedAtRemote: timestamp("updated_at_remote"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueOrder: unique().on(table.bigArenaAccountId, table.orderId),
+  unprocessedIdx: index("big_arena_orders_unprocessed_idx").on(table.processedToOrders),
+  orderIdIdx: index("big_arena_orders_order_idx").on(table.orderId),
+  accountIdx: index("big_arena_orders_account_idx").on(table.bigArenaAccountId),
+}));
+
+// Big Arena Order Returns staging table
+export const bigArenaOrderReturns = pgTable("big_arena_order_returns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  orderReturnId: text("order_return_id").notNull(),
+  orderId: text("order_id"),
+  status: text("status"),
+  reason: text("reason"),
+  resolved: boolean("resolved").default(false),
+  rawData: jsonb("raw_data").notNull(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueReturn: unique().on(table.bigArenaAccountId, table.orderReturnId),
+  orderIdx: index("big_arena_returns_order_idx").on(table.orderId),
+}));
+
+// Big Arena Products staging table
+export const bigArenaProducts = pgTable("big_arena_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull(),
+  sku: text("sku"),
+  name: text("name"),
+  status: text("status"),
+  metadata: jsonb("metadata"),
+  rawData: jsonb("raw_data").notNull(),
+  syncedAt: timestamp("synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueProduct: unique().on(table.bigArenaAccountId, table.productId),
+  skuIdx: index("big_arena_products_sku_idx").on(table.sku),
+}));
+
+// Big Arena Product Variants staging table
+export const bigArenaProductVariants = pgTable("big_arena_product_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull(),
+  variantId: text("variant_id").notNull(),
+  sku: text("sku"),
+  title: text("title"),
+  barcode: text("barcode"),
+  price: decimal("price", { precision: 12, scale: 2 }),
+  inventoryQuantity: integer("inventory_quantity"),
+  rawData: jsonb("raw_data").notNull(),
+  syncedAt: timestamp("synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueVariant: unique().on(table.bigArenaAccountId, table.variantId),
+  productIdx: index("big_arena_variants_product_idx").on(table.productId),
+  skuIdx: index("big_arena_variants_sku_idx").on(table.sku),
+}));
+
+// Big Arena Shipments staging table
+export const bigArenaShipments = pgTable("big_arena_shipments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  shipmentId: text("shipment_id").notNull(),
+  orderId: text("order_id"),
+  status: text("status"),
+  carrier: text("carrier"),
+  trackingCode: text("tracking_code"),
+  trackingUrl: text("tracking_url"),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  rawData: jsonb("raw_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueShipment: unique().on(table.bigArenaAccountId, table.shipmentId),
+  orderIdx: index("big_arena_shipments_order_idx").on(table.orderId),
+}));
+
+// Big Arena Couriers snapshot
+export const bigArenaCouriers = pgTable("big_arena_couriers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  courierId: text("courier_id").notNull(),
+  name: text("name"),
+  code: text("code"),
+  rawData: jsonb("raw_data").notNull(),
+  syncedAt: timestamp("synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueCourier: unique().on(table.bigArenaAccountId, table.courierId),
+}));
+
+// Big Arena Courier Nomenclatures snapshot
+export const bigArenaCourierNomenclatures = pgTable("big_arena_courier_nomenclatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bigArenaAccountId: varchar("big_arena_account_id").notNull().references(() => bigArenaWarehouseAccounts.id, { onDelete: "cascade" }),
+  nomenclatureId: text("nomenclature_id").notNull(),
+  courierId: text("courier_id"),
+  name: text("name"),
+  rawData: jsonb("raw_data").notNull(),
+  syncedAt: timestamp("synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueNomenclature: unique().on(table.bigArenaAccountId, table.nomenclatureId),
+}));
+
 // European Fulfillment Orders Staging Table - raw orders before processing to operations
 export const europeanFulfillmentOrders = pgTable("european_fulfillment_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -671,8 +881,29 @@ export const userOperationAccess = pgTable("user_operation_access", {
   role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
   permissions: jsonb("permissions"), // Custom permissions
   
+  invitedAt: timestamp("invited_at"), // Timestamp when invitation was accepted
+  invitedBy: varchar("invited_by").references(() => users.id), // User who sent the invitation
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Operation invitations table - tracks team member invitations
+export const operationInvitations = pgTable("operation_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  email: text("email").notNull(),
+  invitedBy: varchar("invited_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
+  permissions: jsonb("permissions"), // Granular permissions JSONB
+  token: varchar("token").notNull().unique(),
+  status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'expired', 'cancelled'
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  tokenIdx: index("operation_invitations_token_idx").on(table.token),
+  operationStatusIdx: index("operation_invitations_operation_status_idx").on(table.operationId, table.status),
+}));
 
 // Products table
 export const products = pgTable("products", {
@@ -942,6 +1173,159 @@ export type InsertUserWarehouseAccount = z.infer<typeof insertUserWarehouseAccou
 export type UpdateUserWarehouseAccount = z.infer<typeof updateUserWarehouseAccountSchema>;
 export type UserWarehouseAccount = typeof userWarehouseAccounts.$inferSelect;
 
+// Big Arena Warehouse Accounts schemas
+export const insertBigArenaWarehouseAccountSchema = createInsertSchema(bigArenaWarehouseAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBigArenaWarehouseAccountSchema = createInsertSchema(bigArenaWarehouseAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertBigArenaWarehouseAccount = z.infer<typeof insertBigArenaWarehouseAccountSchema>;
+export type UpdateBigArenaWarehouseAccount = z.infer<typeof updateBigArenaWarehouseAccountSchema>;
+export type BigArenaWarehouseAccount = typeof bigArenaWarehouseAccounts.$inferSelect;
+
+// Big Arena Warehouses schemas
+export const insertBigArenaWarehouseSchema = createInsertSchema(bigArenaWarehouses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateBigArenaWarehouseSchema = createInsertSchema(bigArenaWarehouses).omit({
+  id: true,
+  bigArenaAccountId: true,
+  warehouseId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaWarehouse = z.infer<typeof insertBigArenaWarehouseSchema>;
+export type UpdateBigArenaWarehouse = z.infer<typeof updateBigArenaWarehouseSchema>;
+export type BigArenaWarehouse = typeof bigArenaWarehouses.$inferSelect;
+
+// Big Arena Orders schemas
+export const insertBigArenaOrderSchema = createInsertSchema(bigArenaOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  processedAt: true,
+  processedToOrders: true,
+  linkedOrderId: true,
+});
+export const updateBigArenaOrderSchema = createInsertSchema(bigArenaOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaOrder = z.infer<typeof insertBigArenaOrderSchema>;
+export type UpdateBigArenaOrder = z.infer<typeof updateBigArenaOrderSchema>;
+export type BigArenaOrderStaging = typeof bigArenaOrders.$inferSelect;
+
+// Big Arena Order Returns schemas
+export const insertBigArenaOrderReturnSchema = createInsertSchema(bigArenaOrderReturns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  processedAt: true,
+});
+export const updateBigArenaOrderReturnSchema = createInsertSchema(bigArenaOrderReturns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaOrderReturn = z.infer<typeof insertBigArenaOrderReturnSchema>;
+export type UpdateBigArenaOrderReturn = z.infer<typeof updateBigArenaOrderReturnSchema>;
+export type BigArenaOrderReturnStaging = typeof bigArenaOrderReturns.$inferSelect;
+
+// Big Arena Products schemas
+export const insertBigArenaProductSchema = createInsertSchema(bigArenaProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateBigArenaProductSchema = createInsertSchema(bigArenaProducts).omit({
+  id: true,
+  bigArenaAccountId: true,
+  productId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaProduct = z.infer<typeof insertBigArenaProductSchema>;
+export type UpdateBigArenaProduct = z.infer<typeof updateBigArenaProductSchema>;
+export type BigArenaProductStaging = typeof bigArenaProducts.$inferSelect;
+
+// Big Arena Product Variants schemas
+export const insertBigArenaProductVariantSchema = createInsertSchema(bigArenaProductVariants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateBigArenaProductVariantSchema = createInsertSchema(bigArenaProductVariants).omit({
+  id: true,
+  bigArenaAccountId: true,
+  variantId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaProductVariant = z.infer<typeof insertBigArenaProductVariantSchema>;
+export type UpdateBigArenaProductVariant = z.infer<typeof updateBigArenaProductVariantSchema>;
+export type BigArenaProductVariantStaging = typeof bigArenaProductVariants.$inferSelect;
+
+// Big Arena Shipments schemas
+export const insertBigArenaShipmentSchema = createInsertSchema(bigArenaShipments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateBigArenaShipmentSchema = createInsertSchema(bigArenaShipments).omit({
+  id: true,
+  bigArenaAccountId: true,
+  shipmentId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaShipment = z.infer<typeof insertBigArenaShipmentSchema>;
+export type UpdateBigArenaShipment = z.infer<typeof updateBigArenaShipmentSchema>;
+export type BigArenaShipmentStaging = typeof bigArenaShipments.$inferSelect;
+
+// Big Arena Couriers schemas
+export const insertBigArenaCourierSchema = createInsertSchema(bigArenaCouriers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateBigArenaCourierSchema = createInsertSchema(bigArenaCouriers).omit({
+  id: true,
+  bigArenaAccountId: true,
+  courierId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaCourier = z.infer<typeof insertBigArenaCourierSchema>;
+export type UpdateBigArenaCourier = z.infer<typeof updateBigArenaCourierSchema>;
+export type BigArenaCourierStaging = typeof bigArenaCouriers.$inferSelect;
+
+// Big Arena Courier Nomenclatures schemas
+export const insertBigArenaCourierNomenclatureSchema = createInsertSchema(bigArenaCourierNomenclatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateBigArenaCourierNomenclatureSchema = createInsertSchema(bigArenaCourierNomenclatures).omit({
+  id: true,
+  bigArenaAccountId: true,
+  nomenclatureId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+export type InsertBigArenaCourierNomenclature = z.infer<typeof insertBigArenaCourierNomenclatureSchema>;
+export type UpdateBigArenaCourierNomenclature = z.infer<typeof updateBigArenaCourierNomenclatureSchema>;
+export type BigArenaCourierNomenclatureStaging = typeof bigArenaCourierNomenclatures.$inferSelect;
+
 // User Warehouse Account Operations schemas
 export const insertUserWarehouseAccountOperationSchema = createInsertSchema(userWarehouseAccountOperations).omit({
   id: true,
@@ -996,6 +1380,13 @@ export const insertCartpandaIntegrationSchema = createInsertSchema(cartpandaInte
 export const insertUserOperationAccessSchema = createInsertSchema(userOperationAccess).omit({
   id: true,
   createdAt: true,
+});
+
+// Operation invitations schemas
+export const insertOperationInvitationSchema = createInsertSchema(operationInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Order schemas
@@ -1092,6 +1483,9 @@ export type InsertShopifyIntegration = z.infer<typeof insertShopifyIntegrationSc
 
 export type UserOperationAccess = typeof userOperationAccess.$inferSelect;
 export type InsertUserOperationAccess = z.infer<typeof insertUserOperationAccessSchema>;
+
+export type OperationInvitation = typeof operationInvitations.$inferSelect;
+export type InsertOperationInvitation = z.infer<typeof insertOperationInvitationSchema>;
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
@@ -6242,3 +6636,55 @@ export type IntegrationConfig = typeof integrationConfigs.$inferSelect;
 export type InsertIntegrationConfig = z.infer<typeof insertIntegrationConfigSchema>;
 export type WebhookLog = typeof webhookLogs.$inferSelect;
 export type InsertWebhookLog = z.infer<typeof insertWebhookLogSchema>;
+
+// ============================================================================
+// SYNC SESSIONS - Persistent state for complete sync operations
+// ============================================================================
+
+export const syncSessions = pgTable("sync_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  runId: varchar("run_id").notNull().unique(), // UUID único da execução
+  
+  // Estado atual
+  isRunning: boolean("is_running").notNull().default(true),
+  phase: text("phase").notNull().default("preparing"), // 'preparing' | 'syncing' | 'completed' | 'error'
+  message: text("message"),
+  currentStep: text("current_step"), // 'shopify' | 'cartpanda' | 'digistore' | 'staging' | null
+  
+  // Progresso geral (apenas plataformas)
+  overallProgress: integer("overall_progress").notNull().default(0), // 0-100
+  
+  // Progresso de plataformas (Shopify, CartPanda, Digistore)
+  platformProgress: jsonb("platform_progress").$type<{
+    processedOrders: number;
+    totalOrders: number;
+    newOrders: number;
+    updatedOrders: number;
+    percentage: number;
+  }>(),
+  
+  // Estatísticas
+  errors: integer("errors").notNull().default(0),
+  
+  // Timestamps
+  startTime: timestamp("start_time").notNull().defaultNow(),
+  endTime: timestamp("end_time"),
+  lastUpdatedAt: timestamp("last_updated_at").notNull().defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_sync_sessions_user_id").on(table.userId),
+  runIdIdx: index("idx_sync_sessions_run_id").on(table.runId),
+  isRunningIdx: index("idx_sync_sessions_is_running").on(table.isRunning).where(sql`${table.isRunning} = true`),
+}));
+
+export const insertSyncSessionSchema = createInsertSchema(syncSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SyncSession = typeof syncSessions.$inferSelect;
+export type InsertSyncSession = z.infer<typeof insertSyncSessionSchema>;

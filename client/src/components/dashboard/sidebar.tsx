@@ -40,7 +40,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   Collapsible,
   CollapsibleContent,
@@ -48,40 +48,46 @@ import {
 } from "@/components/ui/collapsible";
 import { NewOperationDialog } from "./new-operation-dialog";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useTranslation } from "@/hooks/use-translation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 
-const getNavigationForRole = (userRole: string, userPermissions: string[] = []) => {
+const getNavigationForRole = (userRole: string, userPermissions: string[] = [], t: any, operationPermissions?: any) => {
   // All possible navigation items with their permission IDs
   const allNavigationItems = [
-    { id: 'dashboard', name: "Dashboard", href: "/", icon: Home },
-    { id: 'hub', name: "N1 Hub", href: "/hub", icon: Store },
-    { id: 'orders', name: "Pedidos", href: "/orders", icon: Package },
-    { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3 },
-    { id: 'ads', name: "Anúncios", href: "/ads", icon: Target },
-    { id: 'creatives', name: "Criativos", href: "/creatives", icon: Sparkles },
+    { id: 'dashboard', name: t('sidebar.dashboard'), href: "/", icon: Home, permissionModule: 'dashboard' as const },
+    { id: 'hub', name: t('sidebar.hub'), href: "/hub", icon: Store, permissionModule: 'hub' as const },
+    { id: 'orders', name: t('sidebar.orders'), href: "/orders", icon: Package, permissionModule: 'orders' as const },
+    { id: 'analytics', name: t('sidebar.analytics'), href: "/analytics", icon: BarChart3, permissionModule: 'dashboard' as const },
+    { id: 'ads', name: t('sidebar.ads'), href: "/ads", icon: Target, permissionModule: 'ads' as const },
+    { id: 'creatives', name: t('sidebar.creatives'), href: "/creatives", icon: Sparkles, permissionModule: 'ads' as const },
     { 
       id: 'funnels',
-      name: "Funis de Venda", 
+      name: t('sidebar.funnels'), 
       icon: Zap,
       isDropdown: true,
+      adminOnly: true, // Only for admins/owners
+      permissionModule: 'dashboard' as const,
       subItems: [
-        { name: "Gerenciar Funis", href: "/funnels" },
-        { name: "Preview & Validação", href: "/funnel-preview" }
+        { name: t('sidebar.manageFunnels'), href: "/funnels" },
+        { name: t('sidebar.previewValidation'), href: "/funnel-preview" }
       ]
     },
-    { name: "Produtos", href: "/products", icon: ShoppingCart }, // Always visible
+    { name: t('sidebar.products'), href: "/products", icon: ShoppingCart, permissionModule: 'products' as const },
     { 
       id: 'support',
-      name: "Suporte", 
+      name: t('sidebar.support'), 
       icon: MessageSquare,
       isDropdown: true,
+      adminOnly: true, // Only for admins/owners
+      permissionModule: 'dashboard' as const,
       subItems: [
-        { name: "Suporte de Clientes", href: "/customer-support" },
-        { name: "Configurações", href: "/customer-support/settings" }
+        { name: t('sidebar.customerSupport'), href: "/customer-support" },
+        { name: t('sidebar.supportSettings'), href: "/customer-support/settings" }
       ]
     },
-    { id: 'integrations', name: "Integrações", href: "/integrations", icon: Plug },
-    { id: 'tools', name: "Ferramentas", href: "/tools", icon: Wrench },
-    { name: "Configurações", href: "/settings", icon: Settings }, // Always visible
+    { id: 'integrations', name: t('sidebar.integrations'), href: "/integrations", icon: Plug, permissionModule: 'integrations' as const },
+    { id: 'tools', name: t('sidebar.tools'), href: "/tools", icon: Wrench, permissionModule: 'dashboard' as const },
+    { name: t('sidebar.settings'), href: "/settings", icon: Settings, permissionModule: 'settings' as const },
   ];
 
   // For super_admin and admin roles, show all items
@@ -96,23 +102,132 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = []) 
     );
   }
 
-  // For regular users, filter by permissions
-  return allNavigationItems.filter(item => 
-    !item.id || userPermissions.includes(item.id)
-  );
+  // For regular users, filter by operation permissions
+  if (!operationPermissions) {
+    // If no operation permissions, show nothing (user might not have access to any operation)
+    return [];
+  }
+
+  // Filter items based on operation permissions
+  const isOwner = operationPermissions?.isOwner || false;
+  const isAdmin = operationPermissions?.isAdmin || false;
+  
+  return allNavigationItems.filter(item => {
+    // CRITICAL: Configurações e Produtos são padrões e sempre aparecem, independente de permissões
+    const isSettings = item.href === '/settings' || (!item.id && item.name?.toLowerCase() === t('sidebar.settings').toLowerCase());
+    const isProducts = item.href === '/products' || (!item.id && item.name?.toLowerCase() === t('sidebar.products').toLowerCase());
+    
+    if (isSettings || isProducts) {
+      return true; // Sempre mostrar Configurações e Produtos
+    }
+    
+    // CRITICAL: Para owners, verificar permissões globais do usuário configuradas no painel administrativo
+    // As permissões de equipe só se aplicam a membros convidados, não ao proprietário
+    if (isOwner) {
+      // Mapear IDs/hrefs de itens do menu para IDs de permissões globais
+      // CRITICAL: Analytics e Criativos precisam ter permissões explícitas, não herdam de dashboard/ads
+      const permissionMap: Record<string, string> = {
+        'dashboard': 'dashboard',
+        'hub': 'hub',
+        'orders': 'orders',
+        'analytics': 'analytics', // Analytics precisa de permissão explícita
+        'ads': 'ads',
+        'creatives': 'creatives', // Criativos precisa de permissão explícita
+        'funnels': 'funnels',
+        'support': 'support',
+        'integrations': 'integrations',
+        'tools': 'tools',
+      };
+      
+      // Buscar permissão por ID primeiro
+      let permissionId = permissionMap[item.id || ''];
+      
+      // Se não encontrou por ID, tentar mapear pela href (para itens sem ID)
+      if (!permissionId && item.href) {
+        const hrefMap: Record<string, string> = {
+          '/': 'dashboard',
+          '/hub': 'hub',
+          '/orders': 'orders',
+          '/analytics': 'analytics', // Analytics precisa de permissão explícita
+          '/ads': 'ads',
+          '/creatives': 'creatives', // Criativos precisa de permissão explícita
+          '/integrations': 'integrations',
+          '/tools': 'tools',
+        };
+        permissionId = hrefMap[item.href] || permissionId;
+      }
+      
+      // Para itens dropdown (funnels, support), verificar pela primeira subItem
+      if (!permissionId && item.isDropdown && item.subItems && item.subItems.length > 0) {
+        const firstHref = item.subItems[0].href;
+        if (firstHref === '/funnels') permissionId = 'funnels';
+        else if (firstHref === '/customer-support' || firstHref?.startsWith('/customer-support')) permissionId = 'support';
+      }
+      
+      // Se o item tem um ID de permissão mapeado, verificar se está nas permissões globais do usuário
+      if (permissionId) {
+        return userPermissions.includes(permissionId);
+      }
+      
+      // Se não tem mapeamento, não mostrar (segurança)
+      return false;
+    }
+    
+    // CRITICAL: Configurações e Produtos sempre aparecem para todos (já verificado acima)
+    // Mas precisamos garantir que também apareçam para admins e membros convidados
+    
+    // Admin-only items: only show for admins
+    if (item.adminOnly) {
+      return isAdmin;
+    }
+    
+    // CRITICAL: Items without permissionModule should appear only for admins
+    if (!item.permissionModule) {
+      return isAdmin;
+    }
+    
+    // Para admins, verificar permissões da operação
+    if (isAdmin) {
+      const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team' | 'hub';
+      if (operationPermissions.canView && typeof operationPermissions.canView === 'function') {
+        return operationPermissions.canView(module);
+      }
+      return true;
+    }
+    
+    // Para usuários regulares (viewers/employees), verificar permissões específicas da operação
+    const module = item.permissionModule as 'dashboard' | 'orders' | 'products' | 'ads' | 'integrations' | 'settings' | 'team' | 'hub';
+    
+    // CRITICAL: Configurações e Produtos sempre aparecem (verificação adicional para membros convidados)
+    if (module === 'settings' || module === 'products') {
+      return true;
+    }
+    
+    if (operationPermissions.canView && typeof operationPermissions.canView === 'function') {
+      return operationPermissions.canView(module);
+    }
+    
+    // Se não há função canView, não mostrar
+    return false;
+  });
 };
 
 export function Sidebar() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const { t, currentLanguage } = useTranslation();
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
+  const operationPermissions = useOperationPermissions();
   
   // Disabled debug logs
   // console.log("🔍 Sidebar Debug:", ...);
   
-  const navigation = getNavigationForRole(user?.role || 'user', user?.permissions || []);
+  // Recalculate navigation when language changes
+  const navigation = useMemo(() => {
+    return getNavigationForRole(user?.role || 'user', user?.permissions || [], t, operationPermissions);
+  }, [user?.role, user?.permissions, t, currentLanguage, operationPermissions]);
 
   // Handle operation change
   const handleOperationChange = (operationId: string) => {
@@ -168,7 +283,7 @@ export function Sidebar() {
       <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm" data-tour-id="operation-selector-section">
         <div className="flex items-center gap-2 mb-2">
           <Briefcase className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground font-medium">Operação</span>
+          <span className="text-sm text-muted-foreground font-medium">{t('sidebar.operation')}</span>
         </div>
         {operations.length > 0 ? (
           <Select value={selectedOperation} onValueChange={(value) => {
@@ -179,7 +294,7 @@ export function Sidebar() {
             handleOperationChange(value);
           }}>
             <SelectTrigger className="w-full" data-testid="operation-selector">
-              <SelectValue placeholder="Selecionar operação" />
+              <SelectValue placeholder={t('sidebar.selectOperation')} />
             </SelectTrigger>
             <SelectContent>
               {operations.map((operation: any) => (
@@ -190,7 +305,7 @@ export function Sidebar() {
               <SelectItem value="add-new" className="py-3 text-[14px]">
                 <div className="flex items-center gap-2">
                   <Plus className="w-4 h-4" />
-                  <span>Adicionar Nova</span>
+                  <span>{t('sidebar.addNew')}</span>
                 </div>
               </SelectItem>
             </SelectContent>
@@ -202,7 +317,7 @@ export function Sidebar() {
             data-testid="create-operation-button"
           >
             <Plus className="w-4 h-4 mr-2 text-white" />
-            Criar Operação
+            {t('sidebar.createOperation')}
           </Button>
         )}
       </div>
@@ -210,7 +325,7 @@ export function Sidebar() {
       <ul className="space-y-1 flex-1" data-testid="nav-menu">
         {navigation.map((item: any) => {
           const hasOperations = operations.length > 0;
-          const isDashboard = item.name === "Dashboard";
+          const isDashboard = item.href === "/";
           const isLocked = !isDashboard && !hasOperations;
 
           if (item.isDropdown) {
@@ -325,10 +440,10 @@ export function Sidebar() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-white" data-testid="text-username">
-                      {user?.name || "Usuário"}
+                      {user?.name || t('sidebar.user')}
                     </p>
                     <p className="text-xs text-gray-400" data-testid="text-user-role">
-                      {user?.role === "admin" ? "Administrador" : user?.role === "product_seller" ? "Vendedor" : "Usuário"}
+                      {user?.role === "admin" ? t('sidebar.admin') : user?.role === "product_seller" ? t('sidebar.seller') : t('sidebar.user')}
                     </p>
                   </div>
                   <div className="text-gray-400">
@@ -353,7 +468,7 @@ export function Sidebar() {
                 data-testid="menu-profile"
               >
                 <User className="mr-2 h-4 w-4" />
-                Minha Conta
+                {t('sidebar.myAccount')}
               </DropdownMenuItem>
               <DropdownMenuItem 
                 className="cursor-pointer text-red-600 hover:text-red-700 focus:text-red-700"
@@ -361,7 +476,7 @@ export function Sidebar() {
                 data-testid="menu-logout"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Sair
+                {t('sidebar.logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

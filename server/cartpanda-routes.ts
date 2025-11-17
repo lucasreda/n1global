@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { CartPandaService, CartPandaCredentials } from "./cartpanda-service";
 import { db } from "./db";
-import { cartpandaIntegrations, orders } from "@shared/schema";
+import { cartpandaIntegrations, orders, operations } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { authenticateToken } from "./auth-middleware";
 import { validateOperationAccess } from "./middleware/operation-access";
@@ -143,6 +143,11 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
       .where(eq(cartpandaIntegrations.operationId, operationId))
       .limit(1);
 
+    // Determinar se deve definir integrationStartedAt
+    const shouldSetIntegrationStartedAt = 
+      !existingIntegration || // Nova integração
+      (existingIntegration.status !== "active" && existingIntegration.integrationStartedAt === null); // Ativando pela primeira vez
+
     let integration;
 
     if (existingIntegration) {
@@ -157,6 +162,7 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
           status: "active",
           lastSyncAt: null, // Reset last sync since credentials changed
           syncErrors: null,
+          ...(shouldSetIntegrationStartedAt && { integrationStartedAt: new Date() }),
           metadata: {
             storeUrl: `https://${storeSlug}.mycartpanda.com`
           },
@@ -175,6 +181,7 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
           storeSlug,
           bearerToken,
           status: "active",
+          integrationStartedAt: new Date(), // Nova integração sempre define integrationStartedAt
           metadata: {
             storeUrl: `https://${storeSlug}.mycartpanda.com`
           }
@@ -218,6 +225,8 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
 /**
  * Sincronizar pedidos da CartPanda
  */
+// ⚠️ ENDPOINT DE SYNC MANUAL - USAR APENAS PARA TESTES/MANUTENÇÃO
+// Em produção, pedidos são criados/atualizados APENAS via webhooks para melhor performance
 router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async (req: AuthRequest, res: Response) => {
   try {
     const { operationId } = req.query;
@@ -249,30 +258,31 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
       bearerToken: integration.bearerToken
     });
 
+    // Preparar parâmetros base com filtro de data de integração
+    const baseParams: any = {};
+    if (integration.integrationStartedAt) {
+      baseParams.created_at_min = integration.integrationStartedAt.toISOString();
+      console.log(`📅 Filtrando pedidos a partir da data de integração: ${integration.integrationStartedAt.toISOString()}`);
+    }
+    
     // Testando múltiplas abordagens para encontrar os pedidos
     console.log('🔍 Investigando CartPanda com múltiplos testes...');
     
     let cartpandaOrders = [];
     
-    // Teste 1: Sem parâmetros (usa paginação padrão da CartPanda)
-    console.log('📊 Teste 1: Sem parâmetros...');
-    cartpandaOrders = await cartpandaService.listOrders();
+    // Teste 1: Com filtro de data de integração (se existir)
+    console.log('📊 Teste 1: Com filtro de data de integração...');
+    cartpandaOrders = await cartpandaService.listOrders(baseParams);
     
     if (cartpandaOrders.length === 0) {
-      // Teste 2: Parâmetros vazios explícitos
-      console.log('📊 Teste 2: Com parâmetros vazios...');
-      cartpandaOrders = await cartpandaService.listOrders({});
-    }
-    
-    if (cartpandaOrders.length === 0) {
-      // Teste 3: Com diferentes status
-      console.log('📊 Teste 3: Testando diferentes status...');
+      // Teste 2: Com diferentes status (mantendo filtro de data)
+      console.log('📊 Teste 2: Testando diferentes status...');
       const statusesToTest = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded'];
       
       for (const status of statusesToTest) {
         try {
           console.log(`🔍 Testando status: ${status}`);
-          const orders = await cartpandaService.listOrders({ status });
+          const orders = await cartpandaService.listOrders({ ...baseParams, status });
           console.log(`📋 Status ${status}: ${orders.length} pedidos`);
           if (orders.length > 0) {
             cartpandaOrders = orders;
@@ -285,8 +295,8 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     }
     
     if (cartpandaOrders.length === 0) {
-      // Teste 4: Com diferentes status de pagamento (números conforme documentação)
-      console.log('📊 Teste 4: Testando diferentes status de pagamento...');
+      // Teste 3: Com diferentes status de pagamento (mantendo filtro de data)
+      console.log('📊 Teste 3: Testando diferentes status de pagamento...');
       const paymentStatusesToTest = [0, 1, 2, 3]; // números conforme documentação
       const paymentStatusNames = ['unpaid', 'paid', 'pending', 'partial']; // para logs
       
@@ -295,7 +305,7 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
         const statusName = paymentStatusNames[i];
         try {
           console.log(`🔍 Testando payment_status: ${paymentStatus} (${statusName})`);
-          const orders = await cartpandaService.listOrders({ payment_status: paymentStatus });
+          const orders = await cartpandaService.listOrders({ ...baseParams, payment_status: paymentStatus });
           console.log(`📋 Payment status ${paymentStatus} (${statusName}): ${orders.length} pedidos`);
           if (orders.length > 0) {
             cartpandaOrders = orders;
@@ -464,9 +474,28 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
           .where(eq(orders.id, `cartpanda_${cartpandaOrder.id}`))
           .limit(1);
 
+        // Buscar storeId da operação
+        const [operation] = await db
+          .select({ storeId: operations.storeId })
+          .from(operations)
+          .where(eq(operations.id, operationId))
+          .limit(1);
+        
+        if (!operation) {
+          console.error(`❌ Operação ${operationId} não encontrada para pedido CartPanda ${cartpandaOrder.id}`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Calcular custos de produto e envio
+        const { calculateOrderCosts } = await import('./utils/order-cost-calculator');
+        const orderStatus = (cartpandaOrder as any).status || 'pending';
+        const orderProducts = (cartpandaOrder as any).items || (cartpandaOrder as any).line_items || [];
+        const costs = await calculateOrderCosts(orderStatus, orderProducts, operation.storeId);
+        
         const orderData = {
           id: `cartpanda_${cartpandaOrder.id}`,
-          storeId: '4a4377cc-38ed-44d2-a925-cd043c63fc31', // default store ID
+          storeId: operation.storeId,
           operationId: operationId,
           dataSource: 'cartpanda',
           
@@ -496,6 +525,10 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
           // Provider
           provider: 'cartpanda',
           providerOrderId: cartpandaOrder.id?.toString(),
+          
+          // Custos calculados
+          productCost: costs.productCost.toFixed(2),
+          shippingCost: costs.shippingCost.toFixed(2),
           
           // Timestamps
           orderDate: new Date(cartpandaOrder.created_at || Date.now()),

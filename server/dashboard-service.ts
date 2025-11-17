@@ -969,9 +969,10 @@ export class DashboardService {
     const operationTimezone = currentOperation.timezone || 'Europe/Madrid';
     
     // Build where conditions for delivered orders only (timezone-aware)
+    // Usar LOWER() para comparação case-insensitive do status
     let whereConditions = [
       eq(orders.operationId, currentOperation.id),
-      eq(orders.status, 'delivered'), // Only delivered orders
+      sql`LOWER(${orders.status}) = 'delivered'`, // Only delivered orders (case-insensitive)
       sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
       sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`
     ];
@@ -985,10 +986,14 @@ export class DashboardService {
       .select({
         id: orders.id,
         products: orders.products,
-        total: orders.total
+        total: orders.total,
+        status: orders.status,
+        orderDate: orders.orderDate
       })
       .from(orders)
       .where(and(...whereConditions));
+    
+    console.log(`📦 [CALCULATE PRODUCT COSTS] Encontrados ${deliveredOrders.length} pedidos entregues para cálculo de custos`);
     
     let totalProductCosts = 0;
     let totalShippingCosts = 0;
@@ -1025,93 +1030,108 @@ export class DashboardService {
       };
     }
     
-    // 🚀 OTIMIZAÇÃO CRÍTICA: Agregação SQL única em vez de 705 loops individuais
-    console.log(`🚀 Iniciando cálculo otimizado para ${deliveredOrders.length} pedidos...`);
+    // 🚀 OTIMIZAÇÃO CRÍTICA: Usar campos product_cost e shipping_cost já calculados nos pedidos
+    console.log(`🚀 Iniciando cálculo otimizado usando custos já calculados dos pedidos...`);
     
     try {
-      // Query única que agrega todos os custos de uma vez
-      const costResults = await db.execute(sql`
-        WITH order_products AS (
-          SELECT 
-            o.id as order_id,
-            jsonb_array_elements(o.products) as product_data
-          FROM orders o
-          WHERE o.operation_id = ${currentOperation.id}
-            AND o.status = 'delivered'
-            AND o.order_date BETWEEN ${dateRange.from} AND ${dateRange.to}
-            ${provider ? sql`AND o.provider = ${provider}` : sql``}
-        ),
-        product_costs AS (
-          SELECT 
-            op.order_id,
-            COALESCE(p.cost_price::decimal, 0) as product_cost,
-            COALESCE(
-              up.custom_shipping_cost::decimal, 
-              p.shipping_cost::decimal, 
-              0
-            ) as shipping_cost
-          FROM order_products op
-          LEFT JOIN user_products up ON (
-            up.sku = COALESCE(op.product_data->>'sku', op.product_data->>'product_sku')
-            AND up.store_id = ${storeId}
-          )
-          LEFT JOIN products p ON (
-            p.id = up.product_id 
-            AND p.operation_id = ${currentOperation.id}
-          )
-          WHERE COALESCE(op.product_data->>'sku', op.product_data->>'product_sku') IS NOT NULL
-            AND up.id IS NOT NULL
-            AND p.id IS NOT NULL
-        )
+      // Query simplificada que usa diretamente os campos product_cost e shipping_cost dos pedidos
+      // que já foram atualizados pelo serviço de recálculo quando produtos foram vinculados
+      
+      // Debug: log dos parâmetros da query
+      console.log(`🔍 Debug - Parâmetros da query:`, {
+        operationId: currentOperation.id,
+        status: 'delivered',
+        dateFrom: dateRange.from.toISOString().split('T')[0],
+        dateTo: dateRange.to.toISOString().split('T')[0],
+        provider: provider || 'todos',
+        timezone: operationTimezone
+      });
+      
+      // Primeiro, verificar se há pedidos entregues no período
+      // Se order_date for NULL, usa created_at como fallback
+      const deliveredOrdersCheck = await db.execute(sql`
         SELECT 
-          COALESCE(SUM(product_cost), 0) as total_product_costs,
-          COALESCE(SUM(shipping_cost), 0) as total_shipping_costs,
-          COUNT(DISTINCT order_id) as processed_orders
-        FROM product_costs
+          COUNT(*) as total,
+          COUNT(CASE WHEN o.product_cost IS NOT NULL AND o.product_cost::decimal > 0 THEN 1 END) as with_product_cost,
+          COUNT(CASE WHEN o.shipping_cost IS NOT NULL AND o.shipping_cost::decimal > 0 THEN 1 END) as with_shipping_cost,
+          SUM(CASE WHEN o.product_cost IS NOT NULL THEN o.product_cost::decimal ELSE 0 END) as sum_product_cost,
+          SUM(CASE WHEN o.shipping_cost IS NOT NULL THEN o.shipping_cost::decimal ELSE 0 END) as sum_shipping_cost
+        FROM orders o
+        WHERE o.operation_id = ${currentOperation.id}
+          AND LOWER(o.status) = 'delivered'
+          AND (
+            (o.order_date IS NOT NULL AND (o.order_date AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]} AND (o.order_date AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]})
+            OR
+            (o.order_date IS NULL AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]} AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]})
+          )
+          ${provider ? sql`AND o.provider = ${provider}` : sql``}
+      `);
+      
+      const checkResult = deliveredOrdersCheck.rows[0] as any;
+      console.log(`🔍 Debug - Verificação de pedidos entregues:`, {
+        total_pedidos: checkResult.total,
+        com_product_cost: checkResult.with_product_cost,
+        com_shipping_cost: checkResult.with_shipping_cost,
+        soma_product_cost: checkResult.sum_product_cost,
+        soma_shipping_cost: checkResult.sum_shipping_cost
+      });
+      
+      // Query para buscar custos dos pedidos entregues
+      // Se order_date for NULL, usa created_at como fallback
+      const costResults = await db.execute(sql`
+        SELECT 
+          COALESCE(SUM(o.product_cost::decimal), 0) as total_product_costs,
+          COALESCE(SUM(o.shipping_cost::decimal), 0) as total_shipping_costs,
+          COUNT(DISTINCT o.id) as processed_orders
+        FROM orders o
+        WHERE o.operation_id = ${currentOperation.id}
+          AND LOWER(o.status) = 'delivered'
+          AND (
+            (o.order_date IS NOT NULL AND (o.order_date AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]} AND (o.order_date AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]})
+            OR
+            (o.order_date IS NULL AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]} AND (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]})
+          )
+          ${provider ? sql`AND o.provider = ${provider}` : sql``}
       `);
       
       const result = costResults.rows[0] as any;
+      
+      // Debug: verificar valores retornados
+      console.log(`🔍 Debug - Resultado da query:`, {
+        total_product_costs: result.total_product_costs,
+        total_shipping_costs: result.total_shipping_costs,
+        processed_orders: result.processed_orders,
+        tipo_product_costs: typeof result.total_product_costs,
+        tipo_shipping_costs: typeof result.total_shipping_costs
+      });
+      
       totalProductCosts = parseFloat(result.total_product_costs || "0");
       totalShippingCosts = parseFloat(result.total_shipping_costs || "0");
       processedOrders = parseInt(result.processed_orders || "0");
       
-      console.log(`🚀 Cálculo SQL otimizado concluído - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos processados: ${processedOrders}`);
+      const totalDeliveredOrders = parseInt(checkResult.total || "0");
+      const ordersWithProductCost = parseInt(checkResult.with_product_cost || "0");
+      const ordersWithoutProductCost = totalDeliveredOrders - ordersWithProductCost;
       
-    } catch (sqlError) {
-      console.error('❌ Erro na query otimizada, usando fallback:', sqlError);
+      console.log(`✅ Cálculo SQL otimizado concluído usando custos dos pedidos - Produtos: €${totalProductCosts.toFixed(2)}, Envio: €${totalShippingCosts.toFixed(2)}, Pedidos processados: ${processedOrders}`);
+      console.log(`📊 Resumo da query otimizada: Total de pedidos entregues: ${totalDeliveredOrders}, Pedidos com product_cost: ${ordersWithProductCost}, Pedidos sem product_cost: ${ordersWithoutProductCost}`);
       
-      // FALLBACK: Método original em caso de erro
-      for (const order of deliveredOrders) {
-        if (!order.products) continue;
-        
-        const productsArray = order.products as any[];
-        if (!Array.isArray(productsArray)) continue;
-        
-        for (const productInfo of productsArray) {
-          const sku = productInfo?.sku || productInfo?.product_sku;
-          if (!sku) continue;
-          
-          const linkedProduct = await storage.getUserProductBySku(sku, storeId);
-          // Verificar se produto existe e se pertence à operação atual através do product
-          const isLinkedToOperation = linkedProduct && linkedProduct.product && linkedProduct.product.operationId === currentOperation.id;
-          
-          if (linkedProduct && isLinkedToOperation) {
-            const productCost = parseFloat(linkedProduct.product.costPrice || "0");
-            const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
-            
-            totalProductCosts += productCost;
-            totalShippingCosts += shippingCost;
-          }
-        }
-        
-        processedOrders++;
+      // Se há pedidos sem custos calculados, apenas logar aviso (não recalcular em tempo real)
+      // Os custos serão calculados automaticamente quando produtos forem vinculados
+      if (ordersWithoutProductCost > 0 && totalDeliveredOrders > 0) {
+        console.warn(`⚠️ Há ${ordersWithoutProductCost} pedidos entregues sem custos calculados (de ${totalDeliveredOrders} totais). Os custos serão calculados automaticamente quando produtos forem vinculados.`);
       }
       
-      console.log(`💰 Fallback calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${processedOrders}`);
+    } catch (sqlError) {
+      // Em caso de erro na query, apenas logar e usar valores zero
+      console.error('❌ Erro na query otimizada:', sqlError);
+      totalProductCosts = 0;
+      totalShippingCosts = 0;
+      processedOrders = 0;
     }
     
     
-    console.log(`💰 Cálculo final - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos: ${processedOrders}`);
+    console.log(`💰 Cálculo final - Produtos: €${totalProductCosts.toFixed(2)}, Envio: €${totalShippingCosts.toFixed(2)}, Pedidos: ${processedOrders}`);
     
     // NO CONVERSION - Use original currency values
     const totalProductCostsBRL = totalProductCosts; // Keep variable name for compatibility

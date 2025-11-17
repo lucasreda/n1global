@@ -1,9 +1,13 @@
-// 🛍️ Shopify Sync Worker - Polling inteligente para novos pedidos
+// 🛍️ Shopify Sync Worker - DESABILITADO
+// Pedidos são criados/atualizados APENAS via webhooks para melhor performance e menos erros
+// Este worker foi desabilitado em favor de webhooks em tempo real
+//
 // Polling adaptativo: 5 minutos (horário comercial 8h-20h UTC), 15 minutos (fora do horário)
+// Para reativar, descomente as linhas em server/index.ts
 
 import { db } from '../db';
-import { shopifyIntegrations, operations } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { shopifyIntegrations, operations, pollingExecutions } from '@shared/schema';
+import { eq, and, lt } from 'drizzle-orm';
 import { ShopifySyncService } from '../shopify-sync-service';
 import { shopifyService } from '../shopify-service';
 
@@ -35,6 +39,50 @@ function getPollingInterval(): number {
 }
 
 /**
+ * Registra execução de polling no banco de dados
+ */
+async function recordPollingExecution(
+  operationId: string,
+  ordersFound: number,
+  ordersProcessed: number,
+  success: boolean,
+  errorMessage: string | null = null
+): Promise<void> {
+  try {
+    await db.insert(pollingExecutions).values({
+      operationId,
+      provider: 'shopify',
+      executedAt: new Date(),
+      ordersFound,
+      ordersProcessed,
+      success,
+      errorMessage,
+    });
+  } catch (error) {
+    // Não bloquear o polling se falhar ao registrar
+    console.error(`⚠️ Erro ao registrar execução de polling:`, error);
+  }
+}
+
+/**
+ * Limpa execuções antigas (mantém apenas últimos 30 dias)
+ */
+async function cleanupOldPollingExecutions(): Promise<void> {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const result = await db
+      .delete(pollingExecutions)
+      .where(lt(pollingExecutions.executedAt, thirtyDaysAgo));
+    
+    console.log(`🧹 Limpeza de execuções de polling antigas concluída (mantidos últimos 30 dias)`);
+  } catch (error) {
+    console.error(`⚠️ Erro ao limpar execuções antigas:`, error);
+  }
+}
+
+/**
  * Polling inteligente: busca apenas pedidos novos/modificados
  */
 async function pollNewOrders() {
@@ -52,6 +100,11 @@ async function pollNewOrders() {
       .where(eq(shopifyIntegrations.status, 'active'));
 
     for (const integration of integrations) {
+      let ordersFound = 0;
+      let ordersProcessed = 0;
+      let executionSuccess = true;
+      let errorMessage: string | null = null;
+
       try {
         const tracking = lastSyncTracking.get(integration.operationId) || {
           lastSyncAt: null,
@@ -71,6 +124,10 @@ async function pollNewOrders() {
         } else if (tracking.lastSyncAt) {
           // Se não temos since_id mas temos lastSyncAt, usar updated_at_min
           params.updated_at_min = tracking.lastSyncAt.toISOString();
+        } else if (integration.integrationStartedAt) {
+          // Se não temos tracking mas temos integrationStartedAt, usar como filtro inicial
+          // Garantir que só buscamos pedidos criados a partir da data de integração
+          params.created_at_min = integration.integrationStartedAt.toISOString();
         }
 
         console.log(`🔍 [SHOPIFY POLLING] Buscando novos pedidos para operação ${integration.operationId}...`);
@@ -83,31 +140,55 @@ async function pollNewOrders() {
 
         if (!ordersResult.success || !ordersResult.orders || ordersResult.orders.length === 0) {
           console.log(`ℹ️ Nenhum pedido novo encontrado para operação ${integration.operationId}`);
-          continue;
-        }
+          // IMPORTANTE: Registrar execução mesmo sem pedidos novos
+          ordersFound = 0;
+          ordersProcessed = 0;
+        } else {
+          const newOrders = ordersResult.orders;
+          ordersFound = newOrders.length;
+          console.log(`📦 [SHOPIFY POLLING] Encontrados ${newOrders.length} pedidos novos/modificados para operação ${integration.operationId}`);
 
-        const newOrders = ordersResult.orders;
-        console.log(`📦 [SHOPIFY POLLING] Encontrados ${newOrders.length} pedidos novos/modificados para operação ${integration.operationId}`);
+          // Processar pedidos em lote pequeno
+          for (const order of newOrders) {
+            try {
+              await syncService.processShopifyOrderDirectly(integration.operationId, order);
+              ordersProcessed++;
 
-        // Processar pedidos em lote pequeno
-        for (const order of newOrders) {
-          try {
-            await syncService.processShopifyOrderDirectly(integration.operationId, order);
-
-            // Atualizar tracking com o último pedido processado
-            const maxId = Math.max(...newOrders.map(o => parseInt(o.id.toString())));
-            lastSyncTracking.set(integration.operationId, {
-              lastSyncAt: new Date(),
-              lastProcessedOrderId: maxId.toString()
-            });
-          } catch (error) {
-            console.error(`❌ Erro ao processar pedido ${order.name || order.id}:`, error);
+              // Atualizar tracking com o último pedido processado
+              const maxId = Math.max(...newOrders.map(o => parseInt(o.id.toString())));
+              lastSyncTracking.set(integration.operationId, {
+                lastSyncAt: new Date(),
+                lastProcessedOrderId: maxId.toString()
+              });
+            } catch (error) {
+              console.error(`❌ Erro ao processar pedido ${order.name || order.id}:`, error);
+            }
           }
+
+          console.log(`✅ [SHOPIFY POLLING] Processados ${ordersProcessed} pedidos para operação ${integration.operationId}`);
         }
 
-        console.log(`✅ [SHOPIFY POLLING] Processados ${newOrders.length} pedidos para operação ${integration.operationId}`);
+        // Atualizar tracking em memória mesmo quando não há pedidos novos
+        if (ordersFound === 0) {
+          lastSyncTracking.set(integration.operationId, {
+            lastSyncAt: new Date(),
+            lastProcessedOrderId: tracking.lastProcessedOrderId
+          });
+        }
+
       } catch (error) {
         console.error(`❌ Erro no polling Shopify para operação ${integration.operationId}:`, error);
+        executionSuccess = false;
+        errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      } finally {
+        // Sempre registrar execução no banco de dados
+        await recordPollingExecution(
+          integration.operationId,
+          ordersFound,
+          ordersProcessed,
+          executionSuccess,
+          errorMessage
+        );
       }
     }
   } catch (error) {
@@ -140,5 +221,16 @@ export function startShopifyPollingWorker() {
     const newInterval = getPollingInterval();
     console.log(`🔄 Ajustando intervalo de polling Shopify para ${newInterval / 1000 / 60} minutos`);
   }, 60 * 60 * 1000); // Verificar a cada hora
+
+  // Executar limpeza de registros antigos uma vez por dia
+  // Primeira execução após 1 hora (para dar tempo do sistema inicializar)
+  setTimeout(() => {
+    cleanupOldPollingExecutions().catch(console.error);
+  }, 60 * 60 * 1000); // 1 hora
+
+  // Depois, executar a cada 24 horas
+  setInterval(() => {
+    cleanupOldPollingExecutions().catch(console.error);
+  }, 24 * 60 * 60 * 1000); // 24 horas
 }
 

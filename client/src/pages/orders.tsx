@@ -3,43 +3,46 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation, DSS_OPERATION_ID } from "@/hooks/use-current-operation";
+import { useOperationPermissions } from "@/hooks/use-operation-permissions";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap, Send, Loader2 } from "lucide-react";
+import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, Send, Loader2 } from "lucide-react";
 import { cn, formatOperationCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
-import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
+import shopifyIcon from "@assets/shopify_1756413996883.webp";
+import cartpandaIcon from "@assets/carticon_1758210690464.avif";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Helper para retornar ícone da plataforma baseado no dataSource ou ID do pedido
 const getPlatformIcon = (order: any) => {
   // Verificar dataSource primeiro
   if (order.dataSource === 'shopify' || order.shopifyOrderId) {
     return (
-      <svg 
-        width="12" 
-        height="12" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        className="inline-block mr-1.5 flex-shrink-0"
-      >
-        <path 
-          d="M16.373 8.717c-.002-.03-.02-.057-.047-.068-.026-.011-1.028-.344-1.028-.344s-.676-.656-.745-.725c-.069-.069-.205-.048-.257-.034-.008.002-.145.045-.37.117-.223-1.004-.775-1.93-1.64-1.93h-.001c-.046 0-.092.003-.139.009-.022-.029-.045-.058-.069-.086-.346-.413-.785-.616-1.305-.616-1.012 0-2.018.754-2.831 2.122-.572.963-.997 2.168-1.127 3.197-1.006.311-1.71.529-1.717.531-.505.158-.519.173-.584.647-.05.362-1.338 10.313-1.338 10.313l10.063 1.74 4.464-1.103s-2.327-15.717-2.329-15.77zm-3.662-.863c-.191.06-.402.125-.63.196v-.155c0-.58-.079-1.049-.212-1.424.386.078.683.57.842 1.383zm-1.196.373c-.517.161-1.082.337-1.647.513.16-.612.465-1.218.831-1.61.121-.13.284-.284.478-.393.259.37.381.914.381 1.49v.001zm-.956-2.355c.119 0 .229.024.333.069-.172.11-.341.257-.494.426-.483.534-.856 1.363-1.019 2.276-.46.143-.91.284-1.339.418.319-1.307 1.177-3.189 2.519-3.189z" 
-          fill="white"
-        />
-      </svg>
+      <img 
+        src={shopifyIcon}
+        alt="Shopify"
+        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0 object-contain"
+        loading="lazy"
+        decoding="async"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
     );
   }
   
   if (order.dataSource === 'cartpanda' || order.cartpandaOrderId) {
     return (
       <img 
-        src="/cartpanda-logo.png"
+        src={cartpandaIcon}
         alt="CartPanda"
-        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0"
+        className="w-3 h-3 inline-block mr-1.5 rounded-sm flex-shrink-0 object-contain"
+        loading="lazy"
+        decoding="async"
         onError={(e) => {
           e.currentTarget.style.display = 'none';
         }}
@@ -52,7 +55,9 @@ const getPlatformIcon = (order: any) => {
       <img
         src="/digistore-logo.png"
         alt="Digistore24"
-        className="w-3 h-3 inline-block mr-1.5 rounded flex-shrink-0"
+        width="30"
+        height="30"
+        className="text-blue-400 rounded w-3 h-3 inline-block mr-1.5 flex-shrink-0 object-contain"
         decoding="async"
         onError={(e) => {
           e.currentTarget.style.display = 'none';
@@ -66,6 +71,7 @@ const getPlatformIcon = (order: any) => {
 };
 
 export default function Orders() {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
@@ -73,17 +79,16 @@ export default function Orders() {
   const [pageSize] = useState(15);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<any | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
-  const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
   const [sendingTrackingOrderId, setSendingTrackingOrderId] = useState<string | null>(null);
+  const { canEdit: canEditOrders, canDelete: canDeleteOrders, canCreate: canCreateOrders } = useOperationPermissions();
   const handleSendDigistoreTracking = async (order: any) => {
     if (!order?.id) return;
     const operationToUse = selectedOperation || DSS_OPERATION_ID;
 
     if (!operationToUse) {
       toast({
-        title: "Operação não selecionada",
-        description: "Selecione uma operação antes de enviar o tracking.",
+        title: t('orders.operationNotSelected'),
+        description: t('orders.selectOperationBeforeTracking'),
         variant: "destructive",
       });
       return;
@@ -99,27 +104,26 @@ export default function Orders() {
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody?.error || "Falha ao enviar tracking");
+        throw new Error(errorBody?.error || t('orders.failedToSendTracking'));
       }
 
       const data = await response.json();
       toast({
-        title: "Tracking enviado",
-        description: `Tracking ${data.trackingNumber} enviado para a Digistore24.`,
+        title: t('orders.trackingSent'),
+        description: t('orders.trackingSentDescription', { trackingNumber: data.trackingNumber }),
       });
 
       await queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
     } catch (error: any) {
       toast({
-        title: "Erro ao enviar tracking",
-        description: error?.message || "Não foi possível enviar o tracking.",
+        title: t('orders.errorSendingTracking'),
+        description: error?.message || t('orders.couldNotSendTracking'),
         variant: "destructive",
       });
     } finally {
       setSendingTrackingOrderId(null);
     }
   };
-  const [currentSyncState, setCurrentSyncState] = useState(false);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -189,16 +193,18 @@ export default function Orders() {
     enabled: !!selectedOperation,
   });
 
+
   // Fetch operation details to get currency
-  const { data: operationDetails } = useQuery({
-    queryKey: ['/api/operations', selectedOperation],
+  const { data: operationsList } = useQuery({
+    queryKey: ['/api/operations'],
     queryFn: async () => {
-      if (!selectedOperation) return null;
-      const response = await authenticatedApiRequest('GET', `/api/operations/${selectedOperation}`);
+      const response = await authenticatedApiRequest('GET', '/api/operations');
       return response.json();
     },
-    enabled: !!selectedOperation,
   });
+
+  // Find the selected operation from the list to get its currency
+  const operationDetails = operationsList?.find((op: any) => op.id === selectedOperation) || null;
 
   // Remove the query for operations with orders since we'll show a simple message
 
@@ -225,11 +231,11 @@ export default function Orders() {
     return (
       <div className="space-y-6">
         <DashboardHeader 
-          title="Gerenciar Pedidos" 
-          subtitle="Visualize e gerencie todos os pedidos COD" 
+          title={t('orders.manageOrders')} 
+          subtitle={t('orders.manageOrdersSubtitle')} 
         />
         <div className="glassmorphism rounded-2xl p-6">
-          <p className="text-gray-300">Carregando pedidos...</p>
+          <p className="text-gray-300">{t('orders.loadingOrders')}</p>
         </div>
       </div>
     );
@@ -263,21 +269,43 @@ export default function Orders() {
     }
   };
 
+  const operationCurrency = operationDetails?.currency || 'EUR';
+  
+  // Debug log para verificar moeda
+  if (operationDetails && selectedOperation) {
+    console.log('💰 [ORDERS] Moeda da operação:', {
+      operationId: selectedOperation,
+      operationName: operationDetails.name,
+      currency: operationDetails.currency,
+      usingCurrency: operationCurrency
+    });
+  }
+
   const formatAmount = (amount: any) => {
-    if (!amount) return formatOperationCurrency(0, 'EUR');
+    if (!amount) return formatOperationCurrency(0, operationCurrency);
     
     // Convert string to number if needed
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     
-    if (isNaN(numAmount)) return formatOperationCurrency(0, 'EUR');
-    return formatOperationCurrency(numAmount, 'EUR');
+    if (isNaN(numAmount)) return formatOperationCurrency(0, operationCurrency);
+    return formatOperationCurrency(numAmount, operationCurrency);
+  };
+
+  const formatCost = (cost: any) => {
+    if (!cost) return formatOperationCurrency(0, operationCurrency);
+    
+    // Convert string to number if needed
+    const numCost = typeof cost === 'string' ? parseFloat(cost) : cost;
+    
+    if (isNaN(numCost)) return formatOperationCurrency(0, operationCurrency);
+    return formatOperationCurrency(numCost, operationCurrency);
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-bold text-white" style={{ fontSize: '22px' }}>Pedidos</h1>
-        <p className="text-gray-400">Visualize e gerencie todos os pedidos</p>
+        <h1 className="font-bold text-white" style={{ fontSize: '22px' }}>{t('orders.title')}</h1>
+        <p className="text-gray-400">{t('orders.subtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -287,7 +315,7 @@ export default function Orders() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
             <Input
-              placeholder="Buscar por nome, telefone ou cidade..."
+              placeholder={t('orders.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-full h-9 glassmorphism-light border-gray-600 text-white placeholder:text-gray-400"
@@ -300,73 +328,38 @@ export default function Orders() {
             <div className="flex flex-col sm:flex-row gap-2 flex-1">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40 h-9 glassmorphism-light border-gray-600 text-white text-sm">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('orders.status')} />
                 </SelectTrigger>
                 <SelectContent className="glassmorphism border-gray-600">
-                  <SelectItem value="all">Status: Todos</SelectItem>
-                  <SelectItem value="delivered">Entregues</SelectItem>
-                  <SelectItem value="in transit">Em trânsito</SelectItem>
-                  <SelectItem value="shipped">Enviados</SelectItem>
-                  <SelectItem value="confirmed">Confirmados</SelectItem>
-                  <SelectItem value="cancelled">Cancelados</SelectItem>
-                  <SelectItem value="pending">Pendentes</SelectItem>
+                  <SelectItem value="all">{t('orders.statusAll')}</SelectItem>
+                  <SelectItem value="delivered">{t('orders.delivered')}</SelectItem>
+                  <SelectItem value="in transit">{t('orders.inTransit')}</SelectItem>
+                  <SelectItem value="shipped">{t('orders.shipped')}</SelectItem>
+                  <SelectItem value="confirmed">{t('orders.confirmed')}</SelectItem>
+                  <SelectItem value="cancelled">{t('orders.cancelled')}</SelectItem>
+                  <SelectItem value="pending">{t('orders.pending')}</SelectItem>
                 </SelectContent>
               </Select>
               
               <Select value={dateFilter} onValueChange={setDateFilter}>
                 <SelectTrigger className="w-full sm:w-36 h-9 glassmorphism-light border-gray-600 text-white text-sm">
-                  <SelectValue placeholder="Período" />
+                  <SelectValue placeholder={t('orders.period')} />
                 </SelectTrigger>
                 <SelectContent className="glassmorphism border-gray-600">
-                  <SelectItem value="1">Hoje</SelectItem>
-                  <SelectItem value="7">7 dias</SelectItem>
-                  <SelectItem value="30">30 dias</SelectItem>
-                  <SelectItem value="90">3 meses</SelectItem>
-                  <SelectItem value="365">1 ano</SelectItem>
-                  <SelectItem value="all">Período: Todos</SelectItem>
+                  <SelectItem value="1">{t('orders.today')}</SelectItem>
+                  <SelectItem value="7">{t('orders.days7')}</SelectItem>
+                  <SelectItem value="30">{t('orders.days30')}</SelectItem>
+                  <SelectItem value="90">{t('orders.months3')}</SelectItem>
+                  <SelectItem value="365">{t('orders.year1')}</SelectItem>
+                  <SelectItem value="all">{t('orders.periodAll')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            {/* Sync button and count */}
+            {/* Order count */}
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex-1">
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsSyncDialogOpen(true)}
-                        disabled={!integrationsStatus?.hasPlatform}
-                        className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap w-full ${
-                          isSyncingInBackground ? 'animate-pulse ring-2 ring-blue-500/50' : ''
-                        }`}
-                        data-testid="button-sync-complete"
-                      >
-                        {isSyncingInBackground ? (
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Zap className="w-4 h-4 mr-2" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {isSyncingInBackground ? "Sincronizando..." : "Sync Completo"}
-                        </span>
-                        <span className="sm:hidden">
-                          {isSyncingInBackground ? "Sincronizando..." : "Sync Completo"}
-                        </span>
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  {!integrationsStatus?.hasPlatform && (
-                    <TooltipContent className="max-w-xs">
-                      <p>É necessário conectar pelo menos uma plataforma (Shopify) para realizar a sincronização completa</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
               <div className="text-xs text-gray-300 text-center sm:text-left whitespace-nowrap">
-                {totalOrders} pedidos
+                {totalOrders} {t('orders.orders')}
               </div>
             </div>
           </div>
@@ -393,10 +386,10 @@ export default function Orders() {
               {orders.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="space-y-4">
-                    <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
+                    <p className="text-gray-400">{t('orders.noOrdersFound')}</p>
                     <div className="glassmorphism-light rounded-xl p-4 max-w-lg mx-auto">
                       <p className="text-gray-300 text-sm text-center">
-                        Se você fez a integração da Shopify, faça a sincronia completa novamente caso não veja seus pedidos.
+                        {t('orders.syncAgainIfNoOrders')}
                       </p>
                     </div>
                   </div>
@@ -445,19 +438,19 @@ export default function Orders() {
                     {/* Values */}
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <span className="text-gray-400">Valor:</span>
+                        <span className="text-gray-400">{t('orders.value')}:</span>
                         <div className="text-white font-semibold">{formatAmount(order.total || order.amount || order.lead_value)}</div>
                       </div>
                       <div>
-                        <span className="text-gray-400">B2B:</span>
-                        <div className="text-orange-400 font-semibold">€{parseFloat(order.productCost || '0').toFixed(2)}</div>
+                        <span className="text-gray-400">{t('orders.b2b')}:</span>
+                        <div className="text-orange-400 font-semibold">{formatCost(order.productCost)}</div>
                       </div>
                     </div>
                     
                     {/* Tracking and Actions */}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-600/30">
                       <div className="text-sm">
-                        <span className="text-gray-400">Tracking: </span>
+                        <span className="text-gray-400">{t('orders.tracking')}: </span>
                         <span className="text-blue-400 font-mono">{order.trackingNumber || '-'}</span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -487,18 +480,21 @@ export default function Orders() {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <span>Enviar tracking de teste</span>
+                              <span>{t('orders.sendTestTracking')}</span>
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditOrder(order.id)}
-                          className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
-                        >
-                          <Edit size={16} />
-                        </Button>
+                        {canEditOrders('orders') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditOrder(order.id)}
+                            className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
+                            title="Editar pedido"
+                          >
+                            <Edit size={16} />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -511,17 +507,17 @@ export default function Orders() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-600/30">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">REF.S / REF</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Tracking Number</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Phone</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Lead Value</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Preço B2B</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Custo Envio</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">City</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Delivery</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Payment</th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-gray-300">Ações</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.ref')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.trackingNumber')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.name')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.phone')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.leadValue')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.b2bPrice')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.shippingCost')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.city')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.delivery')}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">{t('orders.payment')}</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-gray-300">{t('orders.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-600/30">
@@ -529,10 +525,10 @@ export default function Orders() {
                     <tr>
                       <td colSpan={11} className="py-8 text-center">
                         <div className="space-y-4">
-                          <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
+                          <p className="text-gray-400">{t('orders.noOrdersFound')}</p>
                           <div className="glassmorphism-light rounded-xl p-4 max-w-lg mx-auto">
                             <p className="text-gray-300 text-sm text-center">
-                              Se você fez a integração da Shopify, faça a sincronia completa novamente caso não veja seus pedidos.
+                              {t('orders.syncAgainIfNoOrders')}
                             </p>
                           </div>
                         </div>
@@ -565,12 +561,26 @@ export default function Orders() {
                             </div>
                             <div className="text-gray-400 text-xs">
                               {(() => {
-                                // Extract SKU from Shopify products array
+                                // Extract SKUs from products array (pode ter múltiplos SKUs concatenados)
                                 if (order.products && Array.isArray(order.products) && order.products.length > 0) {
-                                  const sku = order.products[0]?.sku;
-                                  return sku ? sku.toLowerCase() : 'No SKU';
+                                  const allSkus: string[] = [];
+                                  
+                                  // Extrair todos os SKUs de todos os produtos
+                                  for (const product of order.products) {
+                                    if (product?.sku) {
+                                      // Dividir SKU concatenado por "+" se houver
+                                      const skus = product.sku.split('+').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+                                      allSkus.push(...skus);
+                                    }
+                                  }
+                                  
+                                  if (allSkus.length > 0) {
+                                    // Se houver múltiplos SKUs, mostrar separados por vírgula
+                                    return allSkus.map(sku => sku.toLowerCase()).join(', ');
+                                  }
+                                  return t('orders.noSku');
                                 }
-                                return order.refNumber || 'No SKU';
+                                return order.refNumber || t('orders.noSku');
                               })()}
                             </div>
                           </div>
@@ -588,10 +598,10 @@ export default function Orders() {
                           {formatAmount(order.total || order.amount || order.lead_value)}
                         </td>
                         <td className="py-4 px-4 text-sm text-orange-400 font-semibold">
-                          €{parseFloat(order.productCost || '0').toFixed(2)}
+                          {formatCost(order.productCost)}
                         </td>
                         <td className="py-4 px-4 text-sm text-cyan-400 font-semibold">
-                          €{parseFloat(order.shippingCost || '0').toFixed(2)}
+                          {formatCost(order.shippingCost)}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-200">
                           {order.customerCity || order.city || '-'}
@@ -644,18 +654,21 @@ export default function Orders() {
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <span>Enviar tracking de teste</span>
+                                  <span>{t('orders.sendTestTracking')}</span>
                                 </TooltipContent>
                               </Tooltip>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditOrder(order.id)}
-                              className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
-                            >
-                              <Edit size={16} />
-                            </Button>
+                            {canEditOrders('orders') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditOrder(order.id)}
+                                className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
+                                title="Editar pedido"
+                              >
+                                <Edit size={16} />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -671,7 +684,11 @@ export default function Orders() {
                 {/* Desktop Layout */}
                 <div className="hidden md:flex items-center justify-between">
                   <p className="text-sm text-gray-300">
-                    Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalOrders)} de {totalOrders} pedidos
+                    {t('orders.showingOrders', { 
+                      start: ((currentPage - 1) * pageSize) + 1, 
+                      end: Math.min(currentPage * pageSize, totalOrders), 
+                      total: totalOrders 
+                    })}
                   </p>
                   <div className="flex items-center space-x-2">
                     <Button
@@ -785,7 +802,11 @@ export default function Orders() {
                   </div>
                   
                   <p className="text-sm text-gray-300 text-center">
-                    Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalOrders)} de {totalOrders} pedidos
+                    {t('orders.showingOrders', { 
+                      start: ((currentPage - 1) * pageSize) + 1, 
+                      end: Math.min(currentPage * pageSize, totalOrders), 
+                      total: totalOrders 
+                    })}
                   </p>
                 </div>
               </div>
@@ -800,26 +821,6 @@ export default function Orders() {
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         operationCurrency={operationDetails?.currency || 'EUR'}
-      />
-
-      {/* Complete Sync Dialog */}
-      <CompleteSyncDialog 
-        isOpen={isSyncDialogOpen}
-        onClose={() => {
-          setIsSyncDialogOpen(false);
-        }}
-        onSyncStateChange={(isRunning) => {
-          setCurrentSyncState(isRunning);
-          if (!isRunning) {
-            setIsSyncingInBackground(false);
-          }
-        }}
-        onComplete={() => {
-          setIsSyncingInBackground(false);
-          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
-        }}
-        operationId={selectedOperation}
       />
     </div>
   );

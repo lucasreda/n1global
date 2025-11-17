@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,7 +43,9 @@ import {
   RefreshCw,
   MapPin,
   Ban,
-  FileText
+  FileText,
+  Upload,
+  X
 } from "lucide-react";
 import logoImage from "@assets/INSIDE_1756100933599.png";
 
@@ -1211,17 +1213,19 @@ export default function InsidePage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEditProduct(product)}
-                                className="text-blue-400 hover:bg-blue-500/20"
+                                className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 flex items-center justify-center"
                                 data-testid={`button-edit-product-${product.id}`}
+                                title="Editar produto"
                               >
-                                <Edit className="h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDeleteProduct(product)}
-                                className="text-red-400 hover:bg-red-500/20"
+                                className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/20"
                                 data-testid={`button-delete-product-${product.id}`}
+                                title="Excluir produto"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1699,8 +1703,8 @@ export default function InsidePage() {
             setProductToEdit(null);
           }}
           product={productToEdit}
-          onSubmit={editProductMutation.mutate}
-          isLoading={editProductMutation.isPending}
+          onSubmit={() => {}}
+          isLoading={false}
         />
       )}
 
@@ -2552,172 +2556,503 @@ function EditProductModal({
   onSubmit: (data: Partial<Product> & { id: string }) => void;
   isLoading: boolean;
 }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>(product.imageUrl || "");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState({
     name: product.name,
     sku: product.sku,
-    type: product.type,
-    price: product.price,
-    costPrice: product.costPrice,
-    shippingCost: product.shippingCost,
-    description: product.description || '',
-    imageUrl: product.imageUrl || '',
-    isActive: product.isActive
+    type: (product.type || "nutraceutico") as "fisico" | "nutraceutico",
+    price: product.price.toString(),
+    costPrice: (product.costPrice || 0).toString(),
+    shippingCost: (product.shippingCost || 0).toString(),
+    description: product.description || "",
+    weight: "",
+    height: "",
+    width: "",
+    depth: "",
+    availableCountries: [] as string[]
+  });
+
+  // Reset form when product changes
+  useEffect(() => {
+    if (product && open) {
+      setFormData({
+        name: product.name,
+        sku: product.sku,
+        type: (product.type || "nutraceutico") as "fisico" | "nutraceutico",
+        price: product.price.toString(),
+        costPrice: (product.costPrice || 0).toString(),
+        shippingCost: (product.shippingCost || 0).toString(),
+        description: product.description || "",
+        weight: "",
+        height: "",
+        width: "",
+        depth: "",
+        availableCountries: []
+      });
+      setImagePreview(product.imageUrl || "");
+      setImageFile(null);
+    }
+  }, [product, open]);
+
+  const handleImageSelect = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageSelect(file);
+  };
+
+  const updateProductMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      let imageUrl = product.imageUrl || "";
+
+      // Upload image if selected
+      if (imageFile) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', imageFile);
+
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            ...(token && { "Authorization": `Bearer ${token}` }),
+          },
+          credentials: 'include',
+          body: formDataUpload
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Erro ao fazer upload da imagem');
+        }
+
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url;
+      }
+
+      // Update product
+      const productPayload: any = {
+        name: formData.name,
+        sku: formData.sku,
+        type: formData.type,
+        price: parseFloat(formData.price),
+        costPrice: parseFloat(formData.costPrice),
+        shippingCost: parseFloat(formData.shippingCost),
+        description: formData.description,
+        imageUrl,
+        isActive: product.isActive
+      };
+
+      if (formData.weight) productPayload.weight = parseFloat(formData.weight);
+      if (formData.height) productPayload.height = parseFloat(formData.height);
+      if (formData.width) productPayload.width = parseFloat(formData.width);
+      if (formData.depth) productPayload.depth = parseFloat(formData.depth);
+      if (formData.availableCountries.length > 0) productPayload.availableCountries = formData.availableCountries;
+      
+      const response = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: 'include',
+        body: JSON.stringify(productPayload)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao atualizar produto');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Produto atualizado",
+        description: "O produto foi atualizado com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      onClose();
+      setImageFile(null);
+      setImagePreview(product.imageUrl || "");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.sku && formData.price > 0) {
-      onSubmit({ ...formData, id: product.id });
-    }
+    updateProductMutation.mutate();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Edit className="h-5 w-5" />
-            Editar Produto
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Modifique as informações do produto
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="edit-name">Nome do Produto *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nome do produto"
-                className="bg-gray-800 border-gray-600 text-white"
-                required
-              />
+      <DialogContent className="max-w-full h-screen w-screen m-0 rounded-none p-0 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="border-b px-8 py-6 flex-shrink-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Edit className="h-6 w-6" />
+              Editar Produto
+            </DialogTitle>
+          </DialogHeader>
+        </div>
+
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8 pb-24">
+              {/* Left Column - Image Upload */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Imagem do Produto</h3>
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-800'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {imagePreview ? (
+                      <div className="space-y-4">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-64 object-contain rounded-lg bg-gray-50 dark:bg-gray-900"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Trocar Imagem
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setImageFile(null);
+                              setImagePreview("");
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          Arraste uma imagem ou clique para selecionar
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Selecionar Imagem
+                        </Button>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Country Availability */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Países Disponíveis</h3>
+                  <div className="border rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { code: 'ES', name: 'Espanha', flag: '🇪🇸' },
+                        { code: 'IT', name: 'Itália', flag: '🇮🇹' },
+                        { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+                        { code: 'RO', name: 'Romênia', flag: '🇷🇴' },
+                        { code: 'GR', name: 'Grécia', flag: '🇬🇷' },
+                        { code: 'SK', name: 'Eslováquia', flag: '🇸🇰' },
+                        { code: 'HR', name: 'Croácia', flag: '🇭🇷' },
+                        { code: 'CZ', name: 'República Tcheca', flag: '🇨🇿' },
+                        { code: 'PL', name: 'Polônia', flag: '🇵🇱' },
+                        { code: 'HU', name: 'Hungria', flag: '🇭🇺' },
+                        { code: 'AT', name: 'Áustria', flag: '🇦🇹' },
+                        { code: 'UA', name: 'Ucrânia', flag: '🇺🇦' },
+                        { code: 'NL', name: 'Holanda', flag: '🇳🇱' },
+                        { code: 'AE', name: 'Emirados Árabes Unidos', flag: '🇦🇪' },
+                        { code: 'SA', name: 'Arábia Saudita', flag: '🇸🇦' },
+                      ].map((country) => (
+                        <button
+                          key={country.code}
+                          type="button"
+                          onClick={() => {
+                            const isSelected = formData.availableCountries.includes(country.code);
+                            setFormData({
+                              ...formData,
+                              availableCountries: isSelected
+                                ? formData.availableCountries.filter(c => c !== country.code)
+                                : [...formData.availableCountries, country.code]
+                            });
+                          }}
+                          className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                            formData.availableCountries.includes(country.code)
+                              ? 'border-primary bg-primary/10'
+                              : 'border-gray-800 hover:border-gray-600'
+                          }`}
+                          data-testid={`button-country-${country.code.toLowerCase()}`}
+                        >
+                          <span className="text-2xl">{country.flag}</span>
+                          <span className="text-sm font-medium">{country.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {formData.availableCountries.length > 0 && (
+                      <div className="mt-3 text-sm text-muted-foreground">
+                        {formData.availableCountries.length} {formData.availableCountries.length === 1 ? 'país selecionado' : 'países selecionados'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Product Details */}
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Nome do Produto *</Label>
+                      <Input
+                        id="edit-name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        placeholder="Ex: Vitamina C 1000mg"
+                        data-testid="input-edit-product-name"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-sku">SKU *</Label>
+                        <Input
+                          id="edit-sku"
+                          value={formData.sku}
+                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                          required
+                          placeholder="Ex: VIT-C-1000"
+                          data-testid="input-edit-product-sku"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-type">Tipo *</Label>
+                        <Select 
+                          value={formData.type} 
+                          onValueChange={(value: "fisico" | "nutraceutico") => setFormData({ ...formData, type: value })}
+                        >
+                          <SelectTrigger id="edit-type" data-testid="select-edit-product-type">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nutraceutico">Nutraceutico</SelectItem>
+                            <SelectItem value="fisico">Físico</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-description">Descrição</Label>
+                      <Input
+                        id="edit-description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Descrição breve do produto"
+                        data-testid="input-edit-product-description"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Preços</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-price">Venda (€) *</Label>
+                      <Input
+                        id="edit-price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                        placeholder="0.00"
+                        data-testid="input-edit-product-price"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-costPrice">Custo (€) *</Label>
+                      <Input
+                        id="edit-costPrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.costPrice}
+                        onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                        required
+                        placeholder="0.00"
+                        data-testid="input-edit-product-cost"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-shippingCost">Envio (€) *</Label>
+                      <Input
+                        id="edit-shippingCost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.shippingCost}
+                        onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
+                        required
+                        placeholder="0.00"
+                        data-testid="input-edit-product-shipping"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dimensions & Weight */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Dimensões e Peso</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-weight">Peso (kg)</Label>
+                      <Input
+                        id="edit-weight"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.weight}
+                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-edit-product-weight"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-height">Altura (cm)</Label>
+                      <Input
+                        id="edit-height"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.height}
+                        onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-edit-product-height"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-width">Largura (cm)</Label>
+                      <Input
+                        id="edit-width"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.width}
+                        onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-edit-product-width"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-depth">Profundidade (cm)</Label>
+                      <Input
+                        id="edit-depth"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.depth}
+                        onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-edit-product-depth"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="edit-sku">SKU *</Label>
-              <Input
-                id="edit-sku"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="SKU único"
-                className="bg-gray-800 border-gray-600 text-white"
-                required
-              />
-            </div>
-          </div>
+          </form>
 
-          <div>
-            <Label htmlFor="edit-type">Tipo de Produto</Label>
-            <Select 
-              value={formData.type} 
-              onValueChange={(value) => setFormData({ ...formData, type: value })}
-            >
-              <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
-                <SelectItem value="fisico">Físico</SelectItem>
-                <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="edit-price">Preço (€) *</Label>
-              <Input
-                id="edit-price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="bg-gray-800 border-gray-600 text-white"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-costPrice">Custo (€)</Label>
-              <Input
-                id="edit-costPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="bg-gray-800 border-gray-600 text-white"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-shippingCost">Frete (€)</Label>
-              <Input
-                id="edit-shippingCost"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.shippingCost}
-                onChange={(e) => setFormData({ ...formData, shippingCost: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                className="bg-gray-800 border-gray-600 text-white"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="edit-description">Descrição</Label>
-            <Input
-              id="edit-description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descrição do produto"
-              className="bg-gray-800 border-gray-600 text-white"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="edit-imageUrl">URL da Imagem</Label>
-            <Input
-              id="edit-imageUrl"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              placeholder="https://..."
-              className="bg-gray-800 border-gray-600 text-white"
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="edit-isActive"
-              checked={formData.isActive}
-              onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked as boolean })}
-            />
-            <Label htmlFor="edit-isActive">Produto ativo</Label>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button 
-              type="button"
-              variant="outline" 
-              onClick={onClose}
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit"
-              disabled={isLoading || !formData.name || !formData.sku || formData.price <= 0}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isLoading ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </DialogFooter>
-        </form>
+        {/* Footer */}
+        <div className="border-t px-8 py-4 flex justify-end gap-3 flex-shrink-0">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose} 
+            disabled={updateProductMutation.isPending}
+            data-testid="button-cancel-edit-product"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={updateProductMutation.isPending}
+            className="flex items-center gap-2 text-white"
+            data-testid="button-save-product"
+          >
+            <Edit className="h-4 w-4 text-white" />
+            {updateProductMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

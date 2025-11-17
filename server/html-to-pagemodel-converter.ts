@@ -1,9 +1,14 @@
 import type { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
-import type { PageModelV3, BlockSectionV3, BlockRowV3, BlockColumnV3, BlockElementV3, ResponsiveStylesV3, StateStylesV3, DesignTokensV3, AnimationV3, CSSPropertiesV3, LayoutTypeV3, SemanticTagV3, PseudoElementsV3 } from "@shared/schema";
+import type { PageModelV3, BlockSectionV3, BlockRowV3, BlockColumnV3, BlockElementV3, ResponsiveStylesV3, StateStylesV3, DesignTokensV3, AnimationV3, PseudoElementsV3 } from "@shared/schema";
 import type { PageModelV4, PageNodeV4, NodeType, ResponsiveStylesV4, StateStylesV4 } from "@shared/schema";
 import { parseDocument } from "htmlparser2";
 import type { Element, ChildNode, Text } from "domhandler";
 import * as csstree from "css-tree";
+
+// Type definitions for missing types
+type CSSPropertiesV3 = Record<string, string>;
+type LayoutTypeV3 = 'flex' | 'grid' | 'absolute' | 'fixed' | 'block' | undefined;
+type SemanticTagV3 = 'div' | 'section' | 'article' | 'aside' | 'header' | 'footer' | 'nav' | 'main' | 'figure';
 
 /**
  * Converts HTML to PageModelV2 structure

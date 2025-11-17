@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,10 @@ import {
   FileText,
   Settings,
   Upload,
-  X
+  X,
+  Pencil,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 
 interface Product {
@@ -836,13 +839,514 @@ function NewProductModal({ open, onClose }: {
   );
 }
 
+// Edit Product Modal Component
+function EditProductModal({ 
+  product,
+  open, 
+  onClose 
+}: { 
+  product: Product;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>(product.imageUrl || "");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [formData, setFormData] = useState({
+    name: product.name,
+    sku: product.sku,
+    type: (product.category === 'nutraceutico' ? 'nutraceutico' : 'fisico') as "fisico" | "nutraceutico",
+    price: product.price.toString(),
+    costPrice: (product.costPrice || 0).toString(),
+    shippingCost: "",
+    description: product.description || "",
+    weight: "",
+    height: "",
+    width: "",
+    depth: "",
+    availableCountries: [] as string[]
+  });
+
+  // Reset form when product changes
+  useEffect(() => {
+    if (product && open) {
+      setFormData({
+        name: product.name,
+        sku: product.sku,
+        type: (product.category === 'nutraceutico' ? 'nutraceutico' : 'fisico') as "fisico" | "nutraceutico",
+        price: product.price.toString(),
+        costPrice: (product.costPrice || 0).toString(),
+        shippingCost: "",
+        description: product.description || "",
+        weight: "",
+        height: "",
+        width: "",
+        depth: "",
+        availableCountries: []
+      });
+      setImagePreview(product.imageUrl || "");
+      setImageFile(null);
+    }
+  }, [product, open]);
+
+  const handleImageSelect = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageSelect(file);
+  };
+
+  const updateProductMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      let imageUrl = product.imageUrl || "";
+
+      // Upload image if selected
+      if (imageFile) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', imageFile);
+
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            ...(token && { "Authorization": `Bearer ${token}` }),
+          },
+          credentials: 'include',
+          body: formDataUpload
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Erro ao fazer upload da imagem');
+        }
+
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url;
+      }
+
+      // Update product
+      const productPayload: any = {
+        name: formData.name,
+        sku: formData.sku,
+        type: formData.type,
+        price: parseFloat(formData.price),
+        costPrice: parseFloat(formData.costPrice),
+        description: formData.description,
+        imageUrl,
+      };
+
+      if (formData.shippingCost) productPayload.shippingCost = parseFloat(formData.shippingCost);
+      if (formData.weight) productPayload.weight = parseFloat(formData.weight);
+      if (formData.height) productPayload.height = parseFloat(formData.height);
+      if (formData.width) productPayload.width = parseFloat(formData.width);
+      if (formData.depth) productPayload.depth = parseFloat(formData.depth);
+      if (formData.availableCountries.length > 0) productPayload.availableCountries = formData.availableCountries;
+      
+      const response = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: 'include',
+        body: JSON.stringify(productPayload)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao atualizar produto');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Produto atualizado",
+        description: "O produto foi atualizado com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      onClose();
+      setImageFile(null);
+      setImagePreview(product.imageUrl || "");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProductMutation.mutate();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-full h-screen w-screen m-0 rounded-none p-0 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="border-b px-8 py-6 flex-shrink-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Pencil className="h-6 w-6" />
+              Editar Produto
+            </DialogTitle>
+          </DialogHeader>
+        </div>
+
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8 pb-24">
+              {/* Left Column - Image Upload */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Imagem do Produto</h3>
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-800'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {imagePreview ? (
+                      <div className="space-y-4">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-64 object-contain rounded-lg bg-gray-50 dark:bg-gray-900"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Trocar Imagem
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setImageFile(null);
+                              setImagePreview("");
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          Arraste uma imagem ou clique para selecionar
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Selecionar Imagem
+                        </Button>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Country Availability */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Países Disponíveis</h3>
+                  <div className="border rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { code: 'ES', name: 'Espanha', flag: '🇪🇸' },
+                        { code: 'IT', name: 'Itália', flag: '🇮🇹' },
+                        { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+                        { code: 'RO', name: 'Romênia', flag: '🇷🇴' },
+                        { code: 'GR', name: 'Grécia', flag: '🇬🇷' },
+                        { code: 'SK', name: 'Eslováquia', flag: '🇸🇰' },
+                        { code: 'HR', name: 'Croácia', flag: '🇭🇷' },
+                        { code: 'CZ', name: 'República Tcheca', flag: '🇨🇿' },
+                        { code: 'PL', name: 'Polônia', flag: '🇵🇱' },
+                        { code: 'HU', name: 'Hungria', flag: '🇭🇺' },
+                        { code: 'AT', name: 'Áustria', flag: '🇦🇹' },
+                        { code: 'UA', name: 'Ucrânia', flag: '🇺🇦' },
+                        { code: 'NL', name: 'Holanda', flag: '🇳🇱' },
+                        { code: 'AE', name: 'Emirados Árabes Unidos', flag: '🇦🇪' },
+                        { code: 'SA', name: 'Arábia Saudita', flag: '🇸🇦' },
+                      ].map((country) => (
+                        <button
+                          key={country.code}
+                          type="button"
+                          onClick={() => {
+                            const isSelected = formData.availableCountries.includes(country.code);
+                            setFormData({
+                              ...formData,
+                              availableCountries: isSelected
+                                ? formData.availableCountries.filter(c => c !== country.code)
+                                : [...formData.availableCountries, country.code]
+                            });
+                          }}
+                          className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                            formData.availableCountries.includes(country.code)
+                              ? 'border-primary bg-primary/10'
+                              : 'border-gray-800 hover:border-gray-600'
+                          }`}
+                        >
+                          <span className="text-2xl">{country.flag}</span>
+                          <span className="text-sm font-medium">{country.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {formData.availableCountries.length > 0 && (
+                      <div className="mt-3 text-sm text-muted-foreground">
+                        {formData.availableCountries.length} {formData.availableCountries.length === 1 ? 'país selecionado' : 'países selecionados'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Product Details */}
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Nome do Produto *</Label>
+                      <Input
+                        id="edit-name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        placeholder="Ex: Vitamina C 1000mg"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-sku">SKU *</Label>
+                        <Input
+                          id="edit-sku"
+                          value={formData.sku}
+                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                          required
+                          placeholder="Ex: VIT-C-1000"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-type">Tipo *</Label>
+                        <Select 
+                          value={formData.type} 
+                          onValueChange={(value: "fisico" | "nutraceutico") => setFormData({ ...formData, type: value })}
+                        >
+                          <SelectTrigger id="edit-type">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nutraceutico">Nutraceutico</SelectItem>
+                            <SelectItem value="fisico">Físico</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-description">Descrição</Label>
+                      <Input
+                        id="edit-description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Descrição breve do produto"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Preços</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-price">Venda (€) *</Label>
+                      <Input
+                        id="edit-price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-costPrice">Custo (€) *</Label>
+                      <Input
+                        id="edit-costPrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.costPrice}
+                        onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                        required
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-shippingCost">Envio (€)</Label>
+                      <Input
+                        id="edit-shippingCost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.shippingCost}
+                        onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dimensions & Weight */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Dimensões e Peso</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-weight">Peso (kg)</Label>
+                      <Input
+                        id="edit-weight"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.weight}
+                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-height">Altura (cm)</Label>
+                      <Input
+                        id="edit-height"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.height}
+                        onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-width">Largura (cm)</Label>
+                      <Input
+                        id="edit-width"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.width}
+                        onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-depth">Profundidade (cm)</Label>
+                      <Input
+                        id="edit-depth"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.depth}
+                        onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+
+        {/* Footer */}
+        <div className="border-t px-8 py-4 flex justify-end gap-3 flex-shrink-0">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose} 
+            disabled={updateProductMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={updateProductMutation.isPending}
+            className="flex items-center gap-2 text-white"
+          >
+            <Pencil className="h-4 w-4 text-white" />
+            {updateProductMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ['/api/admin/products', searchTerm, statusFilter, supplierFilter],
@@ -915,6 +1419,47 @@ export default function AdminProducts() {
   const getStatusCount = (status: string) => {
     if (!products) return 0;
     return products.filter(product => product.status === status).length;
+  };
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao excluir produto');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      toast({
+        title: "Produto excluído",
+        description: "O produto foi excluído com sucesso.",
+      });
+      setProductToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir produto",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const confirmDeleteProduct = () => {
+    if (productToDelete) {
+      deleteProductMutation.mutate(productToDelete.id);
+    }
   };
 
   return (
@@ -1140,12 +1685,23 @@ export default function AdminProducts() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setEditProduct(product)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Editar produto"
+                            data-testid={`button-edit-product-${product.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           {product.status === 'approved' && (
                             <Button 
                               variant="ghost" 
                               size="sm"
                               onClick={() => setViewProduct(product)}
                               data-testid={`button-view-product-${product.id}`}
+                              title="Visualizar produto"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -1156,6 +1712,7 @@ export default function AdminProducts() {
                               size="sm"
                               onClick={() => setSelectedProduct(product)}
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              title="Aprovar produto"
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Aprovar
@@ -1167,11 +1724,22 @@ export default function AdminProducts() {
                               size="sm"
                               onClick={() => setSelectedProduct(product)}
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Configurar custos"
                             >
                               <Settings className="h-4 w-4 mr-1" />
                               Configurar Custos
                             </Button>
                           )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setProductToDelete(product)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Excluir produto"
+                            data-testid={`button-delete-product-${product.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -1359,6 +1927,52 @@ export default function AdminProducts() {
         open={showNewProductModal}
         onClose={() => setShowNewProductModal(false)}
       />
+
+      {/* Edit Product Modal */}
+      {editProduct && (
+        <EditProductModal
+          product={editProduct}
+          open={!!editProduct}
+          onClose={() => setEditProduct(null)}
+        />
+      )}
+
+      {/* Delete Product Confirmation Modal */}
+      <Dialog open={!!productToDelete} onOpenChange={() => setProductToDelete(null)}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Exclusão
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-300 mb-4">
+              Tem certeza que deseja excluir o produto <strong className="text-white">{productToDelete?.name}</strong>?
+            </p>
+            <p className="text-sm text-gray-400">
+              Esta ação não pode ser desfeita. Todos os dados relacionados a este produto serão permanentemente removidos.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setProductToDelete(null)}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteProduct}
+              disabled={deleteProductMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteProductMutation.isPending ? 'Excluindo...' : 'Excluir Produto'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
