@@ -19,6 +19,7 @@ import { storeContext } from "./middleware/store-context";
 import { validateOperationAccess as operationAccess } from "./middleware/operation-access";
 import { requireTeamManagementPermission, hasPermission, getDefaultPermissions, requirePermission } from "./middleware/team-permissions";
 import { teamInvitationEmailService } from "./services/team-invitation-email-service";
+import { adminUserEmailService } from "./services/admin-user-email-service";
 import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
@@ -8159,6 +8160,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
           )
         );
+      }
+
+      // Enviar email com credenciais para o novo usuário
+      try {
+        console.log(`📧 Enviando email de credenciais para: ${email}`);
+        await adminUserEmailService.sendCredentialsEmail({
+          toEmail: email,
+          toName: name,
+          password: password, // Senha em texto plano (antes do hash)
+          createdBy: req.user?.name || req.user?.email,
+        });
+        console.log(`✅ Email de credenciais enviado com sucesso para: ${email}`);
+      } catch (emailError) {
+        // Não falhar a criação do usuário se o email falhar, apenas logar o erro
+        console.error(`❌ Erro ao enviar email de credenciais para ${email}:`, emailError);
       }
 
       res.status(201).json(newUser);
