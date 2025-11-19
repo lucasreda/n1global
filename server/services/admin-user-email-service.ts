@@ -1,7 +1,7 @@
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 
-type MailgunClient = ReturnType<ReturnType<typeof Mailgun)['client']>;
+type MailgunClient = ReturnType<ReturnType<typeof Mailgun>['client']>;
 
 /**
  * Serviço de envio de credenciais administrativas via Mailgun.
