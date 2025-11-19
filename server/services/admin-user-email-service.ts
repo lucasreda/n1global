@@ -126,7 +126,7 @@ export class AdminUserEmailService {
     const plainText = `
 ${greetingName}
 
-Seu acesso ao painel administrativo da N1 Global foi criado.
+Seu acesso a N1 Global foi criado.
 
 Credenciais de acesso:
 Email: ${toEmail}
@@ -164,7 +164,7 @@ Equipe N1 Global
       
       <p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;">${greetingName}</p>
       <p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;">
-        Seu acesso ao painel administrativo da N1 Global foi criado.
+        Seu acesso a N1 Global foi criado.
       </p>
       <div style="margin:24px 0;padding:16px;border:1px solid #d2d6dc;border-radius:6px;background-color:#f9fafb;">
         <p style="margin:0 0 12px 0;font-size:14px;line-height:1.5;color:#52606d;">
