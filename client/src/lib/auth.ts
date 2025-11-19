@@ -1,4 +1,5 @@
-import { apiRequest } from "./queryClient";
+import { apiRequest, generateSessionId, clearSessionId } from "./queryClient";
+import { queryClient } from "./queryClient";
 
 interface LoginCredentials {
   email: string;
@@ -31,8 +32,11 @@ export const authService = {
     const response = await apiRequest("/api/auth/login", "POST", credentials);
     const data = await response.json();
     
+    // Gerar novo sessionId ao fazer login
+    const sessionId = generateSessionId();
     localStorage.setItem("auth_token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem("auth_session_id", sessionId);
     
     return data;
   },
@@ -41,8 +45,11 @@ export const authService = {
     const response = await apiRequest("/api/auth/register", "POST", credentials);
     const data = await response.json();
     
+    // Gerar novo sessionId ao fazer registro
+    const sessionId = generateSessionId();
     localStorage.setItem("auth_token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem("auth_session_id", sessionId);
     
     return data;
   },
@@ -53,11 +60,20 @@ export const authService = {
   },
 
   logout() {
+    // Limpar sessionId e cancelar requisições pendentes
+    clearSessionId();
+    // Invalidar todas as queries do React Query
+    queryClient.clear();
+    // Limpar dados de autenticação
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user");
   },
 
   forceLogout() {
+    // Limpar sessionId e cancelar requisições pendentes
+    clearSessionId();
+    // Invalidar todas as queries do React Query
+    queryClient.clear();
     // Clear all localStorage data
     localStorage.clear();
     // Also clear sessionStorage just in case

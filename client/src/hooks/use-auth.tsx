@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { authService } from "@/lib/auth";
 import { useOperationStore } from "@/store/operations";
+import { queryClient, generateSessionId, getCurrentSessionId } from "@/lib/queryClient";
 
 interface User {
   id: string;
@@ -32,6 +33,9 @@ export const useAuth = create<AuthState>((set, get) => ({
       useOperationStore.getState().setSelectedOperation(null);
       localStorage.removeItem('current_operation_id');
       
+      // Invalidar todas as queries antes do login para evitar conflitos
+      queryClient.clear();
+      
       const response = await authService.login({ email, password });
       set({
         user: response.user,
@@ -46,6 +50,9 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   register: async (name: string, email: string, password: string, role: string = "user") => {
     try {
+      // Invalidar todas as queries antes do registro para evitar conflitos
+      queryClient.clear();
+      
       const response = await authService.register({ name, email, password, role });
       set({
         user: response.user,
@@ -63,7 +70,9 @@ export const useAuth = create<AuthState>((set, get) => ({
     useOperationStore.getState().setSelectedOperation(null);
     localStorage.removeItem('current_operation_id');
     
+    // Invalidar todas as queries e cancelar requisições pendentes
     authService.logout();
+    
     set({
       user: null,
       isAuthenticated: false,
@@ -76,6 +85,12 @@ export const useAuth = create<AuthState>((set, get) => ({
     const user = authService.getUser();
     
     if (token && user) {
+      // Se há token mas não há sessionId, gerar um novo (usuário logado antes da implementação do sistema de sessão)
+      if (!getCurrentSessionId()) {
+        const sessionId = generateSessionId();
+        localStorage.setItem("auth_session_id", sessionId);
+      }
+      
       set({
         user,
         isAuthenticated: true,

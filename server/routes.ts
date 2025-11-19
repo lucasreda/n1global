@@ -7876,61 +7876,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook endpoint for Shopify orders (no auth required - uses HMAC verification)
   app.post("/api/webhooks/shopify/orders", async (req: Request, res: Response) => {
     try {
-      const topic = req.headers['x-shopify-topic'] as string;
-      const shop = req.headers['x-shopify-shop-domain'] as string;
+      const topic = req.headers["x-shopify-topic"] as string;
+      const shop = req.headers["x-shopify-shop-domain"] as string;
       const payload = req.body;
 
       if (!topic || !shop || !payload) {
-        return res.status(400).json({ message: 'Dados inválidos' });
+        return res.status(400).json({ message: "Dados inválidos" });
       }
 
-      // Buscar integração pela loja Shopify (necessário para verificação HMAC)
-      const [integration] = await db
-        .select({ 
+      const normalizedShop =
+        shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+
+      // Buscar TODAS as integrações dessa loja (pode existir mais de uma)
+      const integrations = await db
+        .select({
+          id: shopifyIntegrations.id,
           operationId: shopifyIntegrations.operationId,
           accessToken: shopifyIntegrations.accessToken,
-          webhookSecret: shopifyIntegrations.webhookSecret
+          webhookSecret: shopifyIntegrations.webhookSecret,
         })
         .from(shopifyIntegrations)
-        .where(eq(shopifyIntegrations.shopName, shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`))
-        .limit(1);
+        .where(eq(shopifyIntegrations.shopName, normalizedShop));
 
-      if (!integration) {
-        console.warn(`⚠️ Integração Shopify não encontrada para loja: ${shop}`);
-        return res.status(404).json({ message: 'Integração não encontrada' });
+      if (!integrations || integrations.length === 0) {
+        console.warn(
+          `⚠️ Integração Shopify não encontrada para loja: ${normalizedShop}`
+        );
+        return res.status(404).json({ message: "Integração não encontrada" });
       }
 
-      // Verificar assinatura HMAC do Shopify usando o webhookSecret da integração
-      // Fallback para accessToken para compatibilidade com integrações antigas
+      // Priorizar integração que já tenha webhookSecret configurado
+      const integrationWithSecret = integrations.find(
+        (i) => i.webhookSecret && i.webhookSecret.length > 0
+      );
+      const integration = integrationWithSecret ?? integrations[0];
+
+      // Em produção, exigir SEMPRE webhookSecret configurado (não usar mais accessToken)
+      if (!integration.webhookSecret && process.env.NODE_ENV === "production") {
+        console.warn(
+          `⚠️ Webhook Shopify recebido para ${normalizedShop}, mas webhookSecret não está configurado na integração ${integration.id}`
+        );
+        return res
+          .status(401)
+          .json({ message: "Webhook secret não configurado para esta loja" });
+      }
+
+      // Em dev, manter compatibilidade usando accessToken como fallback se necessário
       const secret = integration.webhookSecret || integration.accessToken;
       const isValid = shopifyWebhookService.verifyWebhook(req, secret);
-      
+
       if (!isValid) {
-        // Em desenvolvimento, permitir sem verificação se não houver secret configurado
-        // Mas logar um aviso para segurança
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('⚠️ Webhook Shopify com assinatura inválida (permitindo em dev)');
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            "⚠️ Webhook Shopify com assinatura inválida (permitindo em dev)"
+          );
         } else {
-          console.warn('⚠️ Webhook Shopify com assinatura inválida');
-          return res.status(401).json({ message: 'Assinatura inválida' });
+          console.warn("⚠️ Webhook Shopify com assinatura inválida");
+          return res.status(401).json({ message: "Assinatura inválida" });
         }
       }
 
-      console.log(`📦 [WEBHOOK] ${topic} de ${shop}`);
+      console.log(`📦 [WEBHOOK] ${topic} de ${normalizedShop}`);
 
       // Processar webhook baseado no tópico
-      if (topic === 'orders/create') {
-        await shopifyWebhookService.handleOrderCreated(payload, integration.operationId);
-      } else if (topic === 'orders/updated') {
-        await shopifyWebhookService.handleOrderUpdated(payload, integration.operationId);
+      if (topic === "orders/create") {
+        await shopifyWebhookService.handleOrderCreated(
+          payload,
+          integration.operationId
+        );
+      } else if (topic === "orders/updated") {
+        await shopifyWebhookService.handleOrderUpdated(
+          payload,
+          integration.operationId
+        );
       } else {
         console.log(`ℹ️ Tópico de webhook não processado: ${topic}`);
       }
 
       res.status(200).json({ success: true });
     } catch (error: any) {
-      console.error('❌ Erro ao processar webhook Shopify:', error);
-      res.status(500).json({ message: error.message || 'Erro interno' });
+      console.error("❌ Erro ao processar webhook Shopify:", error);
+      res.status(500).json({ message: error.message || "Erro interno" });
     }
   });
 

@@ -6,6 +6,36 @@ const REQUEST_TIMEOUT = 30000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 segundo base
 
+// Sistema de identificação de sessão para evitar logout por requisições antigas
+let currentSessionId: string | null = null;
+const activeRequests = new Set<AbortController>();
+
+// Gerar novo sessionId quando o usuário faz login
+export function generateSessionId(): string {
+  currentSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return currentSessionId;
+}
+
+// Obter sessionId atual
+export function getCurrentSessionId(): string | null {
+  return currentSessionId || localStorage.getItem("auth_session_id");
+}
+
+// Limpar sessionId quando o usuário faz logout
+export function clearSessionId(): void {
+  currentSessionId = null;
+  localStorage.removeItem("auth_session_id");
+  // Cancelar todas as requisições pendentes
+  activeRequests.forEach(controller => {
+    try {
+      controller.abort();
+    } catch (e) {
+      // Ignorar erros ao cancelar
+    }
+  });
+  activeRequests.clear();
+}
+
 // Verifica se é um erro de rede que deve ser retentado
 export function isRetryableError(error: any): boolean {
   if (!error) return false;
@@ -29,14 +59,22 @@ export function isRetryableError(error: any): boolean {
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
-  retries = MAX_RETRIES
+  retries = MAX_RETRIES,
+  sessionId?: string | null
 ): Promise<Response> {
   let lastError: Error | null = null;
   
   for (let attempt = 0; attempt <= retries; attempt++) {
+    // Verificar se a sessão mudou antes de fazer a requisição
+    const currentSession = getCurrentSessionId();
+    if (sessionId && currentSession !== sessionId) {
+      throw new Error('Sessão expirada - requisição cancelada');
+    }
+    
     try {
-      // Criar AbortController para timeout
+      // Criar AbortController para timeout e controle de cancelamento
       const controller = new AbortController();
+      activeRequests.add(controller);
       const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
       
       try {
@@ -46,6 +84,13 @@ async function fetchWithRetry(
         });
         
         clearTimeout(timeoutId);
+        activeRequests.delete(controller);
+        
+        // Verificar novamente se a sessão mudou após a resposta
+        const sessionAfterResponse = getCurrentSessionId();
+        if (sessionId && sessionAfterResponse !== sessionId) {
+          throw new Error('Sessão expirada - requisição cancelada');
+        }
         
         // Se for erro 5xx, tentar novamente (exceto na última tentativa)
         if (response.status >= 500 && response.status < 600 && attempt < retries) {
@@ -58,10 +103,22 @@ async function fetchWithRetry(
         return response;
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
+        activeRequests.delete(controller);
+        
+        // Se foi cancelado por mudança de sessão, não tentar novamente
+        if (fetchError.message === 'Sessão expirada - requisição cancelada') {
+          throw fetchError;
+        }
+        
         throw fetchError;
       }
     } catch (error: any) {
       lastError = error;
+      
+      // Se foi cancelado por mudança de sessão, não tentar novamente
+      if (error.message === 'Sessão expirada - requisição cancelada') {
+        throw error;
+      }
       
       // Se for erro de abort (timeout) ou erro de rede retentável
       if (
@@ -97,6 +154,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const token = localStorage.getItem("auth_token");
   const operationId = localStorage.getItem("current_operation_id");
+  const sessionId = getCurrentSessionId();
   
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
   
@@ -107,6 +165,10 @@ export async function apiRequest(
   if (operationId) {
     headers["x-operation-id"] = operationId;
   }
+  
+  if (sessionId) {
+    headers["x-session-id"] = sessionId;
+  }
 
   try {
     const res = await fetchWithRetry(url, {
@@ -114,21 +176,43 @@ export async function apiRequest(
       headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
-    });
+    }, MAX_RETRIES, sessionId);
 
     if (res.status === 401 || res.status === 403) {
-      // Only redirect if this is an authenticated request that failed
-      // Don't redirect on login failures
-      if (url !== "/api/auth/login" && localStorage.getItem("auth_token")) {
+      // Verificar se a sessão ainda é a mesma antes de fazer logout
+      const currentSessionId = getCurrentSessionId();
+      const currentToken = localStorage.getItem("auth_token");
+      
+      // Só fazer logout se:
+      // 1. Não for uma requisição de login
+      // 2. Ainda há um token no localStorage
+      // 3. A sessão ainda é a mesma (não mudou durante a requisição)
+      // 4. O token ainda é o mesmo (não foi atualizado durante a requisição)
+      if (
+        url !== "/api/auth/login" && 
+        currentToken && 
+        currentSessionId === sessionId &&
+        currentToken === token
+      ) {
+        console.warn("🔒 Token inválido detectado, fazendo logout...");
+        clearSessionId();
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         window.location.href = "/";
+      } else {
+        // Sessão ou token mudou durante a requisição, não fazer logout
+        console.log("ℹ️ Requisição falhou mas sessão/token mudou, ignorando erro de autenticação");
       }
     }
 
     await throwIfResNotOk(res);
     return res;
   } catch (error: any) {
+    // Se foi cancelado por mudança de sessão, não tratar como erro
+    if (error.message === 'Sessão expirada - requisição cancelada') {
+      throw error;
+    }
+    
     // Tratamento de erros de conexão
     if (error.name === 'AbortError' || error.message?.includes('timeout')) {
       throw new Error('Tempo de conexão esgotado. Verifique sua conexão com a internet e tente novamente.');
@@ -152,6 +236,7 @@ export const getQueryFn: <T>(options: {
     const url = queryKey.join("/") as string;
     const token = localStorage.getItem("auth_token");
     const operationId = localStorage.getItem("current_operation_id");
+    const sessionId = getCurrentSessionId();
     
     const headers: HeadersInit = {};
     if (token) {
@@ -160,30 +245,55 @@ export const getQueryFn: <T>(options: {
     if (operationId) {
       headers["x-operation-id"] = operationId;
     }
+    if (sessionId) {
+      headers["x-session-id"] = sessionId;
+    }
 
     try {
       const res = await fetchWithRetry(url, {
         headers,
         credentials: "include",
-      });
+      }, MAX_RETRIES, sessionId);
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         return null;
       }
 
       if (res.status === 401 || res.status === 403) {
-        // Only redirect if this is an authenticated request that failed
-        // Don't redirect on login failures
-        if (url !== "/api/auth/login" && localStorage.getItem("auth_token")) {
+        // Verificar se a sessão ainda é a mesma antes de fazer logout
+        const currentSessionId = getCurrentSessionId();
+        const currentToken = localStorage.getItem("auth_token");
+        
+        // Só fazer logout se:
+        // 1. Não for uma requisição de login
+        // 2. Ainda há um token no localStorage
+        // 3. A sessão ainda é a mesma (não mudou durante a requisição)
+        // 4. O token ainda é o mesmo (não foi atualizado durante a requisição)
+        if (
+          url !== "/api/auth/login" && 
+          currentToken && 
+          currentSessionId === sessionId &&
+          currentToken === token
+        ) {
+          console.warn("🔒 Token inválido detectado em query, fazendo logout...");
+          clearSessionId();
           localStorage.removeItem("auth_token");
           localStorage.removeItem("user");
           window.location.href = "/";
+        } else {
+          // Sessão ou token mudou durante a requisição, não fazer logout
+          console.log("ℹ️ Query falhou mas sessão/token mudou, ignorando erro de autenticação");
         }
       }
 
       await throwIfResNotOk(res);
       return await res.json();
     } catch (error: any) {
+      // Se foi cancelado por mudança de sessão, não tratar como erro
+      if (error.message === 'Sessão expirada - requisição cancelada') {
+        throw error;
+      }
+      
       // Tratamento de erros de conexão
       if (error.name === 'AbortError' || error.message?.includes('timeout')) {
         throw new Error('Tempo de conexão esgotado. Verifique sua conexão com a internet e tente novamente.');
