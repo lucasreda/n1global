@@ -234,6 +234,18 @@ export class ShopifyWebhookService {
     
     if (!isValid) {
       console.warn('⚠️ Assinatura HMAC do webhook inválida');
+      // Debug detalhado para investigar diferenças de HMAC em produção
+      console.log('🔐 Shopify Webhook Debug:', {
+        shopDomain: req.headers['x-shopify-shop-domain'] || null,
+        topic: req.headers['x-shopify-topic'] || null,
+        secretLength: webhookSecret.length,
+        secretPreview: webhookSecret
+          ? `${webhookSecret.slice(0, 4)}...${webhookSecret.slice(-4)}`
+          : null,
+        hmacHeader,
+        calculatedHmac,
+        rawBodyLength: rawBody ? rawBody.length : 0,
+      });
     }
 
     return isValid;
