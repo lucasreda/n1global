@@ -126,6 +126,17 @@ async function runMigrations() {
     `);
     
     console.log('✅ Migração add_integration_started_at aplicada');
+
+    // Migração: Adicionar campos de convite em user_operation_access
+    console.log('📝 Aplicando: add_user_operation_access_invited_fields');
+    await pool.query(`
+      ALTER TABLE user_operation_access
+      ADD COLUMN IF NOT EXISTS invited_at TIMESTAMP;
+
+      ALTER TABLE user_operation_access
+      ADD COLUMN IF NOT EXISTS invited_by VARCHAR REFERENCES users(id);
+    `);
+    console.log('✅ Migração add_user_operation_access_invited_fields aplicada');
     
     // Migração: Criar tabela big_arena_warehouse_accounts
     console.log('📝 Aplicando: create_big_arena_warehouse_accounts_table');
