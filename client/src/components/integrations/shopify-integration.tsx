@@ -17,6 +17,7 @@ interface ShopifyIntegration {
   id: string;
   operationId: string;
   shopName: string;
+  webhookSecret?: string | null;
   status: "active" | "pending" | "error";
   lastSyncAt: string | null;
   syncErrors: string | null;
@@ -35,6 +36,7 @@ export function ShopifyIntegration() {
   const { t } = useTranslation();
   const [shopName, setShopName] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [webhookUrlCopied, setWebhookUrlCopied] = useState(false);
   const { toast } = useToast();
@@ -88,11 +90,12 @@ export function ShopifyIntegration() {
 
   // Configurar/atualizar integração
   const configureMutation = useMutation({
-    mutationFn: async ({ shopName, accessToken }: { shopName: string; accessToken: string }) => {
+    mutationFn: async ({ shopName, accessToken, webhookSecret }: { shopName: string; accessToken: string; webhookSecret?: string }) => {
       const response = await apiRequest("/api/integrations/shopify", "POST", {
         operationId,
         shopName: shopName.replace(/^https?:\/\//, '').replace(/\/$/, ''),
         accessToken,
+        webhookSecret: webhookSecret || null,
       });
       return response.json();
     },
@@ -200,6 +203,7 @@ export function ShopifyIntegration() {
   useEffect(() => {
     if (integration) {
       setShopName(integration.shopName);
+      setWebhookSecret(integration.webhookSecret || "");
     }
   }, [integration]);
 
@@ -213,7 +217,7 @@ export function ShopifyIntegration() {
       return;
     }
 
-    configureMutation.mutate({ shopName, accessToken });
+    configureMutation.mutate({ shopName, accessToken, webhookSecret });
   };
 
   const handleTest = () => {
@@ -473,6 +477,20 @@ export function ShopifyIntegration() {
               />
               <p className="text-xs text-muted-foreground">
                 {t('integrations.shopify.accessTokenHint')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="webhookSecret">Webhook secret (HMAC)</Label>
+              <Input
+                id="webhookSecret"
+                type="password"
+                placeholder="Opcional: cole aqui o segredo do webhook configurado na Shopify"
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use o mesmo valor configurado como segredo do webhook na Shopify para que os webhooks de pedidos sejam aceitos com segurança.
               </p>
             </div>
 

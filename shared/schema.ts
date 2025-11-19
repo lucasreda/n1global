@@ -436,6 +436,7 @@ export const shopifyIntegrations = pgTable("shopify_integrations", {
   
   shopName: text("shop_name").notNull(), // e.g., "mystore.myshopify.com"
   accessToken: text("access_token").notNull(), // Shopify Admin API access token
+  webhookSecret: text("webhook_secret"), // Optional: Shopify webhook secret (HMAC validation)
   
   status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
   lastSyncAt: timestamp("last_sync_at"),

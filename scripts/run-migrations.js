@@ -127,6 +127,14 @@ async function runMigrations() {
     
     console.log('✅ Migração add_integration_started_at aplicada');
 
+    // Migração: Adicionar webhook_secret nas integrações Shopify
+    console.log('📝 Aplicando: add_shopify_webhook_secret');
+    await pool.query(`
+      ALTER TABLE shopify_integrations 
+      ADD COLUMN IF NOT EXISTS webhook_secret TEXT;
+    `);
+    console.log('✅ Migração add_shopify_webhook_secret aplicada');
+
     // Migração: Adicionar campos de convite em user_operation_access
     console.log('📝 Aplicando: add_user_operation_access_invited_fields');
     await pool.query(`

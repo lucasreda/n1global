@@ -7879,11 +7879,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Dados inválidos' });
       }
 
-      // Buscar integração pela loja Shopify (necessário para verificação HMAC com access token)
+      // Buscar integração pela loja Shopify (necessário para verificação HMAC)
       const [integration] = await db
         .select({ 
           operationId: shopifyIntegrations.operationId,
-          accessToken: shopifyIntegrations.accessToken
+          accessToken: shopifyIntegrations.accessToken,
+          webhookSecret: shopifyIntegrations.webhookSecret
         })
         .from(shopifyIntegrations)
         .where(eq(shopifyIntegrations.shopName, shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`))
@@ -7894,9 +7895,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Integração não encontrada' });
       }
 
-      // Verificar assinatura HMAC do Shopify usando o access token da integração
-      // Para apps privados, o shared secret geralmente é o próprio access token
-      const isValid = shopifyWebhookService.verifyWebhook(req, integration.accessToken);
+      // Verificar assinatura HMAC do Shopify usando o webhookSecret da integração
+      // Fallback para accessToken para compatibilidade com integrações antigas
+      const secret = integration.webhookSecret || integration.accessToken;
+      const isValid = shopifyWebhookService.verifyWebhook(req, secret);
       
       if (!isValid) {
         // Em desenvolvimento, permitir sem verificação se não houver secret configurado
