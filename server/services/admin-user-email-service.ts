@@ -57,7 +57,7 @@ export class AdminUserEmailService {
         });
       }
 
-      const senderName = params.createdBy ? `${params.createdBy} via N1 Global` : 'N1 Global';
+      const senderName = 'N1 Global';
       const senderEmail = `noreply@${mailgunDomain}`;
 
       const loginUrl = this.resolveLoginUrl(params.loginUrl);
@@ -101,7 +101,7 @@ export class AdminUserEmailService {
       return `${baseUrl}/login`;
     }
 
-    return 'https://app.n1.global/login';
+    return 'https://n1global.app/login';
   }
 
   private buildTemplate({
@@ -116,6 +116,13 @@ export class AdminUserEmailService {
     loginUrl: string;
   }): { html: string; text: string } {
     const greetingName = toName ? `Olá, ${toName}!` : 'Olá!';
+    
+    // Detectar URL base para a logo
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://n1global.app' 
+      : (process.env.VITE_APP_URL || process.env.APP_BASE_URL || 'https://n1global.app');
+    const logoUrl = `${baseUrl}/images/n1-lblue.png`;
+    
     const plainText = `
 ${greetingName}
 
@@ -144,6 +151,17 @@ Equipe N1 Global
   </head>
   <body style="margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;background-color:#f4f4f7;color:#1f2933;">
     <div style="max-width:520px;margin:0 auto;background-color:#ffffff;border-radius:8px;padding:24px;border:1px solid #e0e6ed;">
+      <!-- Logo N1 Global -->
+      <div style="text-align:center;margin-bottom:24px;">
+        <img
+          src="${logoUrl}"
+          alt="N1 Global"
+          style="height:30px;width:auto;max-width:200px;"
+          width="200"
+          height="30"
+        />
+      </div>
+      
       <p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;">${greetingName}</p>
       <p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;">
         Seu acesso ao painel administrativo da N1 Global foi criado.

@@ -8169,7 +8169,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           toEmail: email,
           toName: name,
           password: password, // Senha em texto plano (antes do hash)
-          createdBy: req.user?.name || req.user?.email,
         });
         console.log(`✅ Email de credenciais enviado com sucesso para: ${email}`);
       } catch (emailError) {
