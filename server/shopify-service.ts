@@ -168,7 +168,12 @@ export class ShopifyService {
   /**
    * Salva ou atualiza integração Shopify para uma operação
    */
-  async saveIntegration(operationId: string, shopName: string, accessToken: string): Promise<ShopifyIntegration> {
+  async saveIntegration(
+    operationId: string,
+    shopName: string,
+    accessToken: string,
+    webhookSecret?: string | null
+  ): Promise<ShopifyIntegration> {
     // Testa a conexão primeiro
     const testResult = await this.testConnection(shopName, accessToken);
     
@@ -190,9 +195,11 @@ export class ShopifyService {
       !existingIntegration || // Nova integração
       (existingIntegration.status !== "active" && existingIntegration.integrationStartedAt === null); // Ativando pela primeira vez
 
-    const integrationData = {
+    const integrationData: Partial<InsertShopifyIntegration> = {
       shopName,
       accessToken,
+      // Persistir webhookSecret se fornecido (pode ser null no início)
+      ...(typeof webhookSecret === 'string' ? { webhookSecret } : {}),
       status: "active" as const,
       lastSyncAt: new Date(),
       syncErrors: null,

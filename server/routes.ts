@@ -7791,13 +7791,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save/update Shopify integration
   app.post("/api/integrations/shopify", authenticateToken, requirePermission('integrations', 'edit'), async (req: AuthRequest, res: Response) => {
     try {
-      const { operationId, shopName, accessToken } = req.body;
+      const { operationId, shopName, accessToken, webhookSecret } = req.body;
       
       if (!operationId || !shopName || !accessToken) {
         return res.status(400).json({ message: "operationId, shopName e accessToken são obrigatórios" });
       }
       
-      const integration = await shopifyService.saveIntegration(operationId, shopName, accessToken);
+      const integration = await shopifyService.saveIntegration(
+        operationId,
+        shopName,
+        accessToken,
+        webhookSecret ?? null
+      );
       
       // Webhooks agora são configurados manualmente pelo cliente na conta Shopify
       // As informações do webhook são mostradas no card de integração
